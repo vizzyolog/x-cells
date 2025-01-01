@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+option go_package = "bullet-server/physics;physics";
+
+package physics;
+
+// gRPC-сервис
+service Physics {
+  // Применить импульс к шару
+  rpc ApplyImpulse (ApplyImpulseRequest) returns (ApplyImpulseResponse);
+
+  // Запросить текущее состояние (позиция сферы)
+  rpc GetState (GetStateRequest) returns (GetStateResponse);
+
+  // Шаг симуляции (опционально, если дергаем вручную)
+  rpc Step (StepRequest) returns (StepResponse);
+}
+
+// Сообщения
+message ApplyImpulseRequest {
+  float impulse_x = 1;
+  float impulse_y = 2;
+  float impulse_z = 3;
+}
+
+message ApplyImpulseResponse {
+  string status = 1;
+}
+
+message GetStateRequest {}
+
+message GetStateResponse {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+  float qx = 4;
+  float qy = 5;
+  float qz = 6;
+  float qw = 7;
+}
+
+message StepRequest {
+  float dt = 1;
+  int32 substeps = 2;
+}
+
+message StepResponse {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+  float qx = 4;
+  float qy = 5;
+  float qz = 6;
+  float qw = 7;
+}

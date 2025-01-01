@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Ammo Terrain + Sphere + Server Authority</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #info { position: absolute; top:10px; left:10px; color:white; }
+    </style>
+</head>
+<body>
+<div id="info">Use arrow keys / space</div>
+
+<!-- Three.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
+<!-- Ammo.js (WASM-версия или обычная) -->
+<script src="js/ammo.wasm.js"></script>
+
+<script>
+    let scene, camera, renderer;
+    let physicsWorld;
+    let sphereBody, sphereMesh;
+    let terrainBody, terrainMesh;
+    let ws;
+
+    // Похожие параметры террейна, как на сервере
+    const TERRAIN_WIDTH = 64;
+    const TERRAIN_HEIGHT = 64;
+    const heightData = new Float32Array(TERRAIN_WIDTH * TERRAIN_HEIGHT);
+
+    function generateHeightData() {
+        for (let z = 0; z < TERRAIN_HEIGHT; z++) {
+            for (let x = 0; x < TERRAIN_WIDTH; x++) {
+                const fx = x - TERRAIN_WIDTH / 2;
+                const fz = z - TERRAIN_HEIGHT / 2;
+                const h = 2.0 * Math.sin(fx * 0.1) * Math.cos(fz * 0.1);
+                heightData[z * TERRAIN_WIDTH + x] = h;
+            }
+        }
+    }
+
+    function initThree() {
+        scene = new THREE.Scene();
+
+        // Камера
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 20, 40);
+
+        // Рендерер
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        window.addEventListener('resize', onWindowResize, false);
+
+        // Источник света - окружающий свет
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Мягкий свет
+        scene.add(ambientLight);
+
+        // Источник света - направленный свет
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(10, 20, 10); // Положение света
+        scene.add(directionalLight);
+
+        // Источник света - точечный свет
+        const pointLight = new THREE.PointLight(0xffffff, 0.5);
+        pointLight.position.set(0, 10, 0);
+        scene.add(pointLight);
+
+        console.log("[Three.js] Scene initialized with lights");
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    async function initAmmo() {
+        await Ammo(); // Ensure Ammo.js is loaded
+
+        // 1) Создаем мир
+        const collisionConfig = new Ammo.btDefaultCollisionConfiguration();
+        const dispatcher = new Ammo.btCollisionDispatcher(collisionConfig);
+        const broadphase = new Ammo.btDbvtBroadphase();
+        const solver = new Ammo.btSequentialImpulseConstraintSolver();
+        physicsWorld = new Ammo.btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfig);
+        physicsWorld.setGravity(new Ammo.btVector3(0, -9.81, 0));
+
+        // 2) Создаем terrain
+        generateHeightData();
+
+        const ptr = Ammo._malloc(heightData.length * Float32Array.BYTES_PER_ELEMENT);
+        Ammo.HEAPF32.set(heightData, ptr / Float32Array.BYTES_PER_ELEMENT);
+
+        const upAxis = 1; // Y
+        const heightScale = 1;
+        const minH = -10;
+        const maxH = 10;
+        const flipQuadEdges = false;
+
+        const hfShape = new Ammo.btHeightfieldTerrainShape(
+            TERRAIN_WIDTH, TERRAIN_HEIGHT,
+            ptr,
+            heightScale,
+            minH, maxH,
+            upAxis, Ammo.PHY_FLOAT, flipQuadEdges
+        );
+        hfShape.setLocalScaling(new Ammo.btVector3(1, 1, 1));
+
+        let transform = new Ammo.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(new Ammo.btVector3(0, 0, 0));
+        let motionState = new Ammo.btDefaultMotionState(transform);
+
+        let rbInfo = new Ammo.btRigidBodyConstructionInfo(0, motionState, hfShape, new Ammo.btVector3(0, 0, 0));
+        terrainBody = new Ammo.btRigidBody(rbInfo);
+        physicsWorld.addRigidBody(terrainBody);
+
+        // Three.js visualization (unchanged)
+        const geo = new THREE.PlaneGeometry(TERRAIN_WIDTH, TERRAIN_HEIGHT, TERRAIN_WIDTH - 1, TERRAIN_HEIGHT - 1);
+        geo.rotateX(-Math.PI / 2);
+        const verts = geo.attributes.position.array;
+        for (let i = 0; i < verts.length; i += 3) {
+            const ix = i / 3 % TERRAIN_WIDTH;
+            const iz = Math.floor(i / 3 / TERRAIN_WIDTH);
+            const h = heightData[iz * TERRAIN_WIDTH + ix];
+            verts[i + 1] = h;
+        }
+        geo.computeVertexNormals();
+        terrainMesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x888888, wireframe: true }));
+        scene.add(terrainMesh);
+
+        // 3) Создаем сферу
+        const sphereShape = new Ammo.btSphereShape(1);
+        sphereShape.setMargin(0.05);
+
+        transform.setIdentity();
+        transform.setOrigin(new Ammo.btVector3(0, 10, 0));
+        const mass = 1;
+        const localInertia = new Ammo.btVector3(0, 0, 0);
+        sphereShape.calculateLocalInertia(mass, localInertia);
+
+        const sphereMotion = new Ammo.btDefaultMotionState(transform);
+        const sphereCI = new Ammo.btRigidBodyConstructionInfo(mass, sphereMotion, sphereShape, localInertia);
+        sphereBody = new Ammo.btRigidBody(sphereCI);
+        physicsWorld.addRigidBody(sphereBody);
+
+        const sphGeo = new THREE.SphereGeometry(1, 16, 16);
+        const sphMat = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+        sphereMesh = new THREE.Mesh(sphGeo, sphMat);
+        scene.add(sphereMesh);
+
+        console.log("[Ammo] init done");
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (physicsWorld && sphereBody && sphereBody.getMotionState) {
+            physicsWorld.stepSimulation(1 / 60, 10);
+
+            let trans = new Ammo.btTransform();
+            sphereBody.getMotionState().getWorldTransform(trans);
+            let o = trans.getOrigin();
+            let r = trans.getRotation();
+            sphereMesh.position.set(o.x(), o.y(), o.z());
+            sphereMesh.quaternion.set(r.x(), r.y(), r.z(), r.w());
+        }
+
+        renderer.render(scene, camera);
+    }
+
+    function initWS() {
+        ws = new WebSocket("ws://localhost:8080/ws");
+
+        ws.onopen = () => {
+            console.log("[WS] connected");
+        };
+
+        ws.onmessage = (evt) => {
+            let data = JSON.parse(evt.data);
+
+            // Сервер должен отправлять только импульс или скорость
+            if (data.type === "update") {
+                const impulse = new Ammo.btVector3(data.impulseX, data.impulseY, data.impulseZ);
+                sphereBody.applyCentralImpulse(impulse);
+            }
+        };
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (!ws) return;
+        let cmd = "";
+        switch (e.key) {
+            case "ArrowLeft": cmd = "LEFT"; break;
+            case "ArrowRight": cmd = "RIGHT"; break;
+            case "ArrowUp": cmd = "UP"; break;
+            case "ArrowDown": cmd = "DOWN"; break;
+            case " ": cmd = "SPACE"; break;
+            default: return;
+        }
+        ws.send(JSON.stringify({ cmd: cmd }));
+    });
+
+    async function start() {
+        initThree();
+        await initAmmo();
+        initWS();
+        animate();
+    }
+    start();
+</script>
+</body>
+</html>

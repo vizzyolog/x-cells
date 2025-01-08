@@ -20,6 +20,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	Physics_CreateObject_FullMethodName = "/physics.Physics/CreateObject"
 	Physics_ApplyImpulse_FullMethodName = "/physics.Physics/ApplyImpulse"
 	Physics_GetState_FullMethodName     = "/physics.Physics/GetState"
 	Physics_Step_FullMethodName         = "/physics.Physics/Step"
@@ -29,13 +30,11 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// gRPC-сервис
+// Универсальный сервис для управления объектами
 type PhysicsClient interface {
-	// Применить импульс к шару
+	CreateObject(ctx context.Context, in *CreateObjectRequest, opts ...grpc.CallOption) (*CreateObjectResponse, error)
 	ApplyImpulse(ctx context.Context, in *ApplyImpulseRequest, opts ...grpc.CallOption) (*ApplyImpulseResponse, error)
-	// Запросить текущее состояние (позиция сферы)
 	GetState(ctx context.Context, in *GetStateRequest, opts ...grpc.CallOption) (*GetStateResponse, error)
-	// Шаг симуляции (опционально, если дергаем вручную)
 	Step(ctx context.Context, in *StepRequest, opts ...grpc.CallOption) (*StepResponse, error)
 }
 
@@ -45,6 +44,16 @@ type physicsClient struct {
 
 func NewPhysicsClient(cc grpc.ClientConnInterface) PhysicsClient {
 	return &physicsClient{cc}
+}
+
+func (c *physicsClient) CreateObject(ctx context.Context, in *CreateObjectRequest, opts ...grpc.CallOption) (*CreateObjectResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateObjectResponse)
+	err := c.cc.Invoke(ctx, Physics_CreateObject_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *physicsClient) ApplyImpulse(ctx context.Context, in *ApplyImpulseRequest, opts ...grpc.CallOption) (*ApplyImpulseResponse, error) {
@@ -81,13 +90,11 @@ func (c *physicsClient) Step(ctx context.Context, in *StepRequest, opts ...grpc.
 // All implementations must embed UnimplementedPhysicsServer
 // for forward compatibility.
 //
-// gRPC-сервис
+// Универсальный сервис для управления объектами
 type PhysicsServer interface {
-	// Применить импульс к шару
+	CreateObject(context.Context, *CreateObjectRequest) (*CreateObjectResponse, error)
 	ApplyImpulse(context.Context, *ApplyImpulseRequest) (*ApplyImpulseResponse, error)
-	// Запросить текущее состояние (позиция сферы)
 	GetState(context.Context, *GetStateRequest) (*GetStateResponse, error)
-	// Шаг симуляции (опционально, если дергаем вручную)
 	Step(context.Context, *StepRequest) (*StepResponse, error)
 	mustEmbedUnimplementedPhysicsServer()
 }
@@ -99,6 +106,9 @@ type PhysicsServer interface {
 // pointer dereference when methods are called.
 type UnimplementedPhysicsServer struct{}
 
+func (UnimplementedPhysicsServer) CreateObject(context.Context, *CreateObjectRequest) (*CreateObjectResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateObject not implemented")
+}
 func (UnimplementedPhysicsServer) ApplyImpulse(context.Context, *ApplyImpulseRequest) (*ApplyImpulseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplyImpulse not implemented")
 }
@@ -127,6 +137,24 @@ func RegisterPhysicsServer(s grpc.ServiceRegistrar, srv PhysicsServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Physics_ServiceDesc, srv)
+}
+
+func _Physics_CreateObject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateObjectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PhysicsServer).CreateObject(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Physics_CreateObject_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PhysicsServer).CreateObject(ctx, req.(*CreateObjectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Physics_ApplyImpulse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -190,6 +218,10 @@ var Physics_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "physics.Physics",
 	HandlerType: (*PhysicsServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateObject",
+			Handler:    _Physics_CreateObject_Handler,
+		},
 		{
 			MethodName: "ApplyImpulse",
 			Handler:    _Physics_ApplyImpulse_Handler,

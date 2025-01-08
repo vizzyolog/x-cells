@@ -1,0 +1,15 @@
+message CreateObjectRequest {
+  string id = 1;
+  string object_type = 2;
+  float x = 3;
+  float y = 4;
+  float z = 5;
+  repeated float height_data = 6; // Высотные данные для террейна
+  int32 heightmap_width = 7;
+  int32 heightmap_height = 8;
+  float scale_x = 9; // Масштаб по X
+  float scale_y = 10; // Масштаб по Y
+  float scale_z = 11; // Масштаб по Z
+  float min_height = 12; // Минимальная высота
+  float max_height = 13; // Максимальная высота
+}

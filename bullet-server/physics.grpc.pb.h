@@ -27,7 +27,7 @@
 
 namespace physics {
 
-// gRPC-сервис
+// Универсальный сервис для управления объектами
 class Physics final {
  public:
   static constexpr char const* service_full_name() {
@@ -36,7 +36,13 @@ class Physics final {
   class StubInterface {
    public:
     virtual ~StubInterface() {}
-    // Применить импульс к шару
+    virtual ::grpc::Status CreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::physics::CreateObjectResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::CreateObjectResponse>> AsyncCreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::CreateObjectResponse>>(AsyncCreateObjectRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::CreateObjectResponse>> PrepareAsyncCreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::CreateObjectResponse>>(PrepareAsyncCreateObjectRaw(context, request, cq));
+    }
     virtual ::grpc::Status ApplyImpulse(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest& request, ::physics::ApplyImpulseResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::ApplyImpulseResponse>> AsyncApplyImpulse(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::ApplyImpulseResponse>>(AsyncApplyImpulseRaw(context, request, cq));
@@ -44,7 +50,6 @@ class Physics final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::ApplyImpulseResponse>> PrepareAsyncApplyImpulse(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::ApplyImpulseResponse>>(PrepareAsyncApplyImpulseRaw(context, request, cq));
     }
-    // Запросить текущее состояние (позиция сферы)
     virtual ::grpc::Status GetState(::grpc::ClientContext* context, const ::physics::GetStateRequest& request, ::physics::GetStateResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetStateResponse>> AsyncGetState(::grpc::ClientContext* context, const ::physics::GetStateRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetStateResponse>>(AsyncGetStateRaw(context, request, cq));
@@ -52,7 +57,6 @@ class Physics final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetStateResponse>> PrepareAsyncGetState(::grpc::ClientContext* context, const ::physics::GetStateRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetStateResponse>>(PrepareAsyncGetStateRaw(context, request, cq));
     }
-    // Шаг симуляции (опционально, если дергаем вручную)
     virtual ::grpc::Status Step(::grpc::ClientContext* context, const ::physics::StepRequest& request, ::physics::StepResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::StepResponse>> AsyncStep(::grpc::ClientContext* context, const ::physics::StepRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::StepResponse>>(AsyncStepRaw(context, request, cq));
@@ -63,13 +67,12 @@ class Physics final {
     class async_interface {
      public:
       virtual ~async_interface() {}
-      // Применить импульс к шару
+      virtual void CreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest* request, ::physics::CreateObjectResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void CreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest* request, ::physics::CreateObjectResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void ApplyImpulse(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest* request, ::physics::ApplyImpulseResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void ApplyImpulse(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest* request, ::physics::ApplyImpulseResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
-      // Запросить текущее состояние (позиция сферы)
       virtual void GetState(::grpc::ClientContext* context, const ::physics::GetStateRequest* request, ::physics::GetStateResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetState(::grpc::ClientContext* context, const ::physics::GetStateRequest* request, ::physics::GetStateResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
-      // Шаг симуляции (опционально, если дергаем вручную)
       virtual void Step(::grpc::ClientContext* context, const ::physics::StepRequest* request, ::physics::StepResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void Step(::grpc::ClientContext* context, const ::physics::StepRequest* request, ::physics::StepResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
     };
@@ -77,6 +80,8 @@ class Physics final {
     virtual class async_interface* async() { return nullptr; }
     class async_interface* experimental_async() { return async(); }
    private:
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::CreateObjectResponse>* AsyncCreateObjectRaw(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::CreateObjectResponse>* PrepareAsyncCreateObjectRaw(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::ApplyImpulseResponse>* AsyncApplyImpulseRaw(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::ApplyImpulseResponse>* PrepareAsyncApplyImpulseRaw(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetStateResponse>* AsyncGetStateRaw(::grpc::ClientContext* context, const ::physics::GetStateRequest& request, ::grpc::CompletionQueue* cq) = 0;
@@ -87,6 +92,13 @@ class Physics final {
   class Stub final : public StubInterface {
    public:
     Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
+    ::grpc::Status CreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::physics::CreateObjectResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::CreateObjectResponse>> AsyncCreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::CreateObjectResponse>>(AsyncCreateObjectRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::CreateObjectResponse>> PrepareAsyncCreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::CreateObjectResponse>>(PrepareAsyncCreateObjectRaw(context, request, cq));
+    }
     ::grpc::Status ApplyImpulse(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest& request, ::physics::ApplyImpulseResponse* response) override;
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::ApplyImpulseResponse>> AsyncApplyImpulse(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::ApplyImpulseResponse>>(AsyncApplyImpulseRaw(context, request, cq));
@@ -111,6 +123,8 @@ class Physics final {
     class async final :
       public StubInterface::async_interface {
      public:
+      void CreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest* request, ::physics::CreateObjectResponse* response, std::function<void(::grpc::Status)>) override;
+      void CreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest* request, ::physics::CreateObjectResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void ApplyImpulse(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest* request, ::physics::ApplyImpulseResponse* response, std::function<void(::grpc::Status)>) override;
       void ApplyImpulse(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest* request, ::physics::ApplyImpulseResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void GetState(::grpc::ClientContext* context, const ::physics::GetStateRequest* request, ::physics::GetStateResponse* response, std::function<void(::grpc::Status)>) override;
@@ -128,12 +142,15 @@ class Physics final {
    private:
     std::shared_ptr< ::grpc::ChannelInterface> channel_;
     class async async_stub_{this};
+    ::grpc::ClientAsyncResponseReader< ::physics::CreateObjectResponse>* AsyncCreateObjectRaw(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::CreateObjectResponse>* PrepareAsyncCreateObjectRaw(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::physics::ApplyImpulseResponse>* AsyncApplyImpulseRaw(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::physics::ApplyImpulseResponse>* PrepareAsyncApplyImpulseRaw(::grpc::ClientContext* context, const ::physics::ApplyImpulseRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::physics::GetStateResponse>* AsyncGetStateRaw(::grpc::ClientContext* context, const ::physics::GetStateRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::physics::GetStateResponse>* PrepareAsyncGetStateRaw(::grpc::ClientContext* context, const ::physics::GetStateRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::physics::StepResponse>* AsyncStepRaw(::grpc::ClientContext* context, const ::physics::StepRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::physics::StepResponse>* PrepareAsyncStepRaw(::grpc::ClientContext* context, const ::physics::StepRequest& request, ::grpc::CompletionQueue* cq) override;
+    const ::grpc::internal::RpcMethod rpcmethod_CreateObject_;
     const ::grpc::internal::RpcMethod rpcmethod_ApplyImpulse_;
     const ::grpc::internal::RpcMethod rpcmethod_GetState_;
     const ::grpc::internal::RpcMethod rpcmethod_Step_;
@@ -144,12 +161,30 @@ class Physics final {
    public:
     Service();
     virtual ~Service();
-    // Применить импульс к шару
+    virtual ::grpc::Status CreateObject(::grpc::ServerContext* context, const ::physics::CreateObjectRequest* request, ::physics::CreateObjectResponse* response);
     virtual ::grpc::Status ApplyImpulse(::grpc::ServerContext* context, const ::physics::ApplyImpulseRequest* request, ::physics::ApplyImpulseResponse* response);
-    // Запросить текущее состояние (позиция сферы)
     virtual ::grpc::Status GetState(::grpc::ServerContext* context, const ::physics::GetStateRequest* request, ::physics::GetStateResponse* response);
-    // Шаг симуляции (опционально, если дергаем вручную)
     virtual ::grpc::Status Step(::grpc::ServerContext* context, const ::physics::StepRequest* request, ::physics::StepResponse* response);
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_CreateObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_CreateObject() {
+      ::grpc::Service::MarkMethodAsync(0);
+    }
+    ~WithAsyncMethod_CreateObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CreateObject(::grpc::ServerContext* /*context*/, const ::physics::CreateObjectRequest* /*request*/, ::physics::CreateObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestCreateObject(::grpc::ServerContext* context, ::physics::CreateObjectRequest* request, ::grpc::ServerAsyncResponseWriter< ::physics::CreateObjectResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(0, context, request, response, new_call_cq, notification_cq, tag);
+    }
   };
   template <class BaseClass>
   class WithAsyncMethod_ApplyImpulse : public BaseClass {
@@ -157,7 +192,7 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_ApplyImpulse() {
-      ::grpc::Service::MarkMethodAsync(0);
+      ::grpc::Service::MarkMethodAsync(1);
     }
     ~WithAsyncMethod_ApplyImpulse() override {
       BaseClassMustBeDerivedFromService(this);
@@ -168,7 +203,7 @@ class Physics final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestApplyImpulse(::grpc::ServerContext* context, ::physics::ApplyImpulseRequest* request, ::grpc::ServerAsyncResponseWriter< ::physics::ApplyImpulseResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(0, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(1, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -177,7 +212,7 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_GetState() {
-      ::grpc::Service::MarkMethodAsync(1);
+      ::grpc::Service::MarkMethodAsync(2);
     }
     ~WithAsyncMethod_GetState() override {
       BaseClassMustBeDerivedFromService(this);
@@ -188,7 +223,7 @@ class Physics final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetState(::grpc::ServerContext* context, ::physics::GetStateRequest* request, ::grpc::ServerAsyncResponseWriter< ::physics::GetStateResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(1, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -197,7 +232,7 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_Step() {
-      ::grpc::Service::MarkMethodAsync(2);
+      ::grpc::Service::MarkMethodAsync(3);
     }
     ~WithAsyncMethod_Step() override {
       BaseClassMustBeDerivedFromService(this);
@@ -208,23 +243,50 @@ class Physics final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestStep(::grpc::ServerContext* context, ::physics::StepRequest* request, ::grpc::ServerAsyncResponseWriter< ::physics::StepResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(3, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_ApplyImpulse<WithAsyncMethod_GetState<WithAsyncMethod_Step<Service > > > AsyncService;
+  typedef WithAsyncMethod_CreateObject<WithAsyncMethod_ApplyImpulse<WithAsyncMethod_GetState<WithAsyncMethod_Step<Service > > > > AsyncService;
+  template <class BaseClass>
+  class WithCallbackMethod_CreateObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_CreateObject() {
+      ::grpc::Service::MarkMethodCallback(0,
+          new ::grpc::internal::CallbackUnaryHandler< ::physics::CreateObjectRequest, ::physics::CreateObjectResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::physics::CreateObjectRequest* request, ::physics::CreateObjectResponse* response) { return this->CreateObject(context, request, response); }));}
+    void SetMessageAllocatorFor_CreateObject(
+        ::grpc::MessageAllocator< ::physics::CreateObjectRequest, ::physics::CreateObjectResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(0);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::physics::CreateObjectRequest, ::physics::CreateObjectResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_CreateObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CreateObject(::grpc::ServerContext* /*context*/, const ::physics::CreateObjectRequest* /*request*/, ::physics::CreateObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* CreateObject(
+      ::grpc::CallbackServerContext* /*context*/, const ::physics::CreateObjectRequest* /*request*/, ::physics::CreateObjectResponse* /*response*/)  { return nullptr; }
+  };
   template <class BaseClass>
   class WithCallbackMethod_ApplyImpulse : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_ApplyImpulse() {
-      ::grpc::Service::MarkMethodCallback(0,
+      ::grpc::Service::MarkMethodCallback(1,
           new ::grpc::internal::CallbackUnaryHandler< ::physics::ApplyImpulseRequest, ::physics::ApplyImpulseResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::physics::ApplyImpulseRequest* request, ::physics::ApplyImpulseResponse* response) { return this->ApplyImpulse(context, request, response); }));}
     void SetMessageAllocatorFor_ApplyImpulse(
         ::grpc::MessageAllocator< ::physics::ApplyImpulseRequest, ::physics::ApplyImpulseResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(0);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(1);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::physics::ApplyImpulseRequest, ::physics::ApplyImpulseResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -245,13 +307,13 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_GetState() {
-      ::grpc::Service::MarkMethodCallback(1,
+      ::grpc::Service::MarkMethodCallback(2,
           new ::grpc::internal::CallbackUnaryHandler< ::physics::GetStateRequest, ::physics::GetStateResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::physics::GetStateRequest* request, ::physics::GetStateResponse* response) { return this->GetState(context, request, response); }));}
     void SetMessageAllocatorFor_GetState(
         ::grpc::MessageAllocator< ::physics::GetStateRequest, ::physics::GetStateResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(1);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(2);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::physics::GetStateRequest, ::physics::GetStateResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -272,13 +334,13 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_Step() {
-      ::grpc::Service::MarkMethodCallback(2,
+      ::grpc::Service::MarkMethodCallback(3,
           new ::grpc::internal::CallbackUnaryHandler< ::physics::StepRequest, ::physics::StepResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::physics::StepRequest* request, ::physics::StepResponse* response) { return this->Step(context, request, response); }));}
     void SetMessageAllocatorFor_Step(
         ::grpc::MessageAllocator< ::physics::StepRequest, ::physics::StepResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(2);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(3);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::physics::StepRequest, ::physics::StepResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -293,15 +355,32 @@ class Physics final {
     virtual ::grpc::ServerUnaryReactor* Step(
       ::grpc::CallbackServerContext* /*context*/, const ::physics::StepRequest* /*request*/, ::physics::StepResponse* /*response*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_ApplyImpulse<WithCallbackMethod_GetState<WithCallbackMethod_Step<Service > > > CallbackService;
+  typedef WithCallbackMethod_CreateObject<WithCallbackMethod_ApplyImpulse<WithCallbackMethod_GetState<WithCallbackMethod_Step<Service > > > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
+  template <class BaseClass>
+  class WithGenericMethod_CreateObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_CreateObject() {
+      ::grpc::Service::MarkMethodGeneric(0);
+    }
+    ~WithGenericMethod_CreateObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CreateObject(::grpc::ServerContext* /*context*/, const ::physics::CreateObjectRequest* /*request*/, ::physics::CreateObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
   template <class BaseClass>
   class WithGenericMethod_ApplyImpulse : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_ApplyImpulse() {
-      ::grpc::Service::MarkMethodGeneric(0);
+      ::grpc::Service::MarkMethodGeneric(1);
     }
     ~WithGenericMethod_ApplyImpulse() override {
       BaseClassMustBeDerivedFromService(this);
@@ -318,7 +397,7 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_GetState() {
-      ::grpc::Service::MarkMethodGeneric(1);
+      ::grpc::Service::MarkMethodGeneric(2);
     }
     ~WithGenericMethod_GetState() override {
       BaseClassMustBeDerivedFromService(this);
@@ -335,7 +414,7 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_Step() {
-      ::grpc::Service::MarkMethodGeneric(2);
+      ::grpc::Service::MarkMethodGeneric(3);
     }
     ~WithGenericMethod_Step() override {
       BaseClassMustBeDerivedFromService(this);
@@ -347,12 +426,32 @@ class Physics final {
     }
   };
   template <class BaseClass>
+  class WithRawMethod_CreateObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_CreateObject() {
+      ::grpc::Service::MarkMethodRaw(0);
+    }
+    ~WithRawMethod_CreateObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CreateObject(::grpc::ServerContext* /*context*/, const ::physics::CreateObjectRequest* /*request*/, ::physics::CreateObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestCreateObject(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(0, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
   class WithRawMethod_ApplyImpulse : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_ApplyImpulse() {
-      ::grpc::Service::MarkMethodRaw(0);
+      ::grpc::Service::MarkMethodRaw(1);
     }
     ~WithRawMethod_ApplyImpulse() override {
       BaseClassMustBeDerivedFromService(this);
@@ -363,7 +462,7 @@ class Physics final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestApplyImpulse(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(0, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(1, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -372,7 +471,7 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_GetState() {
-      ::grpc::Service::MarkMethodRaw(1);
+      ::grpc::Service::MarkMethodRaw(2);
     }
     ~WithRawMethod_GetState() override {
       BaseClassMustBeDerivedFromService(this);
@@ -383,7 +482,7 @@ class Physics final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestGetState(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(1, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -392,7 +491,7 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_Step() {
-      ::grpc::Service::MarkMethodRaw(2);
+      ::grpc::Service::MarkMethodRaw(3);
     }
     ~WithRawMethod_Step() override {
       BaseClassMustBeDerivedFromService(this);
@@ -403,8 +502,30 @@ class Physics final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestStep(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(3, context, request, response, new_call_cq, notification_cq, tag);
     }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_CreateObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_CreateObject() {
+      ::grpc::Service::MarkMethodRawCallback(0,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->CreateObject(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_CreateObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CreateObject(::grpc::ServerContext* /*context*/, const ::physics::CreateObjectRequest* /*request*/, ::physics::CreateObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* CreateObject(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
   class WithRawCallbackMethod_ApplyImpulse : public BaseClass {
@@ -412,7 +533,7 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_ApplyImpulse() {
-      ::grpc::Service::MarkMethodRawCallback(0,
+      ::grpc::Service::MarkMethodRawCallback(1,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->ApplyImpulse(context, request, response); }));
@@ -434,7 +555,7 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_GetState() {
-      ::grpc::Service::MarkMethodRawCallback(1,
+      ::grpc::Service::MarkMethodRawCallback(2,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetState(context, request, response); }));
@@ -456,7 +577,7 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_Step() {
-      ::grpc::Service::MarkMethodRawCallback(2,
+      ::grpc::Service::MarkMethodRawCallback(3,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->Step(context, request, response); }));
@@ -473,12 +594,39 @@ class Physics final {
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
+  class WithStreamedUnaryMethod_CreateObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_CreateObject() {
+      ::grpc::Service::MarkMethodStreamed(0,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::physics::CreateObjectRequest, ::physics::CreateObjectResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::physics::CreateObjectRequest, ::physics::CreateObjectResponse>* streamer) {
+                       return this->StreamedCreateObject(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_CreateObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status CreateObject(::grpc::ServerContext* /*context*/, const ::physics::CreateObjectRequest* /*request*/, ::physics::CreateObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedCreateObject(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::physics::CreateObjectRequest,::physics::CreateObjectResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
   class WithStreamedUnaryMethod_ApplyImpulse : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_ApplyImpulse() {
-      ::grpc::Service::MarkMethodStreamed(0,
+      ::grpc::Service::MarkMethodStreamed(1,
         new ::grpc::internal::StreamedUnaryHandler<
           ::physics::ApplyImpulseRequest, ::physics::ApplyImpulseResponse>(
             [this](::grpc::ServerContext* context,
@@ -505,7 +653,7 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_GetState() {
-      ::grpc::Service::MarkMethodStreamed(1,
+      ::grpc::Service::MarkMethodStreamed(2,
         new ::grpc::internal::StreamedUnaryHandler<
           ::physics::GetStateRequest, ::physics::GetStateResponse>(
             [this](::grpc::ServerContext* context,
@@ -532,7 +680,7 @@ class Physics final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_Step() {
-      ::grpc::Service::MarkMethodStreamed(2,
+      ::grpc::Service::MarkMethodStreamed(3,
         new ::grpc::internal::StreamedUnaryHandler<
           ::physics::StepRequest, ::physics::StepResponse>(
             [this](::grpc::ServerContext* context,
@@ -553,9 +701,9 @@ class Physics final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedStep(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::physics::StepRequest,::physics::StepResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_ApplyImpulse<WithStreamedUnaryMethod_GetState<WithStreamedUnaryMethod_Step<Service > > > StreamedUnaryService;
+  typedef WithStreamedUnaryMethod_CreateObject<WithStreamedUnaryMethod_ApplyImpulse<WithStreamedUnaryMethod_GetState<WithStreamedUnaryMethod_Step<Service > > > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_ApplyImpulse<WithStreamedUnaryMethod_GetState<WithStreamedUnaryMethod_Step<Service > > > StreamedService;
+  typedef WithStreamedUnaryMethod_CreateObject<WithStreamedUnaryMethod_ApplyImpulse<WithStreamedUnaryMethod_GetState<WithStreamedUnaryMethod_Step<Service > > > > StreamedService;
 };
 
 }  // namespace physics

@@ -23,7 +23,6 @@
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/arena.h>
 #include <google/protobuf/arenastring.h>
-#include <google/protobuf/generated_message_bases.h>
 #include <google/protobuf/generated_message_util.h>
 #include <google/protobuf/metadata_lite.h>
 #include <google/protobuf/generated_message_reflection.h>
@@ -52,6 +51,12 @@ extern ApplyImpulseRequestDefaultTypeInternal _ApplyImpulseRequest_default_insta
 class ApplyImpulseResponse;
 struct ApplyImpulseResponseDefaultTypeInternal;
 extern ApplyImpulseResponseDefaultTypeInternal _ApplyImpulseResponse_default_instance_;
+class CreateObjectRequest;
+struct CreateObjectRequestDefaultTypeInternal;
+extern CreateObjectRequestDefaultTypeInternal _CreateObjectRequest_default_instance_;
+class CreateObjectResponse;
+struct CreateObjectResponseDefaultTypeInternal;
+extern CreateObjectResponseDefaultTypeInternal _CreateObjectResponse_default_instance_;
 class GetStateRequest;
 struct GetStateRequestDefaultTypeInternal;
 extern GetStateRequestDefaultTypeInternal _GetStateRequest_default_instance_;
@@ -68,6 +73,8 @@ extern StepResponseDefaultTypeInternal _StepResponse_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
 template<> ::physics::ApplyImpulseRequest* Arena::CreateMaybeMessage<::physics::ApplyImpulseRequest>(Arena*);
 template<> ::physics::ApplyImpulseResponse* Arena::CreateMaybeMessage<::physics::ApplyImpulseResponse>(Arena*);
+template<> ::physics::CreateObjectRequest* Arena::CreateMaybeMessage<::physics::CreateObjectRequest>(Arena*);
+template<> ::physics::CreateObjectResponse* Arena::CreateMaybeMessage<::physics::CreateObjectResponse>(Arena*);
 template<> ::physics::GetStateRequest* Arena::CreateMaybeMessage<::physics::GetStateRequest>(Arena*);
 template<> ::physics::GetStateResponse* Arena::CreateMaybeMessage<::physics::GetStateResponse>(Arena*);
 template<> ::physics::StepRequest* Arena::CreateMaybeMessage<::physics::StepRequest>(Arena*);
@@ -76,6 +83,533 @@ PROTOBUF_NAMESPACE_CLOSE
 namespace physics {
 
 // ===================================================================
+
+class CreateObjectRequest final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:physics.CreateObjectRequest) */ {
+ public:
+  inline CreateObjectRequest() : CreateObjectRequest(nullptr) {}
+  ~CreateObjectRequest() override;
+  explicit PROTOBUF_CONSTEXPR CreateObjectRequest(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  CreateObjectRequest(const CreateObjectRequest& from);
+  CreateObjectRequest(CreateObjectRequest&& from) noexcept
+    : CreateObjectRequest() {
+    *this = ::std::move(from);
+  }
+
+  inline CreateObjectRequest& operator=(const CreateObjectRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CreateObjectRequest& operator=(CreateObjectRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const CreateObjectRequest& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const CreateObjectRequest* internal_default_instance() {
+    return reinterpret_cast<const CreateObjectRequest*>(
+               &_CreateObjectRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    0;
+
+  friend void swap(CreateObjectRequest& a, CreateObjectRequest& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(CreateObjectRequest* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(CreateObjectRequest* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  CreateObjectRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<CreateObjectRequest>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const CreateObjectRequest& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const CreateObjectRequest& from) {
+    CreateObjectRequest::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CreateObjectRequest* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "physics.CreateObjectRequest";
+  }
+  protected:
+  explicit CreateObjectRequest(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kHeightDataFieldNumber = 12,
+    kIdFieldNumber = 1,
+    kObjectTypeFieldNumber = 2,
+    kColorFieldNumber = 11,
+    kXFieldNumber = 3,
+    kYFieldNumber = 4,
+    kZFieldNumber = 5,
+    kMassFieldNumber = 6,
+    kRadiusFieldNumber = 7,
+    kWidthFieldNumber = 8,
+    kHeightFieldNumber = 9,
+    kDepthFieldNumber = 10,
+    kHeightmapWidthFieldNumber = 13,
+    kHeightmapHeightFieldNumber = 14,
+    kScaleXFieldNumber = 15,
+    kScaleYFieldNumber = 16,
+    kScaleZFieldNumber = 17,
+    kMinHeightFieldNumber = 18,
+    kMaxHeightFieldNumber = 19,
+  };
+  // repeated float height_data = 12;
+  int height_data_size() const;
+  private:
+  int _internal_height_data_size() const;
+  public:
+  void clear_height_data();
+  private:
+  float _internal_height_data(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
+      _internal_height_data() const;
+  void _internal_add_height_data(float value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
+      _internal_mutable_height_data();
+  public:
+  float height_data(int index) const;
+  void set_height_data(int index, float value);
+  void add_height_data(float value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
+      height_data() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
+      mutable_height_data();
+
+  // string id = 1;
+  void clear_id();
+  const std::string& id() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_id(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_id();
+  PROTOBUF_NODISCARD std::string* release_id();
+  void set_allocated_id(std::string* id);
+  private:
+  const std::string& _internal_id() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_id(const std::string& value);
+  std::string* _internal_mutable_id();
+  public:
+
+  // string object_type = 2;
+  void clear_object_type();
+  const std::string& object_type() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_object_type(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_object_type();
+  PROTOBUF_NODISCARD std::string* release_object_type();
+  void set_allocated_object_type(std::string* object_type);
+  private:
+  const std::string& _internal_object_type() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_object_type(const std::string& value);
+  std::string* _internal_mutable_object_type();
+  public:
+
+  // string color = 11;
+  void clear_color();
+  const std::string& color() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_color(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_color();
+  PROTOBUF_NODISCARD std::string* release_color();
+  void set_allocated_color(std::string* color);
+  private:
+  const std::string& _internal_color() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_color(const std::string& value);
+  std::string* _internal_mutable_color();
+  public:
+
+  // float x = 3;
+  void clear_x();
+  float x() const;
+  void set_x(float value);
+  private:
+  float _internal_x() const;
+  void _internal_set_x(float value);
+  public:
+
+  // float y = 4;
+  void clear_y();
+  float y() const;
+  void set_y(float value);
+  private:
+  float _internal_y() const;
+  void _internal_set_y(float value);
+  public:
+
+  // float z = 5;
+  void clear_z();
+  float z() const;
+  void set_z(float value);
+  private:
+  float _internal_z() const;
+  void _internal_set_z(float value);
+  public:
+
+  // float mass = 6;
+  void clear_mass();
+  float mass() const;
+  void set_mass(float value);
+  private:
+  float _internal_mass() const;
+  void _internal_set_mass(float value);
+  public:
+
+  // float radius = 7;
+  void clear_radius();
+  float radius() const;
+  void set_radius(float value);
+  private:
+  float _internal_radius() const;
+  void _internal_set_radius(float value);
+  public:
+
+  // float width = 8;
+  void clear_width();
+  float width() const;
+  void set_width(float value);
+  private:
+  float _internal_width() const;
+  void _internal_set_width(float value);
+  public:
+
+  // float height = 9;
+  void clear_height();
+  float height() const;
+  void set_height(float value);
+  private:
+  float _internal_height() const;
+  void _internal_set_height(float value);
+  public:
+
+  // float depth = 10;
+  void clear_depth();
+  float depth() const;
+  void set_depth(float value);
+  private:
+  float _internal_depth() const;
+  void _internal_set_depth(float value);
+  public:
+
+  // int32 heightmap_width = 13;
+  void clear_heightmap_width();
+  int32_t heightmap_width() const;
+  void set_heightmap_width(int32_t value);
+  private:
+  int32_t _internal_heightmap_width() const;
+  void _internal_set_heightmap_width(int32_t value);
+  public:
+
+  // int32 heightmap_height = 14;
+  void clear_heightmap_height();
+  int32_t heightmap_height() const;
+  void set_heightmap_height(int32_t value);
+  private:
+  int32_t _internal_heightmap_height() const;
+  void _internal_set_heightmap_height(int32_t value);
+  public:
+
+  // float scale_x = 15;
+  void clear_scale_x();
+  float scale_x() const;
+  void set_scale_x(float value);
+  private:
+  float _internal_scale_x() const;
+  void _internal_set_scale_x(float value);
+  public:
+
+  // float scale_y = 16;
+  void clear_scale_y();
+  float scale_y() const;
+  void set_scale_y(float value);
+  private:
+  float _internal_scale_y() const;
+  void _internal_set_scale_y(float value);
+  public:
+
+  // float scale_z = 17;
+  void clear_scale_z();
+  float scale_z() const;
+  void set_scale_z(float value);
+  private:
+  float _internal_scale_z() const;
+  void _internal_set_scale_z(float value);
+  public:
+
+  // float min_height = 18;
+  void clear_min_height();
+  float min_height() const;
+  void set_min_height(float value);
+  private:
+  float _internal_min_height() const;
+  void _internal_set_min_height(float value);
+  public:
+
+  // float max_height = 19;
+  void clear_max_height();
+  float max_height() const;
+  void set_max_height(float value);
+  private:
+  float _internal_max_height() const;
+  void _internal_set_max_height(float value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:physics.CreateObjectRequest)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< float > height_data_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr id_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr object_type_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr color_;
+    float x_;
+    float y_;
+    float z_;
+    float mass_;
+    float radius_;
+    float width_;
+    float height_;
+    float depth_;
+    int32_t heightmap_width_;
+    int32_t heightmap_height_;
+    float scale_x_;
+    float scale_y_;
+    float scale_z_;
+    float min_height_;
+    float max_height_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_bullet_2dserver_2fphysics_2eproto;
+};
+// -------------------------------------------------------------------
+
+class CreateObjectResponse final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:physics.CreateObjectResponse) */ {
+ public:
+  inline CreateObjectResponse() : CreateObjectResponse(nullptr) {}
+  ~CreateObjectResponse() override;
+  explicit PROTOBUF_CONSTEXPR CreateObjectResponse(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  CreateObjectResponse(const CreateObjectResponse& from);
+  CreateObjectResponse(CreateObjectResponse&& from) noexcept
+    : CreateObjectResponse() {
+    *this = ::std::move(from);
+  }
+
+  inline CreateObjectResponse& operator=(const CreateObjectResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CreateObjectResponse& operator=(CreateObjectResponse&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const CreateObjectResponse& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const CreateObjectResponse* internal_default_instance() {
+    return reinterpret_cast<const CreateObjectResponse*>(
+               &_CreateObjectResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    1;
+
+  friend void swap(CreateObjectResponse& a, CreateObjectResponse& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(CreateObjectResponse* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(CreateObjectResponse* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  CreateObjectResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<CreateObjectResponse>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const CreateObjectResponse& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const CreateObjectResponse& from) {
+    CreateObjectResponse::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(CreateObjectResponse* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "physics.CreateObjectResponse";
+  }
+  protected:
+  explicit CreateObjectResponse(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kStatusFieldNumber = 1,
+  };
+  // string status = 1;
+  void clear_status();
+  const std::string& status() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_status(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_status();
+  PROTOBUF_NODISCARD std::string* release_status();
+  void set_allocated_status(std::string* status);
+  private:
+  const std::string& _internal_status() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_status(const std::string& value);
+  std::string* _internal_mutable_status();
+  public:
+
+  // @@protoc_insertion_point(class_scope:physics.CreateObjectResponse)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr status_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_bullet_2dserver_2fphysics_2eproto;
+};
+// -------------------------------------------------------------------
 
 class ApplyImpulseRequest final :
     public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:physics.ApplyImpulseRequest) */ {
@@ -125,7 +659,7 @@ class ApplyImpulseRequest final :
                &_ApplyImpulseRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    0;
+    2;
 
   friend void swap(ApplyImpulseRequest& a, ApplyImpulseRequest& b) {
     a.Swap(&b);
@@ -198,11 +732,26 @@ class ApplyImpulseRequest final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kImpulseXFieldNumber = 1,
-    kImpulseYFieldNumber = 2,
-    kImpulseZFieldNumber = 3,
+    kIdFieldNumber = 1,
+    kImpulseXFieldNumber = 2,
+    kImpulseYFieldNumber = 3,
+    kImpulseZFieldNumber = 4,
   };
-  // float impulse_x = 1;
+  // string id = 1;
+  void clear_id();
+  const std::string& id() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_id(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_id();
+  PROTOBUF_NODISCARD std::string* release_id();
+  void set_allocated_id(std::string* id);
+  private:
+  const std::string& _internal_id() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_id(const std::string& value);
+  std::string* _internal_mutable_id();
+  public:
+
+  // float impulse_x = 2;
   void clear_impulse_x();
   float impulse_x() const;
   void set_impulse_x(float value);
@@ -211,7 +760,7 @@ class ApplyImpulseRequest final :
   void _internal_set_impulse_x(float value);
   public:
 
-  // float impulse_y = 2;
+  // float impulse_y = 3;
   void clear_impulse_y();
   float impulse_y() const;
   void set_impulse_y(float value);
@@ -220,7 +769,7 @@ class ApplyImpulseRequest final :
   void _internal_set_impulse_y(float value);
   public:
 
-  // float impulse_z = 3;
+  // float impulse_z = 4;
   void clear_impulse_z();
   float impulse_z() const;
   void set_impulse_z(float value);
@@ -237,6 +786,7 @@ class ApplyImpulseRequest final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr id_;
     float impulse_x_;
     float impulse_y_;
     float impulse_z_;
@@ -295,7 +845,7 @@ class ApplyImpulseResponse final :
                &_ApplyImpulseResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    1;
+    3;
 
   friend void swap(ApplyImpulseResponse& a, ApplyImpulseResponse& b) {
     a.Swap(&b);
@@ -401,9 +951,10 @@ class ApplyImpulseResponse final :
 // -------------------------------------------------------------------
 
 class GetStateRequest final :
-    public ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase /* @@protoc_insertion_point(class_definition:physics.GetStateRequest) */ {
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:physics.GetStateRequest) */ {
  public:
   inline GetStateRequest() : GetStateRequest(nullptr) {}
+  ~GetStateRequest() override;
   explicit PROTOBUF_CONSTEXPR GetStateRequest(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
 
   GetStateRequest(const GetStateRequest& from);
@@ -447,7 +998,7 @@ class GetStateRequest final :
                &_GetStateRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    2;
+    4;
 
   friend void swap(GetStateRequest& a, GetStateRequest& b) {
     a.Swap(&b);
@@ -476,15 +1027,29 @@ class GetStateRequest final :
   GetStateRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
     return CreateMaybeMessage<GetStateRequest>(arena);
   }
-  using ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::CopyFrom;
-  inline void CopyFrom(const GetStateRequest& from) {
-    ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::CopyImpl(*this, from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const GetStateRequest& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const GetStateRequest& from) {
+    GetStateRequest::MergeImpl(*this, from);
   }
-  using ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::MergeFrom;
-  void MergeFrom(const GetStateRequest& from) {
-    ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::MergeImpl(*this, from);
-  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
   public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(GetStateRequest* other);
 
   private:
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
@@ -505,6 +1070,23 @@ class GetStateRequest final :
 
   // accessors -------------------------------------------------------
 
+  enum : int {
+    kIdFieldNumber = 1,
+  };
+  // string id = 1;
+  void clear_id();
+  const std::string& id() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_id(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_id();
+  PROTOBUF_NODISCARD std::string* release_id();
+  void set_allocated_id(std::string* id);
+  private:
+  const std::string& _internal_id() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_id(const std::string& value);
+  std::string* _internal_mutable_id();
+  public:
+
   // @@protoc_insertion_point(class_scope:physics.GetStateRequest)
  private:
   class _Internal;
@@ -513,7 +1095,10 @@ class GetStateRequest final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr id_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
+  union { Impl_ _impl_; };
   friend struct ::TableStruct_bullet_2dserver_2fphysics_2eproto;
 };
 // -------------------------------------------------------------------
@@ -566,7 +1151,7 @@ class GetStateResponse final :
                &_GetStateResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    3;
+    5;
 
   friend void swap(GetStateResponse& a, GetStateResponse& b) {
     a.Swap(&b);
@@ -780,7 +1365,7 @@ class StepRequest final :
                &_StepRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    4;
+    6;
 
   friend void swap(StepRequest& a, StepRequest& b) {
     a.Swap(&b);
@@ -939,7 +1524,7 @@ class StepResponse final :
                &_StepResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    5;
+    7;
 
   friend void swap(StepResponse& a, StepResponse& b) {
     a.Swap(&b);
@@ -1012,75 +1597,20 @@ class StepResponse final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kXFieldNumber = 1,
-    kYFieldNumber = 2,
-    kZFieldNumber = 3,
-    kQxFieldNumber = 4,
-    kQyFieldNumber = 5,
-    kQzFieldNumber = 6,
-    kQwFieldNumber = 7,
+    kStatusFieldNumber = 1,
   };
-  // float x = 1;
-  void clear_x();
-  float x() const;
-  void set_x(float value);
+  // string status = 1;
+  void clear_status();
+  const std::string& status() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_status(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_status();
+  PROTOBUF_NODISCARD std::string* release_status();
+  void set_allocated_status(std::string* status);
   private:
-  float _internal_x() const;
-  void _internal_set_x(float value);
-  public:
-
-  // float y = 2;
-  void clear_y();
-  float y() const;
-  void set_y(float value);
-  private:
-  float _internal_y() const;
-  void _internal_set_y(float value);
-  public:
-
-  // float z = 3;
-  void clear_z();
-  float z() const;
-  void set_z(float value);
-  private:
-  float _internal_z() const;
-  void _internal_set_z(float value);
-  public:
-
-  // float qx = 4;
-  void clear_qx();
-  float qx() const;
-  void set_qx(float value);
-  private:
-  float _internal_qx() const;
-  void _internal_set_qx(float value);
-  public:
-
-  // float qy = 5;
-  void clear_qy();
-  float qy() const;
-  void set_qy(float value);
-  private:
-  float _internal_qy() const;
-  void _internal_set_qy(float value);
-  public:
-
-  // float qz = 6;
-  void clear_qz();
-  float qz() const;
-  void set_qz(float value);
-  private:
-  float _internal_qz() const;
-  void _internal_set_qz(float value);
-  public:
-
-  // float qw = 7;
-  void clear_qw();
-  float qw() const;
-  void set_qw(float value);
-  private:
-  float _internal_qw() const;
-  void _internal_set_qw(float value);
+  const std::string& _internal_status() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_status(const std::string& value);
+  std::string* _internal_mutable_status();
   public:
 
   // @@protoc_insertion_point(class_scope:physics.StepResponse)
@@ -1091,13 +1621,7 @@ class StepResponse final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
-    float x_;
-    float y_;
-    float z_;
-    float qx_;
-    float qy_;
-    float qz_;
-    float qw_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr status_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1112,9 +1636,614 @@ class StepResponse final :
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
+// CreateObjectRequest
+
+// string id = 1;
+inline void CreateObjectRequest::clear_id() {
+  _impl_.id_.ClearToEmpty();
+}
+inline const std::string& CreateObjectRequest::id() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.id)
+  return _internal_id();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void CreateObjectRequest::set_id(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.id_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.id)
+}
+inline std::string* CreateObjectRequest::mutable_id() {
+  std::string* _s = _internal_mutable_id();
+  // @@protoc_insertion_point(field_mutable:physics.CreateObjectRequest.id)
+  return _s;
+}
+inline const std::string& CreateObjectRequest::_internal_id() const {
+  return _impl_.id_.Get();
+}
+inline void CreateObjectRequest::_internal_set_id(const std::string& value) {
+  
+  _impl_.id_.Set(value, GetArenaForAllocation());
+}
+inline std::string* CreateObjectRequest::_internal_mutable_id() {
+  
+  return _impl_.id_.Mutable(GetArenaForAllocation());
+}
+inline std::string* CreateObjectRequest::release_id() {
+  // @@protoc_insertion_point(field_release:physics.CreateObjectRequest.id)
+  return _impl_.id_.Release();
+}
+inline void CreateObjectRequest::set_allocated_id(std::string* id) {
+  if (id != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.id_.SetAllocated(id, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.id_.IsDefault()) {
+    _impl_.id_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:physics.CreateObjectRequest.id)
+}
+
+// string object_type = 2;
+inline void CreateObjectRequest::clear_object_type() {
+  _impl_.object_type_.ClearToEmpty();
+}
+inline const std::string& CreateObjectRequest::object_type() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.object_type)
+  return _internal_object_type();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void CreateObjectRequest::set_object_type(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.object_type_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.object_type)
+}
+inline std::string* CreateObjectRequest::mutable_object_type() {
+  std::string* _s = _internal_mutable_object_type();
+  // @@protoc_insertion_point(field_mutable:physics.CreateObjectRequest.object_type)
+  return _s;
+}
+inline const std::string& CreateObjectRequest::_internal_object_type() const {
+  return _impl_.object_type_.Get();
+}
+inline void CreateObjectRequest::_internal_set_object_type(const std::string& value) {
+  
+  _impl_.object_type_.Set(value, GetArenaForAllocation());
+}
+inline std::string* CreateObjectRequest::_internal_mutable_object_type() {
+  
+  return _impl_.object_type_.Mutable(GetArenaForAllocation());
+}
+inline std::string* CreateObjectRequest::release_object_type() {
+  // @@protoc_insertion_point(field_release:physics.CreateObjectRequest.object_type)
+  return _impl_.object_type_.Release();
+}
+inline void CreateObjectRequest::set_allocated_object_type(std::string* object_type) {
+  if (object_type != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.object_type_.SetAllocated(object_type, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.object_type_.IsDefault()) {
+    _impl_.object_type_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:physics.CreateObjectRequest.object_type)
+}
+
+// float x = 3;
+inline void CreateObjectRequest::clear_x() {
+  _impl_.x_ = 0;
+}
+inline float CreateObjectRequest::_internal_x() const {
+  return _impl_.x_;
+}
+inline float CreateObjectRequest::x() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.x)
+  return _internal_x();
+}
+inline void CreateObjectRequest::_internal_set_x(float value) {
+  
+  _impl_.x_ = value;
+}
+inline void CreateObjectRequest::set_x(float value) {
+  _internal_set_x(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.x)
+}
+
+// float y = 4;
+inline void CreateObjectRequest::clear_y() {
+  _impl_.y_ = 0;
+}
+inline float CreateObjectRequest::_internal_y() const {
+  return _impl_.y_;
+}
+inline float CreateObjectRequest::y() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.y)
+  return _internal_y();
+}
+inline void CreateObjectRequest::_internal_set_y(float value) {
+  
+  _impl_.y_ = value;
+}
+inline void CreateObjectRequest::set_y(float value) {
+  _internal_set_y(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.y)
+}
+
+// float z = 5;
+inline void CreateObjectRequest::clear_z() {
+  _impl_.z_ = 0;
+}
+inline float CreateObjectRequest::_internal_z() const {
+  return _impl_.z_;
+}
+inline float CreateObjectRequest::z() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.z)
+  return _internal_z();
+}
+inline void CreateObjectRequest::_internal_set_z(float value) {
+  
+  _impl_.z_ = value;
+}
+inline void CreateObjectRequest::set_z(float value) {
+  _internal_set_z(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.z)
+}
+
+// float mass = 6;
+inline void CreateObjectRequest::clear_mass() {
+  _impl_.mass_ = 0;
+}
+inline float CreateObjectRequest::_internal_mass() const {
+  return _impl_.mass_;
+}
+inline float CreateObjectRequest::mass() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.mass)
+  return _internal_mass();
+}
+inline void CreateObjectRequest::_internal_set_mass(float value) {
+  
+  _impl_.mass_ = value;
+}
+inline void CreateObjectRequest::set_mass(float value) {
+  _internal_set_mass(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.mass)
+}
+
+// float radius = 7;
+inline void CreateObjectRequest::clear_radius() {
+  _impl_.radius_ = 0;
+}
+inline float CreateObjectRequest::_internal_radius() const {
+  return _impl_.radius_;
+}
+inline float CreateObjectRequest::radius() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.radius)
+  return _internal_radius();
+}
+inline void CreateObjectRequest::_internal_set_radius(float value) {
+  
+  _impl_.radius_ = value;
+}
+inline void CreateObjectRequest::set_radius(float value) {
+  _internal_set_radius(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.radius)
+}
+
+// float width = 8;
+inline void CreateObjectRequest::clear_width() {
+  _impl_.width_ = 0;
+}
+inline float CreateObjectRequest::_internal_width() const {
+  return _impl_.width_;
+}
+inline float CreateObjectRequest::width() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.width)
+  return _internal_width();
+}
+inline void CreateObjectRequest::_internal_set_width(float value) {
+  
+  _impl_.width_ = value;
+}
+inline void CreateObjectRequest::set_width(float value) {
+  _internal_set_width(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.width)
+}
+
+// float height = 9;
+inline void CreateObjectRequest::clear_height() {
+  _impl_.height_ = 0;
+}
+inline float CreateObjectRequest::_internal_height() const {
+  return _impl_.height_;
+}
+inline float CreateObjectRequest::height() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.height)
+  return _internal_height();
+}
+inline void CreateObjectRequest::_internal_set_height(float value) {
+  
+  _impl_.height_ = value;
+}
+inline void CreateObjectRequest::set_height(float value) {
+  _internal_set_height(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.height)
+}
+
+// float depth = 10;
+inline void CreateObjectRequest::clear_depth() {
+  _impl_.depth_ = 0;
+}
+inline float CreateObjectRequest::_internal_depth() const {
+  return _impl_.depth_;
+}
+inline float CreateObjectRequest::depth() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.depth)
+  return _internal_depth();
+}
+inline void CreateObjectRequest::_internal_set_depth(float value) {
+  
+  _impl_.depth_ = value;
+}
+inline void CreateObjectRequest::set_depth(float value) {
+  _internal_set_depth(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.depth)
+}
+
+// string color = 11;
+inline void CreateObjectRequest::clear_color() {
+  _impl_.color_.ClearToEmpty();
+}
+inline const std::string& CreateObjectRequest::color() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.color)
+  return _internal_color();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void CreateObjectRequest::set_color(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.color_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.color)
+}
+inline std::string* CreateObjectRequest::mutable_color() {
+  std::string* _s = _internal_mutable_color();
+  // @@protoc_insertion_point(field_mutable:physics.CreateObjectRequest.color)
+  return _s;
+}
+inline const std::string& CreateObjectRequest::_internal_color() const {
+  return _impl_.color_.Get();
+}
+inline void CreateObjectRequest::_internal_set_color(const std::string& value) {
+  
+  _impl_.color_.Set(value, GetArenaForAllocation());
+}
+inline std::string* CreateObjectRequest::_internal_mutable_color() {
+  
+  return _impl_.color_.Mutable(GetArenaForAllocation());
+}
+inline std::string* CreateObjectRequest::release_color() {
+  // @@protoc_insertion_point(field_release:physics.CreateObjectRequest.color)
+  return _impl_.color_.Release();
+}
+inline void CreateObjectRequest::set_allocated_color(std::string* color) {
+  if (color != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.color_.SetAllocated(color, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.color_.IsDefault()) {
+    _impl_.color_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:physics.CreateObjectRequest.color)
+}
+
+// repeated float height_data = 12;
+inline int CreateObjectRequest::_internal_height_data_size() const {
+  return _impl_.height_data_.size();
+}
+inline int CreateObjectRequest::height_data_size() const {
+  return _internal_height_data_size();
+}
+inline void CreateObjectRequest::clear_height_data() {
+  _impl_.height_data_.Clear();
+}
+inline float CreateObjectRequest::_internal_height_data(int index) const {
+  return _impl_.height_data_.Get(index);
+}
+inline float CreateObjectRequest::height_data(int index) const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.height_data)
+  return _internal_height_data(index);
+}
+inline void CreateObjectRequest::set_height_data(int index, float value) {
+  _impl_.height_data_.Set(index, value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.height_data)
+}
+inline void CreateObjectRequest::_internal_add_height_data(float value) {
+  _impl_.height_data_.Add(value);
+}
+inline void CreateObjectRequest::add_height_data(float value) {
+  _internal_add_height_data(value);
+  // @@protoc_insertion_point(field_add:physics.CreateObjectRequest.height_data)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
+CreateObjectRequest::_internal_height_data() const {
+  return _impl_.height_data_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
+CreateObjectRequest::height_data() const {
+  // @@protoc_insertion_point(field_list:physics.CreateObjectRequest.height_data)
+  return _internal_height_data();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
+CreateObjectRequest::_internal_mutable_height_data() {
+  return &_impl_.height_data_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
+CreateObjectRequest::mutable_height_data() {
+  // @@protoc_insertion_point(field_mutable_list:physics.CreateObjectRequest.height_data)
+  return _internal_mutable_height_data();
+}
+
+// int32 heightmap_width = 13;
+inline void CreateObjectRequest::clear_heightmap_width() {
+  _impl_.heightmap_width_ = 0;
+}
+inline int32_t CreateObjectRequest::_internal_heightmap_width() const {
+  return _impl_.heightmap_width_;
+}
+inline int32_t CreateObjectRequest::heightmap_width() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.heightmap_width)
+  return _internal_heightmap_width();
+}
+inline void CreateObjectRequest::_internal_set_heightmap_width(int32_t value) {
+  
+  _impl_.heightmap_width_ = value;
+}
+inline void CreateObjectRequest::set_heightmap_width(int32_t value) {
+  _internal_set_heightmap_width(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.heightmap_width)
+}
+
+// int32 heightmap_height = 14;
+inline void CreateObjectRequest::clear_heightmap_height() {
+  _impl_.heightmap_height_ = 0;
+}
+inline int32_t CreateObjectRequest::_internal_heightmap_height() const {
+  return _impl_.heightmap_height_;
+}
+inline int32_t CreateObjectRequest::heightmap_height() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.heightmap_height)
+  return _internal_heightmap_height();
+}
+inline void CreateObjectRequest::_internal_set_heightmap_height(int32_t value) {
+  
+  _impl_.heightmap_height_ = value;
+}
+inline void CreateObjectRequest::set_heightmap_height(int32_t value) {
+  _internal_set_heightmap_height(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.heightmap_height)
+}
+
+// float scale_x = 15;
+inline void CreateObjectRequest::clear_scale_x() {
+  _impl_.scale_x_ = 0;
+}
+inline float CreateObjectRequest::_internal_scale_x() const {
+  return _impl_.scale_x_;
+}
+inline float CreateObjectRequest::scale_x() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.scale_x)
+  return _internal_scale_x();
+}
+inline void CreateObjectRequest::_internal_set_scale_x(float value) {
+  
+  _impl_.scale_x_ = value;
+}
+inline void CreateObjectRequest::set_scale_x(float value) {
+  _internal_set_scale_x(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.scale_x)
+}
+
+// float scale_y = 16;
+inline void CreateObjectRequest::clear_scale_y() {
+  _impl_.scale_y_ = 0;
+}
+inline float CreateObjectRequest::_internal_scale_y() const {
+  return _impl_.scale_y_;
+}
+inline float CreateObjectRequest::scale_y() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.scale_y)
+  return _internal_scale_y();
+}
+inline void CreateObjectRequest::_internal_set_scale_y(float value) {
+  
+  _impl_.scale_y_ = value;
+}
+inline void CreateObjectRequest::set_scale_y(float value) {
+  _internal_set_scale_y(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.scale_y)
+}
+
+// float scale_z = 17;
+inline void CreateObjectRequest::clear_scale_z() {
+  _impl_.scale_z_ = 0;
+}
+inline float CreateObjectRequest::_internal_scale_z() const {
+  return _impl_.scale_z_;
+}
+inline float CreateObjectRequest::scale_z() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.scale_z)
+  return _internal_scale_z();
+}
+inline void CreateObjectRequest::_internal_set_scale_z(float value) {
+  
+  _impl_.scale_z_ = value;
+}
+inline void CreateObjectRequest::set_scale_z(float value) {
+  _internal_set_scale_z(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.scale_z)
+}
+
+// float min_height = 18;
+inline void CreateObjectRequest::clear_min_height() {
+  _impl_.min_height_ = 0;
+}
+inline float CreateObjectRequest::_internal_min_height() const {
+  return _impl_.min_height_;
+}
+inline float CreateObjectRequest::min_height() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.min_height)
+  return _internal_min_height();
+}
+inline void CreateObjectRequest::_internal_set_min_height(float value) {
+  
+  _impl_.min_height_ = value;
+}
+inline void CreateObjectRequest::set_min_height(float value) {
+  _internal_set_min_height(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.min_height)
+}
+
+// float max_height = 19;
+inline void CreateObjectRequest::clear_max_height() {
+  _impl_.max_height_ = 0;
+}
+inline float CreateObjectRequest::_internal_max_height() const {
+  return _impl_.max_height_;
+}
+inline float CreateObjectRequest::max_height() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.max_height)
+  return _internal_max_height();
+}
+inline void CreateObjectRequest::_internal_set_max_height(float value) {
+  
+  _impl_.max_height_ = value;
+}
+inline void CreateObjectRequest::set_max_height(float value) {
+  _internal_set_max_height(value);
+  // @@protoc_insertion_point(field_set:physics.CreateObjectRequest.max_height)
+}
+
+// -------------------------------------------------------------------
+
+// CreateObjectResponse
+
+// string status = 1;
+inline void CreateObjectResponse::clear_status() {
+  _impl_.status_.ClearToEmpty();
+}
+inline const std::string& CreateObjectResponse::status() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectResponse.status)
+  return _internal_status();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void CreateObjectResponse::set_status(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.status_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:physics.CreateObjectResponse.status)
+}
+inline std::string* CreateObjectResponse::mutable_status() {
+  std::string* _s = _internal_mutable_status();
+  // @@protoc_insertion_point(field_mutable:physics.CreateObjectResponse.status)
+  return _s;
+}
+inline const std::string& CreateObjectResponse::_internal_status() const {
+  return _impl_.status_.Get();
+}
+inline void CreateObjectResponse::_internal_set_status(const std::string& value) {
+  
+  _impl_.status_.Set(value, GetArenaForAllocation());
+}
+inline std::string* CreateObjectResponse::_internal_mutable_status() {
+  
+  return _impl_.status_.Mutable(GetArenaForAllocation());
+}
+inline std::string* CreateObjectResponse::release_status() {
+  // @@protoc_insertion_point(field_release:physics.CreateObjectResponse.status)
+  return _impl_.status_.Release();
+}
+inline void CreateObjectResponse::set_allocated_status(std::string* status) {
+  if (status != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.status_.SetAllocated(status, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.status_.IsDefault()) {
+    _impl_.status_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:physics.CreateObjectResponse.status)
+}
+
+// -------------------------------------------------------------------
+
 // ApplyImpulseRequest
 
-// float impulse_x = 1;
+// string id = 1;
+inline void ApplyImpulseRequest::clear_id() {
+  _impl_.id_.ClearToEmpty();
+}
+inline const std::string& ApplyImpulseRequest::id() const {
+  // @@protoc_insertion_point(field_get:physics.ApplyImpulseRequest.id)
+  return _internal_id();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void ApplyImpulseRequest::set_id(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.id_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:physics.ApplyImpulseRequest.id)
+}
+inline std::string* ApplyImpulseRequest::mutable_id() {
+  std::string* _s = _internal_mutable_id();
+  // @@protoc_insertion_point(field_mutable:physics.ApplyImpulseRequest.id)
+  return _s;
+}
+inline const std::string& ApplyImpulseRequest::_internal_id() const {
+  return _impl_.id_.Get();
+}
+inline void ApplyImpulseRequest::_internal_set_id(const std::string& value) {
+  
+  _impl_.id_.Set(value, GetArenaForAllocation());
+}
+inline std::string* ApplyImpulseRequest::_internal_mutable_id() {
+  
+  return _impl_.id_.Mutable(GetArenaForAllocation());
+}
+inline std::string* ApplyImpulseRequest::release_id() {
+  // @@protoc_insertion_point(field_release:physics.ApplyImpulseRequest.id)
+  return _impl_.id_.Release();
+}
+inline void ApplyImpulseRequest::set_allocated_id(std::string* id) {
+  if (id != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.id_.SetAllocated(id, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.id_.IsDefault()) {
+    _impl_.id_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:physics.ApplyImpulseRequest.id)
+}
+
+// float impulse_x = 2;
 inline void ApplyImpulseRequest::clear_impulse_x() {
   _impl_.impulse_x_ = 0;
 }
@@ -1134,7 +2263,7 @@ inline void ApplyImpulseRequest::set_impulse_x(float value) {
   // @@protoc_insertion_point(field_set:physics.ApplyImpulseRequest.impulse_x)
 }
 
-// float impulse_y = 2;
+// float impulse_y = 3;
 inline void ApplyImpulseRequest::clear_impulse_y() {
   _impl_.impulse_y_ = 0;
 }
@@ -1154,7 +2283,7 @@ inline void ApplyImpulseRequest::set_impulse_y(float value) {
   // @@protoc_insertion_point(field_set:physics.ApplyImpulseRequest.impulse_y)
 }
 
-// float impulse_z = 3;
+// float impulse_z = 4;
 inline void ApplyImpulseRequest::clear_impulse_z() {
   _impl_.impulse_z_ = 0;
 }
@@ -1231,6 +2360,56 @@ inline void ApplyImpulseResponse::set_allocated_status(std::string* status) {
 // -------------------------------------------------------------------
 
 // GetStateRequest
+
+// string id = 1;
+inline void GetStateRequest::clear_id() {
+  _impl_.id_.ClearToEmpty();
+}
+inline const std::string& GetStateRequest::id() const {
+  // @@protoc_insertion_point(field_get:physics.GetStateRequest.id)
+  return _internal_id();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void GetStateRequest::set_id(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.id_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:physics.GetStateRequest.id)
+}
+inline std::string* GetStateRequest::mutable_id() {
+  std::string* _s = _internal_mutable_id();
+  // @@protoc_insertion_point(field_mutable:physics.GetStateRequest.id)
+  return _s;
+}
+inline const std::string& GetStateRequest::_internal_id() const {
+  return _impl_.id_.Get();
+}
+inline void GetStateRequest::_internal_set_id(const std::string& value) {
+  
+  _impl_.id_.Set(value, GetArenaForAllocation());
+}
+inline std::string* GetStateRequest::_internal_mutable_id() {
+  
+  return _impl_.id_.Mutable(GetArenaForAllocation());
+}
+inline std::string* GetStateRequest::release_id() {
+  // @@protoc_insertion_point(field_release:physics.GetStateRequest.id)
+  return _impl_.id_.Release();
+}
+inline void GetStateRequest::set_allocated_id(std::string* id) {
+  if (id != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.id_.SetAllocated(id, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.id_.IsDefault()) {
+    _impl_.id_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:physics.GetStateRequest.id)
+}
 
 // -------------------------------------------------------------------
 
@@ -1424,149 +2603,63 @@ inline void StepRequest::set_substeps(int32_t value) {
 
 // StepResponse
 
-// float x = 1;
-inline void StepResponse::clear_x() {
-  _impl_.x_ = 0;
+// string status = 1;
+inline void StepResponse::clear_status() {
+  _impl_.status_.ClearToEmpty();
 }
-inline float StepResponse::_internal_x() const {
-  return _impl_.x_;
+inline const std::string& StepResponse::status() const {
+  // @@protoc_insertion_point(field_get:physics.StepResponse.status)
+  return _internal_status();
 }
-inline float StepResponse::x() const {
-  // @@protoc_insertion_point(field_get:physics.StepResponse.x)
-  return _internal_x();
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void StepResponse::set_status(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.status_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:physics.StepResponse.status)
 }
-inline void StepResponse::_internal_set_x(float value) {
+inline std::string* StepResponse::mutable_status() {
+  std::string* _s = _internal_mutable_status();
+  // @@protoc_insertion_point(field_mutable:physics.StepResponse.status)
+  return _s;
+}
+inline const std::string& StepResponse::_internal_status() const {
+  return _impl_.status_.Get();
+}
+inline void StepResponse::_internal_set_status(const std::string& value) {
   
-  _impl_.x_ = value;
+  _impl_.status_.Set(value, GetArenaForAllocation());
 }
-inline void StepResponse::set_x(float value) {
-  _internal_set_x(value);
-  // @@protoc_insertion_point(field_set:physics.StepResponse.x)
-}
-
-// float y = 2;
-inline void StepResponse::clear_y() {
-  _impl_.y_ = 0;
-}
-inline float StepResponse::_internal_y() const {
-  return _impl_.y_;
-}
-inline float StepResponse::y() const {
-  // @@protoc_insertion_point(field_get:physics.StepResponse.y)
-  return _internal_y();
-}
-inline void StepResponse::_internal_set_y(float value) {
+inline std::string* StepResponse::_internal_mutable_status() {
   
-  _impl_.y_ = value;
+  return _impl_.status_.Mutable(GetArenaForAllocation());
 }
-inline void StepResponse::set_y(float value) {
-  _internal_set_y(value);
-  // @@protoc_insertion_point(field_set:physics.StepResponse.y)
+inline std::string* StepResponse::release_status() {
+  // @@protoc_insertion_point(field_release:physics.StepResponse.status)
+  return _impl_.status_.Release();
 }
-
-// float z = 3;
-inline void StepResponse::clear_z() {
-  _impl_.z_ = 0;
-}
-inline float StepResponse::_internal_z() const {
-  return _impl_.z_;
-}
-inline float StepResponse::z() const {
-  // @@protoc_insertion_point(field_get:physics.StepResponse.z)
-  return _internal_z();
-}
-inline void StepResponse::_internal_set_z(float value) {
-  
-  _impl_.z_ = value;
-}
-inline void StepResponse::set_z(float value) {
-  _internal_set_z(value);
-  // @@protoc_insertion_point(field_set:physics.StepResponse.z)
-}
-
-// float qx = 4;
-inline void StepResponse::clear_qx() {
-  _impl_.qx_ = 0;
-}
-inline float StepResponse::_internal_qx() const {
-  return _impl_.qx_;
-}
-inline float StepResponse::qx() const {
-  // @@protoc_insertion_point(field_get:physics.StepResponse.qx)
-  return _internal_qx();
-}
-inline void StepResponse::_internal_set_qx(float value) {
-  
-  _impl_.qx_ = value;
-}
-inline void StepResponse::set_qx(float value) {
-  _internal_set_qx(value);
-  // @@protoc_insertion_point(field_set:physics.StepResponse.qx)
-}
-
-// float qy = 5;
-inline void StepResponse::clear_qy() {
-  _impl_.qy_ = 0;
-}
-inline float StepResponse::_internal_qy() const {
-  return _impl_.qy_;
-}
-inline float StepResponse::qy() const {
-  // @@protoc_insertion_point(field_get:physics.StepResponse.qy)
-  return _internal_qy();
-}
-inline void StepResponse::_internal_set_qy(float value) {
-  
-  _impl_.qy_ = value;
-}
-inline void StepResponse::set_qy(float value) {
-  _internal_set_qy(value);
-  // @@protoc_insertion_point(field_set:physics.StepResponse.qy)
-}
-
-// float qz = 6;
-inline void StepResponse::clear_qz() {
-  _impl_.qz_ = 0;
-}
-inline float StepResponse::_internal_qz() const {
-  return _impl_.qz_;
-}
-inline float StepResponse::qz() const {
-  // @@protoc_insertion_point(field_get:physics.StepResponse.qz)
-  return _internal_qz();
-}
-inline void StepResponse::_internal_set_qz(float value) {
-  
-  _impl_.qz_ = value;
-}
-inline void StepResponse::set_qz(float value) {
-  _internal_set_qz(value);
-  // @@protoc_insertion_point(field_set:physics.StepResponse.qz)
-}
-
-// float qw = 7;
-inline void StepResponse::clear_qw() {
-  _impl_.qw_ = 0;
-}
-inline float StepResponse::_internal_qw() const {
-  return _impl_.qw_;
-}
-inline float StepResponse::qw() const {
-  // @@protoc_insertion_point(field_get:physics.StepResponse.qw)
-  return _internal_qw();
-}
-inline void StepResponse::_internal_set_qw(float value) {
-  
-  _impl_.qw_ = value;
-}
-inline void StepResponse::set_qw(float value) {
-  _internal_set_qw(value);
-  // @@protoc_insertion_point(field_set:physics.StepResponse.qw)
+inline void StepResponse::set_allocated_status(std::string* status) {
+  if (status != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.status_.SetAllocated(status, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.status_.IsDefault()) {
+    _impl_.status_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:physics.StepResponse.status)
 }
 
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

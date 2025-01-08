@@ -1,55 +1,81 @@
 syntax = "proto3";
 
-option go_package = "bullet-server/physics;physics";
+option go_package = "x-cells/generated;physics";
 
 package physics;
 
-// gRPC-сервис
+// Универсальный сервис для управления объектами
 service Physics {
-  // Применить импульс к шару
+  rpc CreateObject (CreateObjectRequest) returns (CreateObjectResponse);
+
   rpc ApplyImpulse (ApplyImpulseRequest) returns (ApplyImpulseResponse);
 
-  // Запросить текущее состояние (позиция сферы)
   rpc GetState (GetStateRequest) returns (GetStateResponse);
 
-  // Шаг симуляции (опционально, если дергаем вручную)
   rpc Step (StepRequest) returns (StepResponse);
 }
 
-// Сообщения
+// Общий запрос для создания объектов в Bullet + Three
+message CreateObjectRequest {
+  string id = 1;
+  string object_type = 2;
+  float x = 3;
+  float y = 4;
+  float z = 5;
+  float mass = 6; // Добавлено
+  float radius = 7; // Добавлено для сферы
+  float width = 8; // Добавлено для коробки
+  float height = 9; // Добавлено для коробки
+  float depth = 10; // Добавлено для коробки
+  string color = 11; // Цвет объекта
+  repeated float height_data = 12; // Высотные данные для террейна
+  int32 heightmap_width = 13; // Ширина карты высот
+  int32 heightmap_height = 14; // Высота карты высот
+  float scale_x = 15; // Масштаб по оси X
+  float scale_y = 16; // Масштаб по оси Y
+  float scale_z = 17; // Масштаб по оси Z
+  float min_height = 18; // Минимальная высота
+  float max_height = 19; // Максимальная высота
+}
+
+// Ответ на создание объекта
+message CreateObjectResponse {
+  string status = 1;
+}
+
+// Применить импульс
 message ApplyImpulseRequest {
-  float impulse_x = 1;
-  float impulse_y = 2;
-  float impulse_z = 3;
+  string id = 1;       // ID объекта
+  float impulse_x = 2;
+  float impulse_y = 3;
+  float impulse_z = 4;
 }
 
 message ApplyImpulseResponse {
   string status = 1;
 }
 
-message GetStateRequest {}
+// Получить состояние
+message GetStateRequest {
+  string id = 1;
+}
 
 message GetStateResponse {
-  float x = 1;
-  float y = 2;
-  float z = 3;
+  float x  = 1;
+  float y  = 2;
+  float z  = 3;
   float qx = 4;
   float qy = 5;
   float qz = 6;
   float qw = 7;
 }
 
+// Шаг симуляции
 message StepRequest {
   float dt = 1;
   int32 substeps = 2;
 }
 
 message StepResponse {
-  float x = 1;
-  float y = 2;
-  float z = 3;
-  float qx = 4;
-  float qy = 5;
-  float qz = 6;
-  float qw = 7;
+  string status = 1;
 }

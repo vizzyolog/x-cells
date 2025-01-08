@@ -2,211 +2,298 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Ammo Terrain + Sphere + Server Authority</title>
-    <style>
-        body { margin: 0; overflow: hidden; }
-        #info { position: absolute; top:10px; left:10px; color:white; }
-    </style>
+    <title>Hybrid Client-Side Prediction + Server Updates</title>
+    <style>body { margin:0; overflow:hidden; }</style>
 </head>
 <body>
-<div id="info">Use arrow keys / space</div>
-
 <!-- Three.js -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
-<!-- Ammo.js (WASM-версия или обычная) -->
+<!-- Ammo.js (WASM) -->
 <script src="js/ammo.wasm.js"></script>
 
 <script>
     let scene, camera, renderer;
-    let physicsWorld;
-    let sphereBody, sphereMesh;
-    let terrainBody, terrainMesh;
-    let ws;
 
-    // Похожие параметры террейна, как на сервере
-    const TERRAIN_WIDTH = 64;
-    const TERRAIN_HEIGHT = 64;
-    const heightData = new Float32Array(TERRAIN_WIDTH * TERRAIN_HEIGHT);
+    let collisionConfig, dispatcher, broadphase, solver, localPhysicsWorld;
 
-    function generateHeightData() {
-        for (let z = 0; z < TERRAIN_HEIGHT; z++) {
-            for (let x = 0; x < TERRAIN_WIDTH; x++) {
-                const fx = x - TERRAIN_WIDTH / 2;
-                const fz = z - TERRAIN_HEIGHT / 2;
-                const h = 2.0 * Math.sin(fx * 0.1) * Math.cos(fz * 0.1);
-                heightData[z * TERRAIN_WIDTH + x] = h;
-            }
-        }
-    }
+    // Словарь: object_id -> { mesh, body, object_type, serverPos }
+    let objects = {};
+
+    let ws = null;
 
     function initThree() {
         scene = new THREE.Scene();
 
-        // Камера
-        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 20, 40);
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
+        camera.position.set(0,50,100);
 
-        // Рендерер
-        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer = new THREE.WebGLRenderer({antialias:true});
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
-        window.addEventListener('resize', onWindowResize, false);
 
-        // Источник света - окружающий свет
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Мягкий свет
-        scene.add(ambientLight);
+        window.addEventListener('resize', onWindowResize);
 
-        // Источник света - направленный свет
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(10, 20, 10); // Положение света
-        scene.add(directionalLight);
-
-        // Источник света - точечный свет
-        const pointLight = new THREE.PointLight(0xffffff, 0.5);
-        pointLight.position.set(0, 10, 0);
-        scene.add(pointLight);
-
-        console.log("[Three.js] Scene initialized with lights");
+        const ambient = new THREE.AmbientLight(0xffffff,0.5);
+        scene.add(ambient);
+        const dir = new THREE.DirectionalLight(0xffffff,1);
+        dir.position.set(10,20,10);
+        scene.add(dir);
     }
 
-    function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
+    function onWindowResize(){
+        camera.aspect = window.innerWidth/window.innerHeight;
         camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(window.innerWidth,window.innerHeight);
     }
 
     async function initAmmo() {
-        await Ammo(); // Ensure Ammo.js is loaded
-
-        // 1) Создаем мир
-        const collisionConfig = new Ammo.btDefaultCollisionConfiguration();
-        const dispatcher = new Ammo.btCollisionDispatcher(collisionConfig);
-        const broadphase = new Ammo.btDbvtBroadphase();
-        const solver = new Ammo.btSequentialImpulseConstraintSolver();
-        physicsWorld = new Ammo.btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfig);
-        physicsWorld.setGravity(new Ammo.btVector3(0, -9.81, 0));
-
-        // 2) Создаем terrain
-        generateHeightData();
-
-        const ptr = Ammo._malloc(heightData.length * Float32Array.BYTES_PER_ELEMENT);
-        Ammo.HEAPF32.set(heightData, ptr / Float32Array.BYTES_PER_ELEMENT);
-
-        const upAxis = 1; // Y
-        const heightScale = 1;
-        const minH = -10;
-        const maxH = 10;
-        const flipQuadEdges = false;
-
-        const hfShape = new Ammo.btHeightfieldTerrainShape(
-            TERRAIN_WIDTH, TERRAIN_HEIGHT,
-            ptr,
-            heightScale,
-            minH, maxH,
-            upAxis, Ammo.PHY_FLOAT, flipQuadEdges
-        );
-        hfShape.setLocalScaling(new Ammo.btVector3(1, 1, 1));
-
-        let transform = new Ammo.btTransform();
-        transform.setIdentity();
-        transform.setOrigin(new Ammo.btVector3(0, 0, 0));
-        let motionState = new Ammo.btDefaultMotionState(transform);
-
-        let rbInfo = new Ammo.btRigidBodyConstructionInfo(0, motionState, hfShape, new Ammo.btVector3(0, 0, 0));
-        terrainBody = new Ammo.btRigidBody(rbInfo);
-        physicsWorld.addRigidBody(terrainBody);
-
-        // Three.js visualization (unchanged)
-        const geo = new THREE.PlaneGeometry(TERRAIN_WIDTH, TERRAIN_HEIGHT, TERRAIN_WIDTH - 1, TERRAIN_HEIGHT - 1);
-        geo.rotateX(-Math.PI / 2);
-        const verts = geo.attributes.position.array;
-        for (let i = 0; i < verts.length; i += 3) {
-            const ix = i / 3 % TERRAIN_WIDTH;
-            const iz = Math.floor(i / 3 / TERRAIN_WIDTH);
-            const h = heightData[iz * TERRAIN_WIDTH + ix];
-            verts[i + 1] = h;
-        }
-        geo.computeVertexNormals();
-        terrainMesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x888888, wireframe: true }));
-        scene.add(terrainMesh);
-
-        // 3) Создаем сферу
-        const sphereShape = new Ammo.btSphereShape(1);
-        sphereShape.setMargin(0.05);
-
-        transform.setIdentity();
-        transform.setOrigin(new Ammo.btVector3(0, 10, 0));
-        const mass = 1;
-        const localInertia = new Ammo.btVector3(0, 0, 0);
-        sphereShape.calculateLocalInertia(mass, localInertia);
-
-        const sphereMotion = new Ammo.btDefaultMotionState(transform);
-        const sphereCI = new Ammo.btRigidBodyConstructionInfo(mass, sphereMotion, sphereShape, localInertia);
-        sphereBody = new Ammo.btRigidBody(sphereCI);
-        physicsWorld.addRigidBody(sphereBody);
-
-        const sphGeo = new THREE.SphereGeometry(1, 16, 16);
-        const sphMat = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
-        sphereMesh = new THREE.Mesh(sphGeo, sphMat);
-        scene.add(sphereMesh);
-
-        console.log("[Ammo] init done");
+        await Ammo();
+        collisionConfig = new Ammo.btDefaultCollisionConfiguration();
+        dispatcher = new Ammo.btCollisionDispatcher(collisionConfig);
+        broadphase = new Ammo.btDbvtBroadphase();
+        solver = new Ammo.btSequentialImpulseConstraintSolver();
+        localPhysicsWorld = new Ammo.btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfig);
+        localPhysicsWorld.setGravity(new Ammo.btVector3(0, -9.81, 0));
+        console.log("[Ammo] Local physics init done");
     }
 
-    function animate() {
+    function animate(){
         requestAnimationFrame(animate);
-        if (physicsWorld && sphereBody && sphereBody.getMotionState) {
-            physicsWorld.stepSimulation(1 / 60, 10);
 
+        // 1) Локальный шаг физики
+        if (localPhysicsWorld) {
+            localPhysicsWorld.stepSimulation(1/60, 10);
+        }
+
+        // 2) Синхронизируем Three.js из локальных Ammo-тел
+        for (let id in objects) {
+            let obj = objects[id];
+            if (!obj.body || !obj.mesh) continue;
+
+            // Текущее лок. положение (предсказанное)
             let trans = new Ammo.btTransform();
-            sphereBody.getMotionState().getWorldTransform(trans);
-            let o = trans.getOrigin();
-            let r = trans.getRotation();
-            sphereMesh.position.set(o.x(), o.y(), o.z());
-            sphereMesh.quaternion.set(r.x(), r.y(), r.z(), r.w());
+            obj.body.getMotionState().getWorldTransform(trans);
+            let locX = trans.getOrigin().x();
+            let locY = trans.getOrigin().y();
+            let locZ = trans.getOrigin().z();
+
+            let qx = trans.getRotation().x();
+            let qy = trans.getRotation().y();
+            let qz = trans.getRotation().z();
+            let qw = trans.getRotation().w();
+
+            // Устанавливаем mesh в лок. позицию
+            obj.mesh.position.set(locX, locY, locZ);
+            obj.mesh.quaternion.set(qx, qy, qz, qw);
+
+            // 3) Коррекция: если obj.serverPos есть
+            if (obj.serverPos) {
+                const dx = obj.serverPos.x - locX;
+                const dy = obj.serverPos.y - locY;
+                const dz = obj.serverPos.z - locZ;
+
+                // Если расхождение велико, делаем "partial lerp"
+                // Можно варьировать alpha=0.1..0.2
+                let dist2 = dx*dx + dy*dy + dz*dz;
+                if (dist2 > 0.01) {
+                    let alpha = 0.1;
+                    let newX = locX + dx * alpha;
+                    let newY = locY + dy * alpha;
+                    let newZ = locZ + dz * alpha;
+
+                    // Применяем коррекцию к Ammo-телу
+                    let corrTrans = new Ammo.btTransform();
+                    corrTrans.setIdentity();
+                    corrTrans.setOrigin(new Ammo.btVector3(newX, newY, newZ));
+                    let rot = trans.getRotation();
+                    corrTrans.setRotation(rot);
+
+                    obj.body.activate(true);
+                    obj.body.getMotionState().setWorldTransform(corrTrans);
+                    obj.body.setCenterOfMassTransform(corrTrans);
+
+                    // Также двигаем mesh
+                    obj.mesh.position.set(newX, newY, newZ);
+                }
+            }
         }
 
         renderer.render(scene, camera);
     }
 
+    ///////////////////////////
+    // 2) Создание Ammo-тела
+    ///////////////////////////
+    function createMeshAndBodyForObject(data) {
+        let mesh = createMeshForObject(data);
+        scene.add(mesh);
+
+        let shape = null;
+        let mass = data.mass || 0;
+
+        if (data.object_type === "terrain") {
+            // Для террейна в локальной физике:
+            // Упростим до btStaticPlaneShape
+            shape = new Ammo.btStaticPlaneShape(new Ammo.btVector3(0,1,0), 0);
+            mass = 0;
+        }
+        else if (data.object_type === "sphere") {
+            let r = data.radius || 1;
+            shape = new Ammo.btSphereShape(r);
+        }
+        else {
+            // fallback box
+            shape = new Ammo.btBoxShape(new Ammo.btVector3(1,1,1));
+        }
+
+        let transform = new Ammo.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(new Ammo.btVector3(data.x||0, data.y||0, data.z||0));
+
+        let localInertia = new Ammo.btVector3(0,0,0);
+        if (mass !== 0) {
+            shape.calculateLocalInertia(mass, localInertia);
+        }
+
+        let motionState = new Ammo.btDefaultMotionState(transform);
+        let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
+        let body = new Ammo.btRigidBody(rbInfo);
+        localPhysicsWorld.addRigidBody(body);
+
+        return { mesh, body };
+    }
+
+    function createMeshForObject(data) {
+        const type = data.object_type || "unknown";
+        const colorHex = parseColor(data.color || "#888888");
+
+        if (type === "terrain") {
+            // Визуализация террейна: PlaneGeometry
+            let w = data.heightmap_w || 64;
+            let h = data.heightmap_h || 64;
+            let geo = new THREE.PlaneGeometry(w, h, w-1, h-1);
+            geo.rotateX(-Math.PI/2);
+            if (data.height_data) {
+                let verts = geo.attributes.position.array;
+                for (let i=0; i<verts.length; i+=3){
+                    let ix = (i/3) % w;
+                    let iz = Math.floor(i/3 / w);
+                    verts[i+1] = data.height_data[iz*w + ix] || 0;
+                }
+                geo.computeVertexNormals();
+            }
+            let mat = new THREE.MeshLambertMaterial({ color: colorHex, wireframe:true });
+            return new THREE.Mesh(geo, mat);
+        }
+        else if (type === "sphere") {
+            let r = data.radius || 1;
+            let geo = new THREE.SphereGeometry(r,16,16);
+            let mat = new THREE.MeshLambertMaterial({ color: colorHex });
+            return new THREE.Mesh(geo, mat);
+        }
+        else {
+            // fallback
+            let geo = new THREE.BoxGeometry(1,1,1);
+            let mat = new THREE.MeshLambertMaterial({ color: colorHex });
+            return new THREE.Mesh(geo, mat);
+        }
+    }
+
+    function parseColor(colStr) {
+        if (!colStr) return 0x888888;
+        if (colStr.startsWith("#")) {
+            return parseInt(colStr.slice(1), 16);
+        }
+        return 0x888888;
+    }
+
+    ///////////////////////////
+    // 3) Инициализация WebSocket
+    ///////////////////////////
     function initWS() {
         ws = new WebSocket("ws://localhost:8080/ws");
 
-        ws.onopen = () => {
+        ws.onopen = ()=>{
             console.log("[WS] connected");
         };
 
-        ws.onmessage = (evt) => {
+        ws.onmessage = (evt)=>{
             let data = JSON.parse(evt.data);
-
-            // Сервер должен отправлять только импульс или скорость
-            if (data.type === "update") {
-                const impulse = new Ammo.btVector3(data.impulseX, data.impulseY, data.impulseZ);
-                sphereBody.applyCentralImpulse(impulse);
+            if (data.type === "create") {
+                if (!objects[data.id]) {
+                    let objStuff = createMeshAndBodyForObject(data);
+                    objects[data.id] = {
+                        mesh: objStuff.mesh,
+                        body: objStuff.body,
+                        object_type: data.object_type
+                    };
+                    console.log("[WS] Created object", data.id, data.object_type);
+                }
+            }
+            else if (data.type === "update") {
+                let o = objects[data.id];
+                if (!o) {
+                    console.log("[WS] update for unknown object", data.id);
+                    return;
+                }
+                // Сохраняем serverPos
+                o.serverPos = { x: data.x, y: data.y, z: data.z };
+                // можно также хранить serverRot, если хотим кватернион
+            }
+            else {
+                console.warn("[WS] Unknown message type:", data.type);
             }
         };
+
+        // При нажатии стрелок/пробела
+        document.addEventListener('keydown', (e)=>{
+            let cmd="";
+            switch(e.key){
+                case "ArrowLeft": cmd="LEFT"; break;
+                case "ArrowRight": cmd="RIGHT"; break;
+                case "ArrowUp": cmd="UP"; break;
+                case "ArrowDown": cmd="DOWN"; break;
+                case " ": cmd="SPACE"; break;
+                default: return;
+            }
+            // Шлём на сервер
+            ws.send(JSON.stringify({ type:"cmd", cmd }));
+
+            // Одновременно локально применяем impulse к последней созданной сфере (или по ID)
+            let lastID = null;
+            for (let id in objects) {
+                if (objects[id].object_type === "sphere") {
+                    lastID = id; // допустим, что у каждого клиента 1 сфера
+                }
+            }
+            if (!lastID) return;
+            let o = objects[lastID];
+            if (!o.body) return;
+
+            let ix=0, iy=0, iz=0;
+            if (cmd==="LEFT")  ix=-2;
+            if (cmd==="RIGHT") ix= 2;
+            if (cmd==="UP")    iz=-2;
+            if (cmd==="DOWN")  iz= 2;
+            if (cmd==="SPACE") iy= 5;
+
+            let impulse = new Ammo.btVector3(ix, iy, iz);
+            o.body.activate(true);
+            o.body.applyCentralImpulse(impulse);
+            console.log("[Local] impulse", ix, iy, iz, "on", lastID);
+        });
     }
 
-    document.addEventListener('keydown', (e) => {
-        if (!ws) return;
-        let cmd = "";
-        switch (e.key) {
-            case "ArrowLeft": cmd = "LEFT"; break;
-            case "ArrowRight": cmd = "RIGHT"; break;
-            case "ArrowUp": cmd = "UP"; break;
-            case "ArrowDown": cmd = "DOWN"; break;
-            case " ": cmd = "SPACE"; break;
-            default: return;
-        }
-        ws.send(JSON.stringify({ cmd: cmd }));
-    });
-
-    async function start() {
+    ///////////////////////////
+    // 4) START
+    ///////////////////////////
+    async function start(){
         initThree();
         await initAmmo();
         initWS();
         animate();
     }
+
     start();
 </script>
 </body>

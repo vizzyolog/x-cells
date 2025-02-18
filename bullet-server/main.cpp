@@ -7,8 +7,8 @@
 #include <btBulletDynamicsCommon.h>
 #include <BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h>
 
-#include "physics.pb.h"
-#include "physics.grpc.pb.h"
+#include "generated/physics.pb.h"
+#include "generated/physics.grpc.pb.h"
 
 using grpc::Server;
 using grpc::ServerBuilder;

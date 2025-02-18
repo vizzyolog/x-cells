@@ -22,20 +22,20 @@ message CreateObjectRequest {
   float x = 3;
   float y = 4;
   float z = 5;
-  float mass = 6; // Добавлено
-  float radius = 7; // Добавлено для сферы
-  float width = 8; // Добавлено для коробки
-  float height = 9; // Добавлено для коробки
-  float depth = 10; // Добавлено для коробки
-  string color = 11; // Цвет объекта
-  repeated float height_data = 12; // Высотные данные для террейна
-  int32 heightmap_width = 13; // Ширина карты высот
-  int32 heightmap_height = 14; // Высота карты высот
-  float scale_x = 15; // Масштаб по оси X
-  float scale_y = 16; // Масштаб по оси Y
-  float scale_z = 17; // Масштаб по оси Z
-  float min_height = 18; // Минимальная высота
-  float max_height = 19; // Максимальная высота
+  float mass = 6; 
+  float radius = 7; 
+  float width = 8; 
+  float height = 9; 
+  float depth = 10; 
+  string color = 11; 
+  repeated float height_data = 12; 
+  int32 heightmap_width = 13; 
+  int32 heightmap_height = 14; 
+  float scale_x = 15; 
+  float scale_y = 16; 
+  float scale_z = 17; 
+  float min_height = 18; 
+  float max_height = 19; 
 }
 
 // Ответ на создание объекта

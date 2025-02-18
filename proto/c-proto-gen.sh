@@ -1,0 +1,1 @@
+protoc --cpp_out=../bullet-server/generated --grpc_out=../bullet-server/generated --plugin=protoc-gen-grpc=/usr/local/bin/grpc_cpp_plugin physics.proto

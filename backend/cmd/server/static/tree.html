@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <title>Фантастические деревья</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+<!-- Подключение Three.js и необходимых модулей -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.172.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.172.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.172.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.172.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+<script>
+    // Параметры L-системы
+    const LSystemParams = {
+        axiom: "F",
+        rules: { "F": "F[+F]F[-F]F" },
+        angle: 25,
+        stepLength: 2,
+        iterations: 5,
+    };
+
+    let scene, camera, renderer, composer, controls;
+
+    init();
+    animate();
+
+    function init() {
+        // Сцена
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        // Камера
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 50, 100);
+
+        // Рендерер
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Управление камерой
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 20, 0);
+
+        // Освещение
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+        scene.add(ambientLight);
+
+        // Эффект тумана
+        scene.fog = new THREE.Fog(0x000000, 50, 200);
+
+        // Пост-обработка
+        const renderScene = new THREE.RenderPass(scene, camera);
+        const bloomPass = new THREE.UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            1.5,  // Интенсивность
+            0.4,  // Радиус
+            0.85  // Порог
+        );
+
+        composer = new THREE.EffectComposer(renderer);
+        composer.addPass(renderScene);
+        composer.addPass(bloomPass);
+
+        // Генерация деревьев
+        for (let i = 0; i < 5; i++) {
+            const params = {
+                ...LSystemParams,
+                angle: LSystemParams.angle + THREE.MathUtils.randFloat(-5, 5),
+                stepLength: LSystemParams.stepLength + THREE.MathUtils.randFloat(-0.5, 0.5),
+                iterations: LSystemParams.iterations + THREE.MathUtils.randInt(-1, 1),
+            };
+
+            const tree = generateLSystemTree(params);
+            tree.position.set(
+                THREE.MathUtils.randFloatSpread(40),
+                0,
+                THREE.MathUtils.randFloatSpread(40)
+            );
+            scene.add(tree);
+        }
+
+        // Обработка изменения размеров окна
+        window.addEventListener('resize', onWindowResize, false);
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        composer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function generateLSystemTree(params) {
+        const { axiom, rules, angle, stepLength, iterations } = params;
+
+        let lString = axiom;
+        for (let i = 0; i < iterations; i++) {
+            lString = lString.replace(/./g, (c) => (rules[c] || c));
+        }
+
+        const treeGroup = new THREE.Group();
+        let stack = [];
+        let position = new THREE.Vector3(0, 0, 0);
+        let quaternion = new THREE.Quaternion();
+
+        const degToRad = Math.PI / 180;
+        const branchMaterial = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(`hsl(${Math.random() * 360}, 80%, 50%)`),
+            metalness: 0.2,
+            roughness: 0.8,
+        });
+
+        function turn(deltaAngle, axis) {
+            const rot = new THREE.Quaternion();
+            rot.setFromAxisAngle(axis, deltaAngle * degToRad);
+            quaternion.multiply(rot);
+        }
+
+        for (let char of lString) {
+            switch (char) {
+                case "F":
+                    const prevPos = position.clone();
+                    const dir = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion);
+                    position.addScaledVector(dir, stepLength);
+
+                    const distance = prevPos.distanceTo(position);
+                    const branchGeom = new THREE.CylinderBufferGeometry(0.1, 0.15, distance, 8);
+                    const branchMesh = new THREE.Mesh(branchGeom, branchMaterial);
+
+                    branchMesh.position.copy(prevPos).add(position).multiplyScalar(0.5);
+                    branchMesh.quaternion.copy(
+                        new THREE.Quaternion().setFromUnitVectors(
+                            new THREE.Vector3(0, 1, 0),
+                            dir.clone().normalize()
+                        )
+                    );
+
+                    treeGroup.add(branchMesh);
+
+                    if (Math.random() < 0.05) {
+                        const fruitGeom = new THREE.SphereBufferGeometry(0.3, 16, 16);
+                        const fruitMat = new THREE.MeshStandardMaterial({
+                            emissive: new THREE.Color(`hsl(${Math.random() * 360}, 100%, 50%)`),
+                            emissiveIntensity: 1,
+                            color: 0x000000,
+                        });
+                        const fruitMesh = new THREE.Mesh(fruitGeom, fruitMat);
+                        fruitMesh.position.copy(position);
+                        treeGroup.add(fruitMesh);
+                    }
+                    break;
+
+                case "+":
+                    turn(angle + THREE.MathUtils.randFloat(-10, 10), new THREE.Vector3(0, 0, 1));
+                    break;
+
+                case "-":
+                    turn(-angle + THREE.MathUtils.randFloat(-10, 10), new THREE.Vector3(0, 0, 1));
+                    break;
+
+                case "[":
+                    stack.push({ position: position.clone(), quaternion: quaternion.clone() });
+                    break;
+
+                case "]":
+                    const saved = stack.pop();
+                    position = saved.position;
+                    quaternion = saved.quaternion;
+                    break;
+            }
+        }
+
+        return treeGroup;
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        composer.render();
+    }
+</script>
+</body>
+</html>

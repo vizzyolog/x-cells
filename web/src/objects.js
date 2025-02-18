@@ -5,34 +5,38 @@ import { localPhysicsWorld } from './physics';
 
 export let objects = {}; // Словарь объектов: id -> { mesh, body, serverPos, ... }
 
-export function createMeshAndBodyForObject(data) {
-    if (!data || !data.object_type) {
-        console.error("Invalid data received for object creation:", data);
-        return null;
-    }
+export function createMeshAndBodyForObject(obj) {
+    console.log("[Objects] Создание объекта:", obj.object_type, obj.id);
 
-    const type = data.object_type;
-    let mesh, body = null;
-
-    switch (type) {
+    let mesh;
+    switch (obj.object_type) {
         case "terrain":
-            mesh = createTerrainMesh(data);
+            mesh = createTerrainMesh(obj);
             break;
-        case "sphere":
-            mesh = createSphereMesh(data);
-            body = createPhysicsBodyForSphere(data);
+        case "sphere": {
+            const geometry = new THREE.SphereGeometry(obj.radius || 1);
+            const material = new THREE.MeshPhongMaterial({ color: obj.color || 0xff0000 });
+            mesh = new THREE.Mesh(geometry, material);
+            console.log("[Objects] Создан меш для сферы:", mesh);
             break;
+        }
         case "tree":
-            mesh = createTreeMesh(data);
+            mesh = createTreeMesh(obj);
             break;
         default:
-            console.warn(`Unknown object type: ${type}`);
-            mesh = createDefaultMesh(data);
+            console.warn(`Unknown object type: ${obj.object_type}`);
+            mesh = createDefaultMesh(obj);
             break;
     }
 
-    scene.add(mesh);
-    return { mesh, body };
+    if (mesh) {
+        mesh.position.set(obj.x || 0, obj.y || 0, obj.z || 0);
+        scene.add(mesh);
+        obj.mesh = mesh;
+        console.log("[Objects] Добавлен меш к объекту:", obj.id, obj.mesh);
+    }
+
+    return obj;
 }
 
 function createTerrainMesh(data) {

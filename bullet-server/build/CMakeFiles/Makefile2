@@ -28,9 +28,6 @@ default_target: all
 
 .SUFFIXES: .hpux_make_needs_suffix_list
 
-# Produce verbose output by default.
-VERBOSE = 1
-
 # Command-line flag to silence nested $(MAKE).
 $(VERBOSE)MAKESILENT = -s
 
@@ -66,11 +63,11 @@ CMAKE_BINARY_DIR = /Users/olegchernov/x-cells/bullet-server/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/bullet_server.dir/all
+all: CMakeFiles/bullet-server.dir/all
 .PHONY : all
 
 # The main recursive "codegen" target.
-codegen: CMakeFiles/bullet_server.dir/codegen
+codegen: CMakeFiles/bullet-server.dir/codegen
 .PHONY : codegen
 
 # The main recursive "preinstall" target.
@@ -78,40 +75,40 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/bullet_server.dir/clean
+clean: CMakeFiles/bullet-server.dir/clean
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/bullet_server.dir
+# Target rules for target CMakeFiles/bullet-server.dir
 
 # All Build rule for target.
-CMakeFiles/bullet_server.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/olegchernov/x-cells/bullet-server/build/CMakeFiles --progress-num=1,2,3,4 "Built target bullet_server"
-.PHONY : CMakeFiles/bullet_server.dir/all
+CMakeFiles/bullet-server.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/olegchernov/x-cells/bullet-server/build/CMakeFiles --progress-num=1,2,3,4 "Built target bullet-server"
+.PHONY : CMakeFiles/bullet-server.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/bullet_server.dir/rule: cmake_check_build_system
+CMakeFiles/bullet-server.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/olegchernov/x-cells/bullet-server/build/CMakeFiles 4
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/bullet_server.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/bullet-server.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/olegchernov/x-cells/bullet-server/build/CMakeFiles 0
-.PHONY : CMakeFiles/bullet_server.dir/rule
+.PHONY : CMakeFiles/bullet-server.dir/rule
 
 # Convenience name for target.
-bullet_server: CMakeFiles/bullet_server.dir/rule
-.PHONY : bullet_server
+bullet-server: CMakeFiles/bullet-server.dir/rule
+.PHONY : bullet-server
 
 # codegen rule for target.
-CMakeFiles/bullet_server.dir/codegen:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/olegchernov/x-cells/bullet-server/build/CMakeFiles --progress-num=1,2,3,4 "Finished codegen for target bullet_server"
-.PHONY : CMakeFiles/bullet_server.dir/codegen
+CMakeFiles/bullet-server.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/olegchernov/x-cells/bullet-server/build/CMakeFiles --progress-num=1,2,3,4 "Finished codegen for target bullet-server"
+.PHONY : CMakeFiles/bullet-server.dir/codegen
 
 # clean rule for target.
-CMakeFiles/bullet_server.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/clean
-.PHONY : CMakeFiles/bullet_server.dir/clean
+CMakeFiles/bullet-server.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/clean
+.PHONY : CMakeFiles/bullet-server.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

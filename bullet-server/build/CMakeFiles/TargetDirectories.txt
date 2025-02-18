@@ -1,3 +1,3 @@
-/Users/olegchernov/x-cells/bullet-server/build/CMakeFiles/bullet_server.dir
+/Users/olegchernov/x-cells/bullet-server/build/CMakeFiles/bullet-server.dir
 /Users/olegchernov/x-cells/bullet-server/build/CMakeFiles/edit_cache.dir
 /Users/olegchernov/x-cells/bullet-server/build/CMakeFiles/rebuild_cache.dir

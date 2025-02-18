@@ -31,9 +31,6 @@ default_target: all
 
 .SUFFIXES: .hpux_make_needs_suffix_list
 
-# Produce verbose output by default.
-VERBOSE = 1
-
 # Command-line flag to silence nested $(MAKE).
 $(VERBOSE)MAKESILENT = -s
 
@@ -120,89 +117,89 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named bullet_server
+# Target rules for targets named bullet-server
 
 # Build rule for target.
-bullet_server: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 bullet_server
-.PHONY : bullet_server
+bullet-server: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 bullet-server
+.PHONY : bullet-server
 
 # fast build rule for target.
-bullet_server/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/build
-.PHONY : bullet_server/fast
+bullet-server/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/build
+.PHONY : bullet-server/fast
 
-main.o: main.cpp.o
-.PHONY : main.o
-
-# target to build an object file
-main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/main.cpp.o
-.PHONY : main.cpp.o
-
-main.i: main.cpp.i
-.PHONY : main.i
-
-# target to preprocess a source file
-main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/main.cpp.i
-.PHONY : main.cpp.i
-
-main.s: main.cpp.s
-.PHONY : main.s
-
-# target to generate assembly for a file
-main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/main.cpp.s
-.PHONY : main.cpp.s
-
-physics.grpc.pb.o: physics.grpc.pb.cc.o
-.PHONY : physics.grpc.pb.o
+generated/physics.grpc.pb.o: generated/physics.grpc.pb.cc.o
+.PHONY : generated/physics.grpc.pb.o
 
 # target to build an object file
-physics.grpc.pb.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/physics.grpc.pb.cc.o
-.PHONY : physics.grpc.pb.cc.o
+generated/physics.grpc.pb.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/generated/physics.grpc.pb.cc.o
+.PHONY : generated/physics.grpc.pb.cc.o
 
-physics.grpc.pb.i: physics.grpc.pb.cc.i
-.PHONY : physics.grpc.pb.i
+generated/physics.grpc.pb.i: generated/physics.grpc.pb.cc.i
+.PHONY : generated/physics.grpc.pb.i
 
 # target to preprocess a source file
-physics.grpc.pb.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/physics.grpc.pb.cc.i
-.PHONY : physics.grpc.pb.cc.i
+generated/physics.grpc.pb.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/generated/physics.grpc.pb.cc.i
+.PHONY : generated/physics.grpc.pb.cc.i
 
-physics.grpc.pb.s: physics.grpc.pb.cc.s
-.PHONY : physics.grpc.pb.s
+generated/physics.grpc.pb.s: generated/physics.grpc.pb.cc.s
+.PHONY : generated/physics.grpc.pb.s
 
 # target to generate assembly for a file
-physics.grpc.pb.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/physics.grpc.pb.cc.s
-.PHONY : physics.grpc.pb.cc.s
+generated/physics.grpc.pb.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/generated/physics.grpc.pb.cc.s
+.PHONY : generated/physics.grpc.pb.cc.s
 
-physics.pb.o: physics.pb.cc.o
-.PHONY : physics.pb.o
+generated/physics.pb.o: generated/physics.pb.cc.o
+.PHONY : generated/physics.pb.o
 
 # target to build an object file
-physics.pb.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/physics.pb.cc.o
-.PHONY : physics.pb.cc.o
+generated/physics.pb.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/generated/physics.pb.cc.o
+.PHONY : generated/physics.pb.cc.o
 
-physics.pb.i: physics.pb.cc.i
-.PHONY : physics.pb.i
+generated/physics.pb.i: generated/physics.pb.cc.i
+.PHONY : generated/physics.pb.i
 
 # target to preprocess a source file
-physics.pb.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/physics.pb.cc.i
-.PHONY : physics.pb.cc.i
+generated/physics.pb.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/generated/physics.pb.cc.i
+.PHONY : generated/physics.pb.cc.i
 
-physics.pb.s: physics.pb.cc.s
-.PHONY : physics.pb.s
+generated/physics.pb.s: generated/physics.pb.cc.s
+.PHONY : generated/physics.pb.s
 
 # target to generate assembly for a file
-physics.pb.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet_server.dir/build.make CMakeFiles/bullet_server.dir/physics.pb.cc.s
-.PHONY : physics.pb.cc.s
+generated/physics.pb.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/generated/physics.pb.cc.s
+.PHONY : generated/physics.pb.cc.s
+
+src/main.o: src/main.cpp.o
+.PHONY : src/main.o
+
+# target to build an object file
+src/main.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/src/main.cpp.o
+.PHONY : src/main.cpp.o
+
+src/main.i: src/main.cpp.i
+.PHONY : src/main.i
+
+# target to preprocess a source file
+src/main.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/src/main.cpp.i
+.PHONY : src/main.cpp.i
+
+src/main.s: src/main.cpp.s
+.PHONY : src/main.s
+
+# target to generate assembly for a file
+src/main.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bullet-server.dir/build.make CMakeFiles/bullet-server.dir/src/main.cpp.s
+.PHONY : src/main.cpp.s
 
 # Help Target
 help:
@@ -212,16 +209,16 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... bullet_server"
-	@echo "... main.o"
-	@echo "... main.i"
-	@echo "... main.s"
-	@echo "... physics.grpc.pb.o"
-	@echo "... physics.grpc.pb.i"
-	@echo "... physics.grpc.pb.s"
-	@echo "... physics.pb.o"
-	@echo "... physics.pb.i"
-	@echo "... physics.pb.s"
+	@echo "... bullet-server"
+	@echo "... generated/physics.grpc.pb.o"
+	@echo "... generated/physics.grpc.pb.i"
+	@echo "... generated/physics.grpc.pb.s"
+	@echo "... generated/physics.pb.o"
+	@echo "... generated/physics.pb.i"
+	@echo "... generated/physics.pb.s"
+	@echo "... src/main.o"
+	@echo "... src/main.i"
+	@echo "... src/main.s"
 .PHONY : help
 
 

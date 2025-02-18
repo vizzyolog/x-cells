@@ -5,11 +5,17 @@ import { initNetwork } from './network';
 import { objects } from './objects';
 import * as THREE from 'three';
 
+// Создаем часы для отслеживания времени
+const clock = new THREE.Clock();
+
 function animate() {
     requestAnimationFrame(animate);
 
-    // Выполняем шаг физической симуляции (например, 1/60 секунды)
-    stepPhysics(1 / 60);
+    // Обновляем физику
+    const deltaTime = clock.getDelta();
+    stepPhysics(deltaTime);
+
+    // Обновляем позиции объектов
     updatePhysicsObjects(objects);
 
     // Пример обновления камеры: следим за первым найденным шаром
@@ -50,6 +56,43 @@ async function start() {
     } catch (error) {
         console.error("Ошибка при инициализации Ammo.js:", error);
     }
+}
+
+function handleWebSocketMessage(event) {
+    const message = JSON.parse(event.data);
+
+    if (message.type === "create") {
+        const obj = {
+            id: message.id,
+            object_type: message.object_type,
+            x: message.x,
+            y: message.y,
+            z: message.z,
+            mass: message.mass,
+            radius: message.radius,
+            color: message.color,
+            height_data: message.height_data,
+            heightmap_w: message.heightmap_w,
+            heightmap_h: message.heightmap_h,
+            scale_x: message.scale_x,
+            scale_y: message.scale_y,
+            scale_z: message.scale_z,
+        };
+
+        createVisualObject(obj);
+        // Создаем физическое тело для объекта
+        createPhysicsObject(obj);
+        objects[obj.id] = obj;
+    }
+}
+
+async function init() {
+    // Инициализируем физику
+    await initAmmo();
+
+    // Создаем сцену
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x88ccff);
 }
 
 start();

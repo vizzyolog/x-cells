@@ -1,81 +1,114 @@
 syntax = "proto3";
 
-option go_package = "x-cells/generated;physics";
-
 package physics;
 
-// Универсальный сервис для управления объектами
-service Physics {
-  rpc CreateObject (CreateObjectRequest) returns (CreateObjectResponse);
+option go_package = "x-cells/backend/internal/physics/generated";
 
-  rpc ApplyImpulse (ApplyImpulseRequest) returns (ApplyImpulseResponse);
-
-  rpc GetState (GetStateRequest) returns (GetStateResponse);
-
-  rpc Step (StepRequest) returns (StepResponse);
+// Описание векторов и кватернионов
+message Vector3 {
+  float x = 1;
+  float y = 2;
+  float z = 3;
 }
 
-// Общий запрос для создания объектов в Bullet + Three
+message Quaternion {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+  float w = 4;
+}
+
+// Описание форм
+message ShapeDescriptor {
+  enum ShapeType {
+    UNKNOWN = 0;
+    SPHERE = 1;
+    BOX = 2;
+    TERRAIN = 3;
+  }
+  ShapeType type = 1;
+
+  // Параметры для разных типов форм
+  oneof shape {
+    SphereData sphere = 10;
+    BoxData box = 11;
+    TerrainData terrain = 12;
+  }
+}
+
+message SphereData {
+  float radius = 1;
+  float mass = 2;
+  string color = 3;
+}
+
+message BoxData {
+  float width = 1;
+  float height = 2;
+  float depth = 3;
+  float mass = 4;
+  string color = 5;
+}
+
+message TerrainData {
+  int32 width = 1;
+  int32 depth = 2;
+  repeated float heightmap = 3;
+  float scale_x = 4;
+  float scale_y = 5;
+  float scale_z = 6;
+}
+
+// Сервисные сообщения
 message CreateObjectRequest {
   string id = 1;
-  string object_type = 2;
-  float x = 3;
-  float y = 4;
-  float z = 5;
-  float mass = 6; 
-  float radius = 7; 
-  float width = 8; 
-  float height = 9; 
-  float depth = 10; 
-  string color = 11; 
-  repeated float height_data = 12; 
-  int32 heightmap_width = 13; 
-  int32 heightmap_height = 14; 
-  float scale_x = 15; 
-  float scale_y = 16; 
-  float scale_z = 17; 
-  float min_height = 18; 
-  float max_height = 19; 
+  Vector3 position = 2;
+  Quaternion rotation = 3;
+  ShapeDescriptor shape = 4;
 }
 
-// Ответ на создание объекта
 message CreateObjectResponse {
   string status = 1;
 }
 
-// Применить импульс
 message ApplyImpulseRequest {
-  string id = 1;       // ID объекта
-  float impulse_x = 2;
-  float impulse_y = 3;
-  float impulse_z = 4;
+  string id = 1;
+  Vector3 impulse = 2;
 }
 
 message ApplyImpulseResponse {
   string status = 1;
 }
 
-// Получить состояние
-message GetStateRequest {
+message ApplyTorqueRequest {
+  string id = 1;
+  Vector3 torque = 2;
+}
+
+message ApplyTorqueResponse {
+  string status = 1;
+}
+
+message GetObjectStateRequest {
   string id = 1;
 }
 
-message GetStateResponse {
-  float x  = 1;
-  float y  = 2;
-  float z  = 3;
-  float qx = 4;
-  float qy = 5;
-  float qz = 6;
-  float qw = 7;
+message ObjectState {
+  Vector3 position = 1;
+  Quaternion rotation = 2;
+  Vector3 linear_velocity = 3;
+  Vector3 angular_velocity = 4;
 }
 
-// Шаг симуляции
-message StepRequest {
-  float dt = 1;
-  int32 substeps = 2;
-}
-
-message StepResponse {
+message GetObjectStateResponse {
   string status = 1;
+  ObjectState state = 2;
+}
+
+// Сервис физики
+service Physics {
+  rpc CreateObject(CreateObjectRequest) returns (CreateObjectResponse);
+  rpc ApplyImpulse(ApplyImpulseRequest) returns (ApplyImpulseResponse);
+  rpc ApplyTorque(ApplyTorqueRequest) returns (ApplyTorqueResponse);
+  rpc GetObjectState(GetObjectStateRequest) returns (GetObjectStateResponse);
 }

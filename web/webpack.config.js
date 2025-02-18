@@ -2,13 +2,13 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
-const outputPath = path.resolve(__dirname, '../backend/cmd/static');
+const outputPath = path.resolve(__dirname, '../dist');
 
 module.exports = {
     mode: process.env.NODE_ENV || 'development',
     entry: './src/index.js',
     output: {
-        filename: 'bundle.[contenthash].js',
+        filename: 'bundle.js',
         path: outputPath,
         clean: true,
     },

@@ -1,5 +1,6 @@
 // network.js
 import { objects, createMeshAndBodyForObject } from './objects';
+import { createPhysicsObject } from './physics';
 import { applyImpulseToSphere } from './physics';
 
 let ws = null;
@@ -8,7 +9,29 @@ function handleMessage(data) {
     try {
         if (data.type === "create" && data.id) {
             console.log("[WS] Обработка create сообщения для id:", data.id);
-            objects[data.id] = createMeshAndBodyForObject(data);
+            const obj = {
+                id: data.id,
+                object_type: data.object_type,
+                x: data.x,
+                y: data.y,
+                z: data.z,
+                mass: data.mass,
+                radius: data.radius,
+                color: data.color,
+                height_data: data.height_data,
+                heightmap_w: data.heightmap_w,
+                heightmap_h: data.heightmap_h,
+                scale_x: data.scale_x,
+                scale_y: data.scale_y,
+                scale_z: data.scale_z,
+            };
+            
+            // Сначала добавляем объект в коллекцию
+            objects[data.id] = obj;
+            
+            // Создаем визуальный объект и физическое тело
+            createMeshAndBodyForObject(obj);
+            createPhysicsObject(obj);
         } 
         else if (data.type === "update" && data.id && objects[data.id]) {
             console.log("[WS] Обработка update сообщения для id:", data.id);
@@ -25,24 +48,41 @@ function handleMessage(data) {
     }
 }
 
-function handleKeyDown(e) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+function handleKeyPress(event) {
+    if (event.repeat) return; // Игнорируем повторные нажатия при удержании клавиши
 
-    let cmd = "";
-    switch (e.key) {
-        case "ArrowLeft": cmd = "LEFT"; break;
-        case "ArrowRight": cmd = "RIGHT"; break;
-        case "ArrowUp": cmd = "UP"; break;
-        case "ArrowDown": cmd = "DOWN"; break;
-        case " ": cmd = "SPACE"; break;
-        default: return;
+    let cmd = null;
+    switch (event.code) {
+        case "ArrowLeft":
+        case "KeyA":
+            cmd = "LEFT";
+            break;
+        case "ArrowRight":
+        case "KeyD":
+            cmd = "RIGHT";
+            break;
+        case "ArrowUp":
+        case "KeyW":
+            cmd = "UP";
+            break;
+        case "ArrowDown":
+        case "KeyS":
+            cmd = "DOWN";
+            break;
+        case "Space":
+            cmd = "SPACE";
+            break;
     }
 
-    try {
-        ws.send(JSON.stringify({ type: "cmd", cmd }));
-        applyImpulseToSphere(cmd);
-    } catch (error) {
-        console.error("[WS] Ошибка отправки:", error);
+    if (cmd) {
+        // Отправляем команду на сервер
+        ws.send(JSON.stringify({
+            type: "cmd",
+            cmd: cmd
+        }));
+
+        // Применяем импульс локально
+        applyImpulseToSphere(cmd, objects);
     }
 }
 
@@ -95,7 +135,7 @@ export function initNetwork() {
             });
         };
 
-        document.addEventListener("keydown", handleKeyDown);
+        document.addEventListener("keydown", handleKeyPress);
     } catch (error) {
         console.error("[WS] Ошибка при создании WebSocket:", error);
         console.error("[WS] Стек вызовов:", error.stack);

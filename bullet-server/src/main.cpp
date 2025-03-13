@@ -42,37 +42,29 @@ private:
     const float timeStep = 1.0f/60.0f; // 60 Hz
 
     btCollisionShape* createTerrainShape(const physics::TerrainData& terrainData) {
-        // Преобразуем heightmap в формат, который ожидает Bullet
         int width = terrainData.width();
         int depth = terrainData.depth();
         
-        // Находим минимальную и максимальную высоту для масштабирования
-        float minHeight = terrainData.heightmap(0);
-        float maxHeight = terrainData.heightmap(0);
-        for (const float height : terrainData.heightmap()) {
-            minHeight = std::min(minHeight, height);
-            maxHeight = std::max(maxHeight, height);
-        }
-
-        // Создаем heightfield shape
+        // Используем только существующие поля из proto
+        float scaleX = terrainData.scale_x();
+        float scaleY = terrainData.scale_y();
+        float scaleZ = terrainData.scale_z();
+        
         btHeightfieldTerrainShape* terrainShape = new btHeightfieldTerrainShape(
             width,                          // ширина
             depth,                          // глубина
             terrainData.heightmap().data(), // данные высот
-            1.0f,                          // высотный масштаб
-            minHeight,                      // минимальная высота
-            maxHeight,                      // максимальная высота
-            1,                             // up axis (1 = y)
-            PHY_FLOAT,                     // тип данных высот
-            false                          // flip quad edges
+            scaleY,                         // масштаб высоты
+            -10.0f,                         // используем фиксированные значения
+            10.0f,                          // вместо min_height и max_height
+            1,                              // up axis (1 = y)
+            PHY_FLOAT,                      // тип данных высот
+            false                           // flip quad edges
         );
 
-        // Устанавливаем локальное масштабирование
-        terrainShape->setLocalScaling(btVector3(
-            terrainData.scale_x(),
-            terrainData.scale_y(),
-            terrainData.scale_z()
-        ));
+        // Применяем масштаб
+        terrainShape->setLocalScaling(btVector3(scaleX, 1.0f, scaleZ));
+        terrainShape->setMargin(0.1f);
 
         return terrainShape;
     }

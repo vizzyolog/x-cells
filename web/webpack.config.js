@@ -8,7 +8,7 @@ module.exports = {
     mode: process.env.NODE_ENV || 'development',
     entry: './src/index.js',
     output: {
-        filename: 'bundle.js',
+        filename: 'bundle.[hash].js',
         path: outputPath,
         clean: true,
     },
@@ -17,6 +17,9 @@ module.exports = {
         //hot: true,
         open: true,
         port: 3000,
+        devMiddleware: {
+            writeToDisk: true,
+        },
     } : undefined,
     module: {
         rules: [
@@ -58,4 +61,5 @@ module.exports = {
             "path": false,
         },
     },
+    cache: false,
 };

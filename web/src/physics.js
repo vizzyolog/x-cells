@@ -1,7 +1,23 @@
 // physics.js
+import * as THREE from 'three';
 
 export let localPhysicsWorld = null;
 let ammoPromise = null;
+export const objects = {};  // Хранилище для всех объектов
+
+// Добавляем глобальные настройки физики
+export const physicsSettings = {
+    useServerPhysics: false,  // false = локальная физика, true = серверная физика
+    interpolationAlpha: 0.1,  // Коэффициент интерполяции для серверных данных
+    debugMode: true,         // Включает вывод отладочной информации
+    sphereOffset: 2.0        // Расстояние между сферами для дебага
+};
+
+// Функция для переключения режима физики
+export function togglePhysicsMode() {
+    physicsSettings.useServerPhysics = !physicsSettings.useServerPhysics;
+    console.log(`[Physics] Переключение режима на: ${physicsSettings.useServerPhysics ? 'серверную' : 'локальную'} физику`);
+}
 
 export async function initAmmo() {
     if (ammoPromise) {
@@ -9,8 +25,34 @@ export async function initAmmo() {
     }
 
     ammoPromise = new Promise((resolve, reject) => {
+        // Проверяем, загружен ли уже Ammo.js через CDN
+        if (typeof Ammo !== 'undefined') {
+            console.log("[Ammo] Скрипт уже загружен через CDN, инициализация...");
+            Ammo().then((AmmoLib) => {
+                window.Ammo = AmmoLib;
+                
+                // Инициализируем физический мир после загрузки Ammo
+                const collisionConfiguration = new AmmoLib.btDefaultCollisionConfiguration();
+                const dispatcher = new AmmoLib.btCollisionDispatcher(collisionConfiguration);
+                const broadphase = new AmmoLib.btDbvtBroadphase();
+                const solver = new AmmoLib.btSequentialImpulseConstraintSolver();
+                localPhysicsWorld = new AmmoLib.btDiscreteDynamicsWorld(
+                    dispatcher,
+                    broadphase,
+                    solver,
+                    collisionConfiguration
+                );
+                localPhysicsWorld.setGravity(new AmmoLib.btVector3(0, -9.81, 0));
+                
+                console.log("[Ammo] Инициализация успешна");
+                resolve(AmmoLib);
+            }).catch(reject);
+            return;
+        }
+
+        // Если Ammo не загружен через CDN, загружаем его динамически
         const script = document.createElement('script');
-        script.src = '/ammo/ammo.wasm.js'; // путь от корня веб-сервера
+        script.src = 'https://cdn.jsdelivr.net/npm/ammo.js@latest/builds/ammo.wasm.js';
         script.async = true;
         
         script.onload = () => {
@@ -32,13 +74,7 @@ export async function initAmmo() {
                 localPhysicsWorld.setGravity(new AmmoLib.btVector3(0, -9.81, 0));
                 
                 console.log("[Ammo] Инициализация успешна");
-                // Дождемся первого шага симуляции для проверки
-                try {
-                    localPhysicsWorld.stepSimulation(1/60, 1);
-                    resolve(AmmoLib);
-                } catch (e) {
-                    reject(new Error("Ошибка инициализации физического мира"));
-                }
+                resolve(AmmoLib);
             }).catch(reject);
         };
         
@@ -54,13 +90,63 @@ export async function initAmmo() {
 }
 
 export function stepPhysics(deltaTime) {
-    if (localPhysicsWorld) {
-        // Используем фиксированный шаг времени для стабильности
-        const fixedTimeStep = 1/60;
-        
-        localPhysicsWorld.stepSimulation(fixedTimeStep, 1);
-    } else {
+    if (!localPhysicsWorld) {
         console.warn("[Physics] Физический мир не инициализирован");
+        return;
+    }
+    
+    // Проверяем, есть ли объекты с физикой
+    let hasPhysicsObjects = false;
+    for (let id in objects) {
+        if (objects[id].body) {
+            hasPhysicsObjects = true;
+            break;
+        }
+    }
+    
+    if (!hasPhysicsObjects) {
+        console.warn("[Physics] Нет объектов с физикой для симуляции");
+    }
+
+    // Используем фиксированный шаг времени для стабильности
+    const fixedTimeStep = 1/60;
+    const maxSubSteps = 10;
+    
+    // Передаем реальное deltaTime и максимальное количество подшагов
+    localPhysicsWorld.stepSimulation(deltaTime, maxSubSteps, fixedTimeStep);
+    
+    if (physicsSettings.debugMode) {
+        console.log("[Physics] Шаг физической симуляции выполнен, deltaTime:", deltaTime);
+        
+        // Проверяем состояние синей сферы
+        const localSphere = objects["local_sphere"];
+        if (localSphere && localSphere.body) {
+            const transform = new window.Ammo.btTransform();
+            localSphere.body.getMotionState().getWorldTransform(transform);
+            const pos = transform.getOrigin();
+            const vel = localSphere.body.getLinearVelocity();
+            console.log("[Physics] Состояние синей сферы:", {
+                позиция: {
+                    x: pos.x(),
+                    y: pos.y(),
+                    z: pos.z()
+                },
+                скорость: {
+                    x: vel.x(),
+                    y: vel.y(),
+                    z: vel.z()
+                },
+                активна: localSphere.body.isActive()
+            });
+            
+            // Если сфера не активна, активируем её
+            if (!localSphere.body.isActive()) {
+                console.log("[Physics] Активируем синюю сферу");
+                localSphere.body.activate(true);
+            }
+        } else {
+            console.warn("[Physics] Синяя сфера не найдена или не имеет физического тела");
+        }
     }
 }
 
@@ -69,112 +155,98 @@ export function updatePhysicsObjects(objects) {
         const obj = objects[id];
         if (!obj.mesh) continue;
 
-        // Сначала обновляем локальную физику
-        if (obj.body) {
-            const trans = new window.Ammo.btTransform();
-            obj.body.getMotionState().getWorldTransform(trans);
+        // Для серверной (красной) сферы просто обновляем позицию из серверных данных
+        if (obj.isServerControlled) {
+            if (obj.serverPos) {
+                // Если синей сферы еще нет, создаем её
+                if (!objects["local_sphere"]) {
+                    console.log("[Physics] Создаем синюю сферу рядом с красной");
+                    const localSphere = {
+                        id: "local_sphere",
+                        object_type: "sphere",
+                        x: obj.serverPos.x + physicsSettings.sphereOffset,
+                        y: obj.serverPos.y,
+                        z: obj.serverPos.z,
+                        mass: 1.0,
+                        radius: 1.0,
+                        color: "#0000ff",
+                        isLocalControlled: true
+                    };
 
-            const locX = trans.getOrigin().x();
-            const locY = trans.getOrigin().y();
-            const locZ = trans.getOrigin().z();
-
-            const qx = trans.getRotation().x();
-            const qy = trans.getRotation().y();
-            const qz = trans.getRotation().z();
-            const qw = trans.getRotation().w();
-
-            obj.mesh.position.set(locX, locY, locZ);
-            obj.mesh.quaternion.set(qx, qy, qz, qw);
-        }
-
-        // Затем корректируем по данным сервера если есть расхождение
-        if (obj.serverPos) {
-            const dx = obj.serverPos.x - obj.mesh.position.x;
-            const dy = obj.serverPos.y - obj.mesh.position.y;
-            const dz = obj.serverPos.z - obj.mesh.position.z;
-
-            // Если расхождение существенное, корректируем физическое тело
-            if (dx * dx + dy * dy + dz * dz > 0.1) {
-                const alpha = 0.1; // Коэффициент коррекции
-                const newX = obj.mesh.position.x + dx * alpha;
-                const newY = obj.mesh.position.y + dy * alpha;
-                const newZ = obj.mesh.position.z + dz * alpha;
-
-                // Корректируем физическое тело если оно есть
-                if (obj.body) {
-                    const correction = new window.Ammo.btTransform();
-                    correction.setIdentity();
-                    correction.setOrigin(new window.Ammo.btVector3(newX, newY, newZ));
+                    // Создаем THREE.js меш
+                    const geometry = new THREE.SphereGeometry(localSphere.radius, 32, 32);
+                    const material = new THREE.MeshPhongMaterial({ 
+                        color: localSphere.color,
+                        shininess: 30,
+                        specular: 0x444444
+                    });
                     
-                    if (obj.serverRot) {
-                        correction.setRotation(new window.Ammo.btQuaternion(
-                            obj.serverRot.x,
-                            obj.serverRot.y,
-                            obj.serverRot.z,
-                            obj.serverRot.w
-                        ));
-                    } else {
-                        correction.setRotation(trans.getRotation());
-                    }
+                    localSphere.mesh = new THREE.Mesh(geometry, material);
+                    localSphere.mesh.position.set(localSphere.x, localSphere.y, localSphere.z);
+                    
+                    // Добавляем в сцену
+                    obj.mesh.parent.add(localSphere.mesh);
+                    
+                    // Создаем физику для синей сферы
+                    createPhysicsObject(localSphere);
+                    
+                    // Сохраняем в объекты
+                    objects["local_sphere"] = localSphere;
+                }
 
-                    obj.body.activate(true);
-                    obj.body.getMotionState().setWorldTransform(correction);
-                    obj.body.setCenterOfMassTransform(correction);
-                } else {
-                    // Если физического тела нет, просто интерполируем меш
-                    obj.mesh.position.lerp(obj.serverPos, alpha);
-                    if (obj.serverRot) {
-                        obj.mesh.quaternion.slerp(obj.serverRot, alpha);
-                    }
+                // Обновляем позицию красной сферы
+                obj.mesh.position.copy(obj.serverPos);
+                if (obj.serverRot) {
+                    obj.mesh.quaternion.copy(obj.serverRot);
                 }
             }
+            continue;
+        }
+
+        // Для локальной (синей) сферы используем только локальную физику
+        if (obj.isLocalControlled && obj.body) {
+            const trans = new window.Ammo.btTransform();
+            obj.body.getMotionState().getWorldTransform(trans);
+            const pos = trans.getOrigin();
+            const rot = trans.getRotation();
+            
+            obj.mesh.position.set(pos.x(), pos.y(), pos.z());
+            obj.mesh.quaternion.set(rot.x(), rot.y(), rot.z(), rot.w());
+
+            if (physicsSettings.debugMode) {
+                console.log("[Physics] Позиция синей сферы:", {
+                    x: pos.x(),
+                    y: pos.y(),
+                    z: pos.z()
+                });
+            }
+            continue;
         }
     }
 }
 
-export function applyImpulseToSphere(cmd, objects) {
-    const IMPULSE_STRENGTH = 10; // Уменьшаем силу импульса
-
-    if (!objects || typeof objects !== 'object') {
-        console.warn("[Physics] Некорректные объекты переданы в applyImpulseToSphere");
-        return;
-    }
-
-    let targetSphere = null;
-    for (let id in objects) {
-        const obj = objects[id];
-        if (obj && obj.mesh && obj.object_type === "sphere") {
-            targetSphere = obj;
-            break;
-        }
-    }
-
-    if (!targetSphere || !targetSphere.body) {
-        console.warn("[Physics] Шар не найден или не имеет физического тела");
-        return;
-    }
-
-    const impulse = new window.Ammo.btVector3(0, 0, 0);
-    if (cmd === "LEFT") impulse.setValue(-IMPULSE_STRENGTH, 0, 0);
-    if (cmd === "RIGHT") impulse.setValue(IMPULSE_STRENGTH, 0, 0);
-    if (cmd === "UP") impulse.setValue(0, 0, -IMPULSE_STRENGTH);
-    if (cmd === "DOWN") impulse.setValue(0, 0, IMPULSE_STRENGTH);
-    if (cmd === "SPACE") impulse.setValue(0, IMPULSE_STRENGTH * 1.5, 0);
-
-    targetSphere.body.activate(true);
-    targetSphere.body.applyCentralImpulse(impulse);
+export function createDebugSpheres() {
+    console.log("[Physics] Создание параметров для отладочных сфер");
     
-    // Добавляем диагностику
-    const velocity = targetSphere.body.getLinearVelocity();
-    console.log("[Physics] Состояние шара:", {
-        команда: cmd,
-        позиция: targetSphere.mesh.position,
-        скорость: {
-            x: velocity.x(),
-            y: velocity.y(),
-            z: velocity.z()
-        }
-    });
+    const radius = 1.0;
+    const mass = 1.0;
+    const startHeight = 30.0;
+
+    // Создаем синюю сферу рядом с позицией красной
+    const localSphere = {
+        id: "local_sphere",
+        object_type: "sphere",
+        x: physicsSettings.sphereOffset,  // Смещаем вправо от красной сферы
+        y: startHeight,
+        z: 0,
+        mass: mass,
+        radius: radius,
+        color: "#0000ff",
+        isLocalControlled: true
+    };
+
+    console.log("[Physics] Параметры отладочной сферы:", localSphere);
+    return [localSphere];
 }
 
 export function createPhysicsObject(obj) {
@@ -183,8 +255,8 @@ export function createPhysicsObject(obj) {
         return;
     }
 
-    // Пропускаем создание физики для деревьев
-    if (obj.object_type === "tree") {
+    // Пропускаем создание физики для серверной сферы и деревьев
+    if (obj.isServerControlled || obj.object_type === "tree") {
         return;
     }
 
@@ -204,6 +276,44 @@ export function createPhysicsObject(obj) {
             // Для сферы устанавливаем параметры физики
             obj.mass = obj.mass || 1;
             console.log("[Physics] Создание физики для сферы:", obj.id);
+
+            // Настраиваем параметры физики для более реалистичного поведения
+            const restitution = 0.7;  // Коэффициент упругости
+            const friction = 0.5;     // Коэффициент трения
+            const rollingFriction = 0.1; // Коэффициент трения качения
+            
+            // Создаем rigid body с этими параметрами
+            const localInertia = new window.Ammo.btVector3(0, 0, 0);
+            shape.calculateLocalInertia(obj.mass, localInertia);
+            
+            const motionState = new window.Ammo.btDefaultMotionState(transform);
+            const sphereRbInfo = new window.Ammo.btRigidBodyConstructionInfo(obj.mass, motionState, shape, localInertia);
+            
+            // Применяем параметры к rigid body
+            body = new window.Ammo.btRigidBody(sphereRbInfo);
+            body.setRestitution(restitution);
+            body.setFriction(friction);
+            body.setRollingFriction(rollingFriction);
+            
+            // Активируем тело и добавляем его в мир
+            body.activate(true);
+            localPhysicsWorld.addRigidBody(body);
+            
+            // Сохраняем тело в объект
+            obj.body = body;
+            
+            // Очищаем память
+            window.Ammo.destroy(sphereRbInfo);
+            window.Ammo.destroy(localInertia);
+            
+            console.log("[Physics] Физические параметры сферы установлены:", {
+                масса: obj.mass,
+                упругость: restitution,
+                трение: friction,
+                трениеКачения: rollingFriction
+            });
+            
+            return;
             break;
         case "terrain":
             const heightData = new Float32Array(obj.height_data);
@@ -249,65 +359,276 @@ export function createPhysicsObject(obj) {
             const scaleZ = obj.scale_z || 1;
             shape.setLocalScaling(new window.Ammo.btVector3(scaleX, scaleY, scaleZ));
             
-            // Смещаем террейн на половину размера, чтобы центр был в правильном месте
-            transform.setOrigin(new window.Ammo.btVector3(
-                obj.x - (scaleX * obj.heightmap_w) / 2,
-                obj.y,
-                obj.z - (scaleZ * obj.heightmap_h) / 2
-            ));
+            obj.mass = 0; // Террейн всегда статичный
             
-            obj.mass = 0;
-            console.log("[Physics] Создание физики для террейна:", obj.id);
+            // Создаем rigid body для террейна
+            motionState = new window.Ammo.btDefaultMotionState(transform);
+            const terrainRbInfo = new window.Ammo.btRigidBodyConstructionInfo(obj.mass, motionState, shape, new window.Ammo.btVector3(0, 0, 0));
+            body = new window.Ammo.btRigidBody(terrainRbInfo);
+            
+            // Устанавливаем как статическое тело
+            body.setCollisionFlags(1); // CF_STATIC_OBJECT
+            
+            // Добавляем тело в мир с правильными параметрами коллизии
+            localPhysicsWorld.addRigidBody(body);
+            
+            // Сохраняем тело в объект
+            obj.body = body;
+            
+            console.log("[Physics] Физика для террейна создана успешно:", {
+                restitution: body.getRestitution(),
+                friction: body.getFriction(),
+                rollingFriction: body.getRollingFriction()
+            });
+            
+            return;
             break;
         default:
             console.warn("[Physics] Пропуск создания физики для типа:", obj.object_type);
             return;
     }
+}
 
-    // Создаем rigid body
-    const mass = obj.mass;
-    const localInertia = new window.Ammo.btVector3(0, 0, 0);
+// Добавляем кнопку для отладки физики
+const debugButton = document.createElement('button');
+debugButton.style.position = 'fixed';
+debugButton.style.top = '10px';
+debugButton.style.right = '10px';
+debugButton.style.zIndex = '1000';
+debugButton.style.padding = '10px';
+debugButton.style.backgroundColor = '#4CAF50';
+debugButton.style.color = 'white';
+debugButton.style.border = 'none';
+debugButton.style.borderRadius = '5px';
+debugButton.style.cursor = 'pointer';
+debugButton.textContent = 'Toggle Physics Mode';
+debugButton.onclick = () => {
+    togglePhysicsMode();
+    debugButton.textContent = `Physics: ${physicsSettings.useServerPhysics ? 'Server' : 'Local'}`;
+};
+document.body.appendChild(debugButton);
+
+// Добавляем кнопку для применения импульса к сфере
+const impulseButton = document.createElement('button');
+impulseButton.style.position = 'fixed';
+impulseButton.style.top = '60px';
+impulseButton.style.right = '10px';
+impulseButton.style.zIndex = '1000';
+impulseButton.style.padding = '10px';
+impulseButton.style.backgroundColor = '#2196F3';
+impulseButton.style.color = 'white';
+impulseButton.style.border = 'none';
+impulseButton.style.borderRadius = '5px';
+impulseButton.style.cursor = 'pointer';
+impulseButton.textContent = 'Apply Impulse (Up)';
+impulseButton.onclick = () => {
+    console.log("[Physics] Применяем импульс вверх к синей сфере");
+    applyImpulseToSphere('SPACE', objects);
+};
+document.body.appendChild(impulseButton);
+
+// Добавляем кнопку для сброса позиции сферы
+const resetButton = document.createElement('button');
+resetButton.style.position = 'fixed';
+resetButton.style.top = '110px';
+resetButton.style.right = '10px';
+resetButton.style.zIndex = '1000';
+resetButton.style.padding = '10px';
+resetButton.style.backgroundColor = '#f44336';
+resetButton.style.color = 'white';
+resetButton.style.border = 'none';
+resetButton.style.borderRadius = '5px';
+resetButton.style.cursor = 'pointer';
+resetButton.textContent = 'Reset Sphere';
+resetButton.onclick = () => {
+    console.log("[Physics] Сбрасываем позицию синей сферы");
+    const localSphere = objects["local_sphere"];
+    if (localSphere && localSphere.body) {
+        // Сбрасываем позицию и скорость
+        const transform = new window.Ammo.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(new window.Ammo.btVector3(physicsSettings.sphereOffset, 30, 0));
+        
+        localSphere.body.getMotionState().setWorldTransform(transform);
+        localSphere.body.setCenterOfMassTransform(transform);
+        
+        // Сбрасываем скорость
+        const zero = new window.Ammo.btVector3(0, 0, 0);
+        localSphere.body.setLinearVelocity(zero);
+        localSphere.body.setAngularVelocity(zero);
+        
+        // Активируем тело
+        localSphere.body.activate(true);
+        
+        console.log("[Physics] Позиция синей сферы сброшена");
+    } else {
+        console.warn("[Physics] Локальная сфера не найдена");
+    }
+};
+document.body.appendChild(resetButton);
+
+// Обновляем функцию применения импульса
+export function applyImpulseToSphere(cmd, objects) {
+    const IMPULSE_STRENGTH = 10;
+
+    // Получаем обе сферы
+    const localSphere = objects["local_sphere"];
+    const serverSphere = objects["server_sphere"];
+
+    if (!localSphere || !localSphere.body) {
+        console.warn("[Physics] Локальная сфера не найдена");
+        return;
+    }
+
+    const impulse = new window.Ammo.btVector3(0, 0, 0);
+    if (cmd === "LEFT") impulse.setValue(-IMPULSE_STRENGTH, 0, 0);
+    if (cmd === "RIGHT") impulse.setValue(IMPULSE_STRENGTH, 0, 0);
+    if (cmd === "UP") impulse.setValue(0, 0, -IMPULSE_STRENGTH);
+    if (cmd === "DOWN") impulse.setValue(0, 0, IMPULSE_STRENGTH);
+    if (cmd === "SPACE") impulse.setValue(0, IMPULSE_STRENGTH * 1.5, 0);
+
+    // Применяем импульс к локальной сфере
+    localSphere.body.activate(true);
+    localSphere.body.applyCentralImpulse(impulse);
+
+    if (physicsSettings.debugMode) {
+        const velocity = localSphere.body.getLinearVelocity();
+        console.log("[Physics] Состояние локальной сферы:", {
+            команда: cmd,
+            позиция: localSphere.mesh.position,
+            скорость: {
+                x: velocity.x(),
+                y: velocity.y(),
+                z: velocity.z()
+            }
+        });
+    }
+}
+
+export function initDebugSpheres(scene) {
+    console.log("[Physics] Начало создания отладочных сфер");
     
-    if (mass > 0) {
-        shape.calculateLocalInertia(mass, localInertia);
+    if (!scene) {
+        console.error("[Physics] Сцена не передана в initDebugSpheres");
+        return [];
+    }
+    
+    // Удаляем существующие сферы, если они есть
+    if (objects["local_sphere"]) {
+        console.log("[Physics] Удаляем существующую синюю сферу");
+        if (objects["local_sphere"].mesh && objects["local_sphere"].mesh.parent) {
+            objects["local_sphere"].mesh.parent.remove(objects["local_sphere"].mesh);
+        }
+        delete objects["local_sphere"];
+    }
+    
+    const debugSpheres = createDebugSpheres();
+    console.log("[Physics] Создано сфер:", debugSpheres.length);
+    
+    debugSpheres.forEach(sphere => {
+        console.log("[Physics] Создание сферы:", sphere.id);
+        
+        const geometry = new THREE.SphereGeometry(sphere.radius, 32, 32);
+        const material = new THREE.MeshPhongMaterial({ 
+            color: sphere.color,
+            shininess: 30,
+            specular: 0x444444
+        });
+        
+        sphere.mesh = new THREE.Mesh(geometry, material);
+        sphere.mesh.position.set(sphere.x, sphere.y, sphere.z);
+        sphere.mesh.castShadow = true;
+        sphere.mesh.receiveShadow = true;
+        
+        // Добавляем сферу в объекты и на сцену
+        objects[sphere.id] = sphere;
+        scene.add(sphere.mesh);
+        console.log("[Physics] Сфера добавлена в сцену:", sphere.id);
+        
+        // Создаем физику только для локальной (синей) сферы
+        if (sphere.isLocalControlled) {
+            try {
+                createPhysicsObject(sphere);
+                console.log("[Physics] Физика создана для сферы:", sphere.id, "body:", !!sphere.body);
+                
+                // Проверяем, что физика создана правильно
+                if (!sphere.body) {
+                    console.error("[Physics] Физическое тело не создано для сферы:", sphere.id);
+                }
+            } catch (error) {
+                console.error("[Physics] Ошибка при создании физики для сферы:", sphere.id, error);
+            }
+        }
+    });
+    
+    return debugSpheres;
+}
+
+// Функция для создания локальной синей сферы
+export function createLocalSphere(scene) {
+    if (!localPhysicsWorld) {
+        console.error("[Physics] Физический мир не инициализирован. Сначала вызовите initAmmo()");
+        return null;
     }
 
-    motionState = new window.Ammo.btDefaultMotionState(transform);
+    console.log("[Physics] Создание локальной синей сферы...");
+    
+    // Создаем синюю сферу
+    const sphere = {
+        id: "local_sphere",
+        object_type: "sphere",
+        x: physicsSettings.sphereOffset/2,
+        y: 30,
+        z: 0,
+        mass: 1.0,
+        radius: 1.0,
+        color: "#0000ff",
+        isLocalControlled: true
+    };
+
+    // Создаем THREE.js меш
+    const geometry = new THREE.SphereGeometry(sphere.radius, 32, 32);
+    const material = new THREE.MeshPhongMaterial({ 
+        color: sphere.color,
+        shininess: 30,
+        specular: 0x444444
+    });
+    
+    sphere.mesh = new THREE.Mesh(geometry, material);
+    sphere.mesh.position.set(sphere.x, sphere.y, sphere.z);
+    sphere.mesh.castShadow = true;
+    sphere.mesh.receiveShadow = true;
+    
+    // Добавляем в сцену
+    scene.add(sphere.mesh);
+    
+    // Создаем физическое тело
+    const shape = new window.Ammo.btSphereShape(sphere.radius);
+    const transform = new window.Ammo.btTransform();
+    transform.setIdentity();
+    transform.setOrigin(new window.Ammo.btVector3(sphere.x, sphere.y, sphere.z));
+    
+    const mass = sphere.mass;
+    const localInertia = new window.Ammo.btVector3(0, 0, 0);
+    shape.calculateLocalInertia(mass, localInertia);
+    
+    const motionState = new window.Ammo.btDefaultMotionState(transform);
     const rbInfo = new window.Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
-    body = new window.Ammo.btRigidBody(rbInfo);
-
-    // Устанавливаем параметры физики
-    if (obj.object_type === "terrain") {
-        // Устанавливаем как статическое тело
-        body.setCollisionFlags(1); // CF_STATIC_OBJECT
-        
-        // Добавляем тело в мир с правильными параметрами коллизии
-        localPhysicsWorld.addRigidBody(body);
-        
-        console.log("[Physics] Параметры физического тела террейна:", {
-            restitution: body.getRestitution(),
-            friction: body.getFriction(),
-            rollingFriction: body.getRollingFriction()
-        });
-    } else if (obj.object_type === "sphere") {
-        // Настройки для динамического тела
-        body.setCollisionFlags(0); // CF_DYNAMIC_OBJECT
-        body.setRestitution(0.7);
-        body.setFriction(0.5);
-        body.setRollingFriction(0.1);
-        
-        // Добавляем тело в мир
-        localPhysicsWorld.addRigidBody(body);
-        
-        // Активируем для физической симуляции
-        body.activate(true);
-        
-        console.log("[Physics] Параметры физического тела сферы:", {
-            mass: mass,
-            restitution: body.getRestitution(),
-            friction: body.getFriction()
-        });
-    }
-
-    obj.body = body;
+    const body = new window.Ammo.btRigidBody(rbInfo);
+    
+    // Настройки физики
+    body.setRestitution(0.7);
+    body.setFriction(0.5);
+    body.setRollingFriction(0.1);
+    body.activate(true);
+    
+    // Добавляем тело в физический мир
+    localPhysicsWorld.addRigidBody(body);
+    sphere.body = body;
+    
+    // Сохраняем в объекты
+    objects[sphere.id] = sphere;
+    
+    console.log("[Physics] Локальная синяя сфера создана успешно");
+    return sphere;
 }

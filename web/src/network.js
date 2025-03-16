@@ -8,7 +8,9 @@ let ws = null;
 function handleMessage(data) {      
     try {
         if (data.type === "create" && data.id) {
-            console.log("[WS] Обработка create сообщения для id:", data.id);
+            if (data.object_type !== 'terrain') {
+                console.log("[WS] Создан объект:", data.object_type, data.id);
+            }
             const obj = {
                 id: data.id,
                 object_type: data.object_type,
@@ -26,15 +28,11 @@ function handleMessage(data) {
                 scale_z: data.scale_z,
             };
             
-            // Сначала добавляем объект в коллекцию
             objects[data.id] = obj;
-            
-            // Создаем визуальный объект и физическое тело
             createMeshAndBodyForObject(obj);
             createPhysicsObject(obj);
         } 
         else if (data.type === "update" && data.id && objects[data.id]) {
-            console.log("[WS] Обработка update сообщения для id:", data.id);
             const obj = objects[data.id];
             obj.serverPos = {
                 x: data.x || 0,
@@ -44,12 +42,11 @@ function handleMessage(data) {
         }
     } catch (error) {
         console.error("[WS] Ошибка при обработке сообщения:", error);
-        console.error("[WS] Стек вызовов:", error.stack);
     }
 }
 
 function handleKeyPress(event) {
-    if (event.repeat) return; // Игнорируем повторные нажатия при удержании клавиши
+    if (event.repeat) return;
 
     let cmd = null;
     switch (event.code) {
@@ -75,69 +72,45 @@ function handleKeyPress(event) {
     }
 
     if (cmd) {
-        // Отправляем команду на сервер
         ws.send(JSON.stringify({
             type: "cmd",
             cmd: cmd
         }));
-
-        // Применяем импульс локально
         applyImpulseToSphere(cmd, objects);
     }
 }
 
 export function initNetwork() {
     try {
-        console.log("[WS] Начало инициализации WebSocket");
         ws = new WebSocket("ws://localhost:8080/ws");
         
         ws.onopen = () => {
-            console.log("[WS] connected");
-            // Отправим тестовое сообщение
-            try {
-                ws.send(JSON.stringify({ type: "ping" }));
-                console.log("[WS] Отправлено тестовое сообщение");
-            } catch (e) {
-                console.error("[WS] Ошибка отправки тестового сообщения:", e);
-            }
+            console.log("[WS] Подключено");
+            ws.send(JSON.stringify({ type: "ping" }));
         };
 
         ws.onmessage = (evt) => {
             try {
                 const data = JSON.parse(evt.data);
-                
                 if (!data || typeof data !== 'object') {
                     throw new Error('Неверный формат данных');
                 }
-
-                // Дальнейшая обработка...
                 handleMessage(data);
             } catch (error) {
-                console.error("[WS] Полная ошибка:", error);
-                console.error("[WS] Стек вызовов:", error.stack);
+                console.error("[WS] Ошибка обработки сообщения:", error);
             }
         };
 
         ws.onerror = (error) => {
-            console.error("[WS] WebSocket error:", error);
-            console.error("[WS] Детали ошибки:", {
-                message: error.message,
-                type: error.type,
-                eventPhase: error.eventPhase
-            });
+            console.error("[WS] Ошибка WebSocket:", error);
         };
 
         ws.onclose = (event) => {
-            console.log("[WS] Соединение закрыто:", {
-                code: event.code,
-                reason: event.reason,
-                wasClean: event.wasClean
-            });
+            console.log("[WS] Соединение закрыто");
         };
 
         document.addEventListener("keydown", handleKeyPress);
     } catch (error) {
         console.error("[WS] Ошибка при создании WebSocket:", error);
-        console.error("[WS] Стек вызовов:", error.stack);
     }
 }

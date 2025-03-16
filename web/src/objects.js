@@ -39,34 +39,43 @@ export function createMeshAndBodyForObject(obj) {
     return obj;
 }
 
-function createTerrainMesh(data) {
-    const w = data.heightmap_w || 64;
-    const h = data.heightmap_h || 64;
-    const geo = new THREE.PlaneGeometry(
-        w * data.scale_x,
-        h * data.scale_z,
-        w - 1,
-        h - 1
+function createTerrainMesh(obj) {
+    const geometry = new THREE.PlaneGeometry(
+        obj.scale_x * obj.heightmap_w,
+        obj.scale_z * obj.heightmap_h,
+        obj.heightmap_w - 1,
+        obj.heightmap_h - 1
     );
-    geo.rotateX(-Math.PI / 2);
 
-    if (data.height_data) {
-        const verts = geo.attributes.position.array;
-        for (let i = 0; i < verts.length; i += 3) {
-            const ix = (i / 3) % w;
-            const iz = Math.floor(i / 3 / w);
-            verts[i + 1] = data.height_data[iz * w + ix] * data.scale_y;
+    // Поворачиваем плоскость в горизонтальное положение
+    geometry.rotateX(-Math.PI / 2);
+
+    // Применяем данные высот напрямую
+    const vertices = geometry.attributes.position.array;
+    for (let i = 0; i < obj.heightmap_h; i++) {
+        for (let j = 0; j < obj.heightmap_w; j++) {
+            const index = (i * obj.heightmap_w + j);
+            const vertex_index = index * 3;
+            vertices[vertex_index + 1] = obj.height_data[index] * obj.scale_y;
         }
-        geo.computeVertexNormals();
     }
 
-    return new THREE.Mesh(
-        geo,
-        new THREE.MeshLambertMaterial({
-            color: parseColor(data.color || "#888888"),
-            wireframe: true,
-        })
-    );
+    // Пересчитываем нормали для правильного освещения
+    geometry.computeVertexNormals();
+
+    // Создаем материал
+    const material = new THREE.MeshPhongMaterial({
+        color: obj.color || 0xC7C7C7,
+        side: THREE.DoubleSide,
+        wireframe: false,
+        flatShading: true
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.receiveShadow = true;
+    mesh.castShadow = true;
+
+    return mesh;
 }
 
 export function createSphereMesh(data) {

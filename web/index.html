@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>X-Cells</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            z-index: 1000;
+        }
+        
+        #loading h1 {
+            margin-bottom: 20px;
+        }
+        
+        #loading-progress {
+            width: 300px;
+            height: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        #loading-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #4CAF50;
+            transition: width 0.3s;
+        }
+        
+        #loading-status {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        #error-message {
+            color: #ff6b6b;
+            font-size: 14px;
+            max-width: 80%;
+            text-align: center;
+            display: none;
+        }
+        
+        #retry-button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <h1>Загрузка X-Cells</h1>
+        <div id="loading-progress">
+            <div id="loading-bar"></div>
+        </div>
+        <div id="loading-status">Инициализация...</div>
+        <div id="error-message"></div>
+        <button id="retry-button">Повторить</button>
+    </div>
+    
+    <script>
+        // Функция для обновления прогресса загрузки
+        function updateLoadingProgress(percent, status) {
+            document.getElementById('loading-bar').style.width = percent + '%';
+            document.getElementById('loading-status').textContent = status;
+        }
+        
+        // Функция для отображения ошибки
+        function showError(message) {
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('error-message').style.display = 'block';
+            document.getElementById('retry-button').style.display = 'block';
+        }
+        
+        // Функция для скрытия экрана загрузки
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        // Функция для загрузки Ammo.js
+        function loadAmmo() {
+            return new Promise((resolve, reject) => {
+                updateLoadingProgress(10, 'Загрузка Ammo.js...');
+                
+                // Проверяем, загружен ли уже Ammo.js
+                if (typeof Ammo !== 'undefined' && window.AmmoLib) {
+                    console.log('Ammo.js уже загружен и инициализирован');
+                    updateLoadingProgress(30, 'Ammo.js уже загружен');
+                    resolve(window.AmmoLib);
+                    return;
+                }
+                
+                // Используем конкретную версию вместо @latest
+                const urls = [
+                    'https://cdn.jsdelivr.net/npm/ammo.js@0.0.10/builds/ammo.js',       // Основная версия
+                    'https://cdnjs.cloudflare.com/ajax/libs/ammo.js/2.0.0/ammo.js',      // Альтернативный CDN
+                    'ammo.js'                                                             // Локальная копия (если есть)
+                ];
+                
+                let loaded = false;
+                
+                // Попытка загрузить скрипт из разных источников
+                function tryLoadScript(index) {
+                    if (index >= urls.length) {
+                        const error = new Error('Не удалось загрузить Ammo.js ни из одного источника');
+                        console.error(error);
+                        showError('Не удалось загрузить Ammo.js. Попробуйте перезагрузить страницу или проверьте подключение к интернету.');
+                        reject(error);
+                        return;
+                    }
+                    
+                    const script = document.createElement('script');
+                    script.src = urls[index];
+                    console.log(`Попытка загрузки Ammo.js из: ${urls[index]}`);
+                    
+                    script.onload = () => {
+                        console.log(`Скрипт Ammo.js загружен из: ${urls[index]}`);
+                        updateLoadingProgress(20, `Скрипт Ammo.js загружен из: ${urls[index]}, инициализация...`);
+                        loaded = true;
+                        
+                        // Проверяем, доступен ли Ammo
+                        if (typeof Ammo === 'undefined') {
+                            console.error('Ammo не найден после загрузки скрипта');
+                            updateLoadingProgress(15, 'Ошибка инициализации, пробуем другой источник...');
+                            tryLoadScript(index + 1);
+                            return;
+                        }
+                        
+                        // Инициализируем Ammo
+                        try {
+                            Ammo().then(ammoLib => {
+                                console.log('Ammo.js инициализирован успешно');
+                                updateLoadingProgress(30, 'Ammo.js инициализирован');
+                                window.AmmoLib = ammoLib;
+                                resolve(ammoLib);
+                            }).catch(error => {
+                                console.error('Ошибка инициализации Ammo.js:', error);
+                                updateLoadingProgress(15, 'Ошибка инициализации, пробуем другой источник...');
+                                tryLoadScript(index + 1);
+                            });
+                        } catch (error) {
+                            console.error('Ошибка при вызове Ammo():', error);
+                            updateLoadingProgress(15, 'Ошибка инициализации, пробуем другой источник...');
+                            tryLoadScript(index + 1);
+                        }
+                    };
+                    
+                    script.onerror = (error) => {
+                        console.error(`Ошибка загрузки скрипта из ${urls[index]}:`, error);
+                        updateLoadingProgress(15, `Ошибка загрузки из ${urls[index]}, пробуем другой источник...`);
+                        tryLoadScript(index + 1);
+                    };
+                    
+                    document.head.appendChild(script);
+                }
+                
+                // Начинаем с первого URL
+                tryLoadScript(0);
+            });
+        }
+        
+        // Функция для инициализации физического мира
+        function initPhysicsWorld(AmmoLib) {
+            return new Promise((resolve, reject) => {
+                try {
+                    updateLoadingProgress(40, 'Инициализация физического мира...');
+                    
+                    // Создаем физический мир
+                    const collisionConfiguration = new AmmoLib.btDefaultCollisionConfiguration();
+                    const dispatcher = new AmmoLib.btCollisionDispatcher(collisionConfiguration);
+                    const broadphase = new AmmoLib.btDbvtBroadphase();
+                    const solver = new AmmoLib.btSequentialImpulseConstraintSolver();
+                    const physicsWorld = new AmmoLib.btDiscreteDynamicsWorld(
+                        dispatcher,
+                        broadphase,
+                        solver,
+                        collisionConfiguration
+                    );
+                    
+                    // Устанавливаем гравитацию
+                    physicsWorld.setGravity(new AmmoLib.btVector3(0, -9.81, 0));
+                    
+                    console.log('Физический мир инициализирован успешно');
+                    updateLoadingProgress(50, 'Физический мир инициализирован');
+                    
+                    // Сохраняем физический мир в глобальном объекте
+                    window.physicsWorld = physicsWorld;
+                    
+                    resolve(physicsWorld);
+                } catch (error) {
+                    console.error('Ошибка инициализации физического мира:', error);
+                    showError('Ошибка инициализации физического мира. Попробуйте перезагрузить страницу.');
+                    reject(error);
+                }
+            });
+        }
+        
+        // Функция для загрузки основного скрипта приложения
+        function loadAppScript() {
+            return new Promise((resolve, reject) => {
+                updateLoadingProgress(70, 'Загрузка приложения...');
+                
+                const script = document.createElement('script');
+                script.src = 'bundle.js';
+                script.defer = true;
+                
+                script.onload = () => {
+                    console.log('Приложение загружено');
+                    updateLoadingProgress(90, 'Приложение загружено');
+                    resolve();
+                };
+                
+                script.onerror = (error) => {
+                    console.error('Ошибка загрузки приложения:', error);
+                    showError('Не удалось загрузить приложение. Попробуйте перезагрузить страницу.');
+                    reject(error);
+                };
+                
+                document.body.appendChild(script);
+            });
+        }
+        
+        // Функция для запуска приложения
+        async function startApp() {
+            try {
+                // Загружаем и инициализируем Ammo.js
+                const AmmoLib = await loadAmmo();
+                
+                // Инициализируем физический мир
+                const physicsWorld = await initPhysicsWorld(AmmoLib);
+                
+                // Загружаем основной скрипт приложения
+                await loadAppScript();
+                
+                updateLoadingProgress(100, 'Запуск приложения...');
+                setTimeout(hideLoading, 500);
+            } catch (error) {
+                console.error('Ошибка при запуске приложения:', error);
+                showError('Ошибка при запуске приложения: ' + error.message);
+            }
+        }
+        
+        // Обработчик кнопки повтора
+        document.getElementById('retry-button').addEventListener('click', () => {
+            document.getElementById('error-message').style.display = 'none';
+            document.getElementById('retry-button').style.display = 'none';
+            startApp();
+        });
+        
+        // Запускаем приложение при загрузке страницы
+        window.addEventListener('load', startApp);
+    </script>
+</body>
+</html> 

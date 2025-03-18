@@ -25,13 +25,16 @@ export async function initAmmo() {
     }
 
     ammoPromise = new Promise((resolve, reject) => {
-        // Проверяем, загружен ли уже Ammo.js через CDN
-        if (typeof Ammo !== 'undefined') {
-            console.log("[Ammo] Скрипт уже загружен через CDN, инициализация...");
-            Ammo().then((AmmoLib) => {
-                window.Ammo = AmmoLib;
+        console.log("[Physics] Инициализация физики...");
+        
+        // Проверяем, доступен ли AmmoLib
+        if (typeof window.AmmoLib !== 'undefined') {
+            console.log("[Physics] AmmoLib уже загружен и инициализирован");
+            
+            try {
+                const AmmoLib = window.AmmoLib;
                 
-                // Инициализируем физический мир после загрузки Ammo
+                // Инициализируем физический мир
                 const collisionConfiguration = new AmmoLib.btDefaultCollisionConfiguration();
                 const dispatcher = new AmmoLib.btCollisionDispatcher(collisionConfiguration);
                 const broadphase = new AmmoLib.btDbvtBroadphase();
@@ -44,46 +47,93 @@ export async function initAmmo() {
                 );
                 localPhysicsWorld.setGravity(new AmmoLib.btVector3(0, -9.81, 0));
                 
-                console.log("[Ammo] Инициализация успешна");
+                console.log("[Physics] Физический мир инициализирован успешно");
+                window.Ammo = AmmoLib; // Для совместимости с существующим кодом
                 resolve(AmmoLib);
-            }).catch(reject);
+            } catch (error) {
+                console.error("[Physics] Ошибка при инициализации физического мира:", error);
+                reject(error);
+            }
+            return;
+        }
+        
+        // Проверяем, доступен ли глобальный физический мир
+        if (window.physicsWorld) {
+            console.log("[Physics] Используем глобальный физический мир");
+            localPhysicsWorld = window.physicsWorld;
+            resolve(window.AmmoLib);
             return;
         }
 
-        // Если Ammo не загружен через CDN, загружаем его динамически
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/ammo.js@latest/builds/ammo.wasm.js';
-        script.async = true;
-        
-        script.onload = () => {
-            console.log("[Ammo] Скрипт загружен, инициализация...");
-            Ammo().then((AmmoLib) => {
-                window.Ammo = AmmoLib;
-                
-                // Инициализируем физический мир после загрузки Ammo
-                const collisionConfiguration = new AmmoLib.btDefaultCollisionConfiguration();
-                const dispatcher = new AmmoLib.btCollisionDispatcher(collisionConfiguration);
-                const broadphase = new AmmoLib.btDbvtBroadphase();
-                const solver = new AmmoLib.btSequentialImpulseConstraintSolver();
-                localPhysicsWorld = new AmmoLib.btDiscreteDynamicsWorld(
-                    dispatcher,
-                    broadphase,
-                    solver,
-                    collisionConfiguration
-                );
-                localPhysicsWorld.setGravity(new AmmoLib.btVector3(0, -9.81, 0));
-                
-                console.log("[Ammo] Инициализация успешна");
-                resolve(AmmoLib);
-            }).catch(reject);
-        };
-        
-        script.onerror = (error) => {
-            console.error("[Ammo] Ошибка загрузки скрипта:", error);
+        // Если AmmoLib не загружен, пробуем загрузить его сами
+        console.log("[Physics] AmmoLib не загружен, пробуем загрузить через CDN");
+        try {
+            // Если уже есть глобальный Ammo, используем его
+            if (typeof window.Ammo === 'function') {
+                window.Ammo().then(AmmoLib => {
+                    window.AmmoLib = AmmoLib;
+                    console.log("[Physics] Используем существующий Ammo.js");
+                    
+                    // Инициализируем физический мир
+                    const collisionConfiguration = new AmmoLib.btDefaultCollisionConfiguration();
+                    const dispatcher = new AmmoLib.btCollisionDispatcher(collisionConfiguration);
+                    const broadphase = new AmmoLib.btDbvtBroadphase();
+                    const solver = new AmmoLib.btSequentialImpulseConstraintSolver();
+                    localPhysicsWorld = new AmmoLib.btDiscreteDynamicsWorld(
+                        dispatcher,
+                        broadphase,
+                        solver,
+                        collisionConfiguration
+                    );
+                    localPhysicsWorld.setGravity(new AmmoLib.btVector3(0, -9.81, 0));
+                    
+                    console.log("[Physics] Физический мир инициализирован успешно");
+                    resolve(AmmoLib);
+                });
+                return;
+            }
+            
+            // Загружаем Ammo.js через CDN
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/ammo.js@0.0.10/ammo.js';
+            script.async = true;
+            
+            script.onload = function() {
+                console.log("[Physics] Ammo.js загружен через CDN");
+                if (typeof window.Ammo === 'function') {
+                    window.Ammo().then(AmmoLib => {
+                        window.AmmoLib = AmmoLib;
+                        
+                        // Инициализируем физический мир
+                        const collisionConfiguration = new AmmoLib.btDefaultCollisionConfiguration();
+                        const dispatcher = new AmmoLib.btCollisionDispatcher(collisionConfiguration);
+                        const broadphase = new AmmoLib.btDbvtBroadphase();
+                        const solver = new AmmoLib.btSequentialImpulseConstraintSolver();
+                        localPhysicsWorld = new AmmoLib.btDiscreteDynamicsWorld(
+                            dispatcher,
+                            broadphase,
+                            solver,
+                            collisionConfiguration
+                        );
+                        localPhysicsWorld.setGravity(new AmmoLib.btVector3(0, -9.81, 0));
+                        
+                        console.log("[Physics] Физический мир инициализирован успешно");
+                        resolve(AmmoLib);
+                    });
+                } else {
+                    reject(new Error("[Physics] Не удалось инициализировать Ammo.js"));
+                }
+            };
+            
+            script.onerror = function() {
+                reject(new Error("[Physics] Не удалось загрузить Ammo.js через CDN"));
+            };
+            
+            document.head.appendChild(script);
+        } catch (error) {
+            console.error("[Physics] Ошибка при загрузке Ammo.js:", error);
             reject(error);
-        };
-
-        document.body.appendChild(script);
+        }
     });
 
     return ammoPromise;

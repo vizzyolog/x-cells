@@ -17,6 +17,21 @@ import (
 	"x-cells/backend/internal/transport"
 )
 
+// Константы для террейна
+const (
+	// Физические размеры террейна в мире
+	terrainPhysicalWidth = 100.0
+	terrainPhysicalDepth = 100.0
+
+	// Размеры сетки террейна
+	terrainVisualGridSize  = 128 // Детализация для визуальной модели
+	terrainPhysicsGridSize = 64  // Пониженная детализация для физики (можно настроить)
+
+	// Диапазон высот
+	terrainMinHeight = -2.0
+	terrainMaxHeight = 8.0
+)
+
 // Object - локальная структура хранения
 type Object struct {
 	ID         string    `json:"id"`
@@ -236,20 +251,43 @@ func createObjectInGo(obj *Object, client pb.PhysicsClient) {
 	}
 
 	request.Shape = shapeDesc
+
+	// Отправляем запрос в C++ сервер
+	_, err := client.CreateObject(context.Background(), request)
+	if err != nil {
+		log.Printf("[Go] Ошибка создания объекта: %v", err)
+		return
+	}
 }
 
 // Генерация данных террейна
 func generateTerrainData(w, h int) []float32 {
-	arr := make([]float32, w*h)
-	for z := 0; z < h; z++ {
-		for x := 0; x < w; x++ {
-			fx := float32(x - w/2)
-			fz := float32(z - h/2)
-			h := 2.0 * float32(math.Sin(float64(fx)*0.1)*math.Cos(float64(fz)*0.1))
-			arr[z*w+x] = h
+	data := make([]float32, w*h)
+
+	// Центр сетки
+	w2 := float64(w-1) / 2.0
+	d2 := float64(h-1) / 2.0
+
+	// Параметры волн
+	phaseMult := 12.0
+	heightRange := terrainMaxHeight - terrainMinHeight
+
+	for j := 0; j < h; j++ {
+		for i := 0; i < w; i++ {
+			// Нормализуем координаты относительно центра
+			x := float64(i) - w2
+			z := float64(j) - d2
+
+			// Вычисляем нормализованное расстояние от центра
+			radius := math.Sqrt((x*x)/(w2*w2) + (z*z)/(d2*d2))
+
+			// Создаем круговую волну и масштабируем её в нужный диапазон высот
+			height := (math.Sin(radius*phaseMult)+1.0)*0.5*heightRange + terrainMinHeight
+			data[j*w+i] = float32(height)
 		}
 	}
-	return arr
+
+	return data
 }
 
 // Стриминг состояния объектов
@@ -309,16 +347,16 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 	}
 
 	// Создаём личную сферу для нового подключения
-	sphereID := fmt.Sprintf("sphere_%d", time.Now().UnixNano())
-	color := fmt.Sprintf("#%06x", rand.Intn(0xffffff))
-	radius := float32(1.0 + rand.Float32()*1.5)
-	mass := float32(1.0 + rand.Float32()*2.0)
+	sphereID := "server_sphere" // Фиксированный ID для серверной сферы
+	color := "#ff0000"          // Красный цвет
+	radius := float32(1.0)      // Фиксированный радиус
+	mass := float32(1.0)        // Фиксированная масса
 
 	sphereObj := &Object{
 		ID:         sphereID,
 		ObjectType: "sphere",
-		X:          0,
-		Y:          30,
+		X:          -2.5,
+		Y:          30, // Начальная высота
 		Z:          0,
 		Mass:       mass,
 		Radius:     radius,
@@ -373,16 +411,16 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 				impulse.Y = 10
 			}
 
-			// Применяем импульс вместо крутящего момента
+			// Применяем импульс только к серверной сфере
 			_, err := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
-				Id:      sphereID,
+				Id:      "server_sphere", // Всегда используем ID серверной сферы
 				Impulse: &impulse,
 			})
 			if err != nil {
 				log.Printf("[Go] Ошибка применения импульса: %v", err)
 			} else {
-				log.Printf("[Go] Применен импульс к %s: (%f, %f, %f)",
-					sphereID, impulse.X, impulse.Y, impulse.Z)
+				log.Printf("[Go] Применен импульс к server_sphere: (%f, %f, %f)",
+					impulse.X, impulse.Y, impulse.Z)
 			}
 		}
 	}
@@ -445,7 +483,7 @@ func main() {
 	defer physicsClient.Close()
 
 	// Создаем террейн
-	terrainData := generateTerrainData(128, 128)
+	terrainData := generateTerrainData(terrainPhysicsGridSize, terrainPhysicsGridSize) // Используем пониженную детализацию для физики
 	terrain := &Object{
 		ID:         "terrain1",
 		ObjectType: "terrain",
@@ -453,15 +491,16 @@ func main() {
 		Y:          0,
 		Z:          0,
 		HeightData: terrainData,
-		HeightmapW: 64,
-		HeightmapH: 64,
+		HeightmapW: terrainPhysicsGridSize,
+		HeightmapH: terrainPhysicsGridSize,
 		Color:      "#888888",
 		Mass:       0,
-		ScaleX:     5.0,
-		ScaleY:     1.0,
-		ScaleZ:     10.0,
-		MinHeight:  -10.0,
-		MaxHeight:  20.0,
+		// Масштаб для равномерного распределения точек по физическому размеру
+		ScaleX:    float32(terrainPhysicalWidth / float64(terrainPhysicsGridSize-1)),
+		ScaleY:    1.0,
+		ScaleZ:    float32(terrainPhysicalDepth / float64(terrainPhysicsGridSize-1)),
+		MinHeight: terrainMinHeight,
+		MaxHeight: terrainMaxHeight,
 	}
 	createObjectInGo(terrain, physicsClient)
 

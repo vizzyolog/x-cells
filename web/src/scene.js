@@ -64,14 +64,27 @@ export async function initScene() {
     // Включаем режим отладки физики
     physicsSettings.debugMode = true;
 
-    // Инициализируем физику
-    console.log("[Scene] Начало инициализации физики");
-    try {
-        await initAmmo();
-        console.log("[Scene] Физика успешно инициализирована");
-    } catch (error) {
-        console.error("[Scene] Ошибка при инициализации физики:", error);
-        throw error;
+    // Проверяем, инициализирован ли уже физический мир в index-test.html
+    if (window.physicsWorld) {
+        console.log("[Scene] Физический мир уже инициализирован в index-test.html");
+        // Используем существующий физический мир
+        try {
+            await initAmmo();
+            console.log("[Scene] Физика успешно подключена к существующему миру");
+        } catch (error) {
+            console.error("[Scene] Ошибка при подключении к существующему физическому миру:", error);
+            throw error;
+        }
+    } else {
+        // Инициализируем физику самостоятельно
+        console.log("[Scene] Начало инициализации физики");
+        try {
+            await initAmmo();
+            console.log("[Scene] Физика успешно инициализирована");
+        } catch (error) {
+            console.error("[Scene] Ошибка при инициализации физики:", error);
+            throw error;
+        }
     }
 
     // Создаем отладочные сферы

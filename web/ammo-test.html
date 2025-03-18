@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Ammo.js Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        
+        #console {
+            background-color: #000;
+            color: #0f0;
+            font-family: monospace;
+            padding: 10px;
+            border-radius: 5px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        h1 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест Ammo.js</h1>
+    
+    <div id="console"></div>
+    
+    <button id="runTest">Запустить тест</button>
+    <button id="clearConsole">Очистить консоль</button>
+    
+    <script>
+        // Перенаправляем вывод консоли в наш элемент
+        const consoleElement = document.getElementById('console');
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+        
+        console.log = function() {
+            const args = Array.from(arguments);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ');
+            
+            consoleElement.innerHTML += `<div style="color: #0f0;">[LOG] ${message}</div>`;
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+            originalConsoleLog.apply(console, arguments);
+        };
+        
+        console.error = function() {
+            const args = Array.from(arguments);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ');
+            
+            consoleElement.innerHTML += `<div style="color: #f00;">[ERROR] ${message}</div>`;
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+            originalConsoleError.apply(console, arguments);
+        };
+        
+        console.warn = function() {
+            const args = Array.from(arguments);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ');
+            
+            consoleElement.innerHTML += `<div style="color: #ff0;">[WARN] ${message}</div>`;
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+            originalConsoleWarn.apply(console, arguments);
+        };
+        
+        // Функция для загрузки Ammo.js
+        function loadAmmo() {
+            return new Promise((resolve, reject) => {
+                console.log("Загрузка Ammo.js...");
+                
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/ammo.js@latest/builds/ammo.wasm.js';
+                script.async = true;
+                
+                script.onload = () => {
+                    console.log("Скрипт Ammo.js загружен, ожидание инициализации...");
+                    
+                    // Проверяем, доступен ли Ammo
+                    if (typeof Ammo === 'undefined') {
+                        console.error("Ammo не найден после загрузки скрипта");
+                        reject(new Error("Ammo не найден после загрузки скрипта"));
+                        return;
+                    }
+                    
+                    // Инициализируем Ammo
+                    Ammo().then(ammoLib => {
+                        console.log("Ammo.js инициализирован успешно");
+                        window.AmmoLib = ammoLib;
+                        resolve(ammoLib);
+                    }).catch(error => {
+                        console.error("Ошибка инициализации Ammo.js:", error);
+                        reject(error);
+                    });
+                };
+                
+                script.onerror = (error) => {
+                    console.error("Ошибка загрузки скрипта Ammo.js:", error);
+                    reject(error);
+                };
+                
+                document.head.appendChild(script);
+            });
+        }
+        
+        // Функция для тестирования Ammo.js
+        async function testAmmo() {
+            try {
+                console.log("Проверка наличия Ammo в глобальном объекте:", typeof Ammo);
+                
+                // Если Ammo не загружен, загружаем его
+                if (typeof Ammo === 'undefined' || typeof window.AmmoLib === 'undefined') {
+                    console.log("Ammo не найден, загружаем...");
+                    const AmmoLib = await loadAmmo();
+                    console.log("Ammo.js загружен и инициализирован");
+                } else {
+                    console.log("Ammo.js уже загружен");
+                }
+                
+                // Используем AmmoLib из глобального объекта
+                const AmmoLib = window.AmmoLib;
+                
+                // Создаем простой физический мир для теста
+                console.log("Создание физического мира...");
+                const collisionConfiguration = new AmmoLib.btDefaultCollisionConfiguration();
+                const dispatcher = new AmmoLib.btCollisionDispatcher(collisionConfiguration);
+                const broadphase = new AmmoLib.btDbvtBroadphase();
+                const solver = new AmmoLib.btSequentialImpulseConstraintSolver();
+                const physicsWorld = new AmmoLib.btDiscreteDynamicsWorld(
+                    dispatcher,
+                    broadphase,
+                    solver,
+                    collisionConfiguration
+                );
+                
+                console.log("Физический мир создан успешно");
+                
+                // Устанавливаем гравитацию
+                physicsWorld.setGravity(new AmmoLib.btVector3(0, -9.81, 0));
+                
+                // Создаем сферу
+                const radius = 1;
+                const sphereShape = new AmmoLib.btSphereShape(radius);
+                
+                // Создаем transform
+                const transform = new AmmoLib.btTransform();
+                transform.setIdentity();
+                transform.setOrigin(new AmmoLib.btVector3(0, 10, 0));
+                
+                // Создаем rigid body
+                const mass = 1;
+                const localInertia = new AmmoLib.btVector3(0, 0, 0);
+                sphereShape.calculateLocalInertia(mass, localInertia);
+                
+                const motionState = new AmmoLib.btDefaultMotionState(transform);
+                const rbInfo = new AmmoLib.btRigidBodyConstructionInfo(mass, motionState, sphereShape, localInertia);
+                const body = new AmmoLib.btRigidBody(rbInfo);
+                
+                // Добавляем тело в мир
+                physicsWorld.addRigidBody(body);
+                
+                console.log("Сфера добавлена в мир");
+                
+                // Симулируем несколько шагов
+                for (let i = 0; i < 10; i++) {
+                    physicsWorld.stepSimulation(1/60, 1);
+                    
+                    const trans = new AmmoLib.btTransform();
+                    body.getMotionState().getWorldTransform(trans);
+                    const pos = trans.getOrigin();
+                    
+                    console.log(`Шаг ${i}: позиция сферы: y = ${pos.y().toFixed(2)}`);
+                }
+                
+                console.log("Тест успешно завершен");
+                return true;
+            } catch (error) {
+                console.error("Ошибка при тестировании Ammo.js:", error);
+                return false;
+            }
+        }
+        
+        // Обработчики кнопок
+        document.getElementById('runTest').addEventListener('click', () => {
+            console.log("Запуск теста Ammo.js...");
+            testAmmo().then(success => {
+                console.log("Результат теста:", success ? "УСПЕХ" : "ОШИБКА");
+            });
+        });
+        
+        document.getElementById('clearConsole').addEventListener('click', () => {
+            consoleElement.innerHTML = '';
+        });
+        
+        // Проверяем Ammo.js при загрузке страницы
+        window.addEventListener('load', () => {
+            console.log("Страница загружена");
+            console.log("Ammo.js доступен:", typeof Ammo !== 'undefined');
+            
+            // Автоматически загружаем Ammo.js при загрузке страницы
+            loadAmmo().then(() => {
+                console.log("Ammo.js загружен автоматически при загрузке страницы");
+            }).catch(error => {
+                console.error("Ошибка при автоматической загрузке Ammo.js:", error);
+            });
+        });
+    </script>
+</body>
+</html> 

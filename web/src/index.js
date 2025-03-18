@@ -1,9 +1,10 @@
 // index.js
 import * as THREE from 'three';
 import { initScene, scene, camera, renderer } from './scene.js';
-import { initAmmo, stepPhysics, updatePhysicsObjects, applyImpulseToSphere, physicsSettings } from './physics.js';
+import { stepPhysics, updatePhysicsObjects, applyImpulseToSphere, physicsSettings, objects } from './physics.js';
 import { initNetwork } from './network.js';
-import { objects, createVisualObject, createPhysicsObject } from './objects.js';
+import { createVisualObject, createPhysicsObject } from './objects.js';
+import { testAmmo } from './ammo-test.js';
 
 // Создаем часы для отслеживания времени
 const clock = new THREE.Clock();
@@ -23,8 +24,8 @@ function animate() {
     // Обновляем позиции объектов
     updatePhysicsObjects(objects);
 
-    // Отладочный вывод состояния объектов
-    if (physicsSettings.debugMode) {
+    // Отладочный вывод состояния объектов (только раз в секунду)
+    if (physicsSettings.debugMode && Math.random() < 0.01) {
         console.log("[Debug] Объекты в сцене:", Object.keys(objects));
         for (let id in objects) {
             const obj = objects[id];
@@ -142,6 +143,8 @@ window.addEventListener('unhandledrejection', function(event) {
 window.addEventListener('keydown', handleKeyDown);
 
 console.log('[Init] Запуск приложения...');
+
+// Приложение запускается из index-test.html после загрузки Ammo.js
 start().catch(error => {
     console.error('[Fatal Error] Критическая ошибка при запуске:', error);
 });

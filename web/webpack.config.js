@@ -8,7 +8,7 @@ module.exports = {
     mode: process.env.NODE_ENV || 'development',
     entry: './src/index.js',
     output: {
-        filename: 'bundle.[hash].js',
+        filename: 'bundle.js',
         path: outputPath,
         clean: true,
     },

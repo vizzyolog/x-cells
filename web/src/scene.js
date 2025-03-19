@@ -1,163 +1,138 @@
 // scene.js
 import * as THREE from 'three';
-import { stepPhysics, updatePhysicsObjects, objects, physicsSettings, initAmmo, initDebugSpheres } from './physics.js';
+import { initAmmo, stepPhysics, updatePhysicsObjects, objects, physicsSettings, localPhysicsWorld, applyImpulseToSphere } from './physics.js';
 
 export let scene, camera, renderer;
 
 export async function initScene() {
-    console.log("[Scene] Начало инициализации сцены");
+    console.log("[Scene] Инициализация сцены...");
     
     // Создаем сцену
     scene = new THREE.Scene();
-    console.log("[Scene] Сцена создана");
-
-    // Создаем камеру
+    scene.background = new THREE.Color(0x88ccff);
+    
+    // Добавляем камеру с улучшенными параметрами
     camera = new THREE.PerspectiveCamera(
-        60,
+        45,  // Уменьшенный угол обзора для лучшей перспективы
         window.innerWidth / window.innerHeight,
-        0.2,
-        2000
+        0.1,
+        1000
     );
-    camera.position.set(0, 50, 100);
+    
+    // Устанавливаем начальную позицию камеры выше и дальше
+    camera.position.set(0, 30, 50);
     camera.lookAt(0, 0, 0);
-    console.log("[Scene] Камера инициализирована");
-
-    // Создаем рендерер
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    
+    // Создаем рендерер с улучшенными настройками
+    renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        powerPreference: "high-performance"
+    });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-    console.log("[Scene] Рендерер создан и добавлен в DOM");
-
-    // Добавляем обработчик изменения размера окна
-    window.addEventListener('resize', onWindowResize);
-
-    // Настраиваем освещение
-    const ambient = new THREE.AmbientLight(0xffffff, 1.0);
-    scene.add(ambient);
-    console.log("[Scene] Добавлен ambient свет");
-
-    const directional = new THREE.DirectionalLight(0xffffff, 1.5);
-    directional.position.set(50, 200, 100);
-    directional.castShadow = true;
-    
-    directional.shadow.mapSize.width = 2048;
-    directional.shadow.mapSize.height = 2048;
-    directional.shadow.camera.near = 0.5;
-    directional.shadow.camera.far = 500;
-    directional.shadow.camera.left = -100;
-    directional.shadow.camera.right = 100;
-    directional.shadow.camera.top = 100;
-    directional.shadow.camera.bottom = -100;
-    
-    scene.add(directional);
-    console.log("[Scene] Добавлен directional свет");
-
-    // Настройка теней
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    console.log("[Scene] Тени включены");
-
-    // Устанавливаем цвет фона
-    scene.background = new THREE.Color(0x87ceeb);
-    console.log("[Scene] Установлен цвет фона");
-
-    // Включаем режим отладки физики
-    physicsSettings.debugMode = true;
-
-    // Проверяем, инициализирован ли уже физический мир в index-test.html
-    if (window.physicsWorld) {
-        console.log("[Scene] Физический мир уже инициализирован в index-test.html");
-        // Используем существующий физический мир
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Мягкие тени
+    document.body.appendChild(renderer.domElement);
+    
+    // Добавляем обработчик изменения размера окна
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    
+    // Улучшенное освещение
+    const ambientLight = new THREE.AmbientLight(0x404040, 2);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    directionalLight.position.set(50, 50, 50);
+    directionalLight.castShadow = true;
+    
+    // Улучшенные настройки теней
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 500;
+    directionalLight.shadow.camera.left = -100;
+    directionalLight.shadow.camera.right = 100;
+    directionalLight.shadow.camera.top = 100;
+    directionalLight.shadow.camera.bottom = -100;
+    
+    scene.add(directionalLight);
+    
+    // Инициализируем физику, если Ammo доступен
+    if (window.Ammo || window.AmmoLib) {
         try {
             await initAmmo();
-            console.log("[Scene] Физика успешно подключена к существующему миру");
+            console.log("[Scene] Физика инициализирована");
+            initKeyboardControls();
         } catch (error) {
-            console.error("[Scene] Ошибка при подключении к существующему физическому миру:", error);
-            throw error;
+            console.error("[Scene] Ошибка инициализации физики:", error);
         }
     } else {
-        // Инициализируем физику самостоятельно
-        console.log("[Scene] Начало инициализации физики");
+        console.log("[Scene] Ammo.js не найден, запуск без физики");
+    }
+    
+    // Запускаем цикл анимации
+    animate();
+}
+
+let previousTime = 0;
+
+function animate() {
+    requestAnimationFrame(animate);
+    
+    const currentTime = performance.now();
+    let deltaTime = (currentTime - previousTime) / 1000;
+    previousTime = currentTime;
+    
+    if (deltaTime > 0.1) deltaTime = 0.1;
+    
+    // Проверяем доступность физики перед обновлением
+    if (window.Ammo && !physicsSettings.useServerPhysics && localPhysicsWorld) {
         try {
-            await initAmmo();
-            console.log("[Scene] Физика успешно инициализирована");
+            stepPhysics(deltaTime);
+            updatePhysicsObjects(objects);
         } catch (error) {
-            console.error("[Scene] Ошибка при инициализации физики:", error);
-            throw error;
+            console.error("[Scene] Ошибка обновления физики:", error);
         }
     }
+    
+    renderer.render(scene, camera);
+}
 
-    // Создаем отладочные сферы
-    console.log("[Scene] Создание отладочных сфер");
-    try {
-        const debugSpheres = initDebugSpheres(scene);
-        console.log("[Scene] Отладочные сферы созданы:", debugSpheres);
-        
-        // Проверяем, что сферы добавлены в сцену
-        const sphereIds = Object.keys(objects).filter(id => 
-            objects[id].object_type === "sphere");
-        console.log("[Scene] Сферы в сцене:", sphereIds);
-        
-        // Проверяем, что у синей сферы есть физическое тело
-        const localSphere = objects["local_sphere"];
-        if (localSphere) {
-            console.log("[Scene] Локальная сфера:", {
-                id: localSphere.id,
-                position: localSphere.mesh.position,
-                hasBody: !!localSphere.body
-            });
-        } else {
-            console.warn("[Scene] Локальная сфера не создана!");
+function initKeyboardControls() {
+    const keyState = {
+        ArrowUp: false,
+        ArrowDown: false,
+        ArrowLeft: false,
+        ArrowRight: false,
+        KeyW: false,
+        KeyA: false,
+        KeyS: false,
+        KeyD: false,
+        Space: false
+    };
+    
+    window.addEventListener('keydown', (e) => {
+        if (keyState.hasOwnProperty(e.code)) {
+            keyState[e.code] = true;
         }
-    } catch (error) {
-        console.error("[Scene] Ошибка при создании отладочных сфер:", error);
-        throw error;
-    }
-
-    console.log("[Scene] Инициализация сцены завершена");
-    return scene;
-}
-
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-export { onWindowResize };
-
-function createTerrainMaterial() {
-    const material = new THREE.MeshStandardMaterial({
-        color: 0x3b7d3b,      // Зеленоватый цвет
-        roughness: 0.8,       // Высокая шероховатость
-        metalness: 0.1,       // Низкая металличность
-        flatShading: false,   // Плавное затенение
-        wireframe: false,     // Отключаем режим wireframe
-        side: THREE.DoubleSide // Отображаем обе стороны полигонов
     });
-
-    return material;
-}
-
-function createTerrainMesh(obj) {
-    const geometry = new THREE.PlaneGeometry(
-        obj.width || 100,
-        obj.height || 100,
-        obj.heightmap_w - 1,
-        obj.heightmap_h - 1
-    );
-
-    // Применяем данные высот к геометрии
-    for (let i = 0; i < geometry.vertices.length; i++) {
-        geometry.vertices[i].z = obj.height_data[i];
-    }
-
-    geometry.computeVertexNormals(); // Важно для правильного освещения
-    geometry.computeFaceNormals();   // Важно для правильного освещения
-
-    const mesh = new THREE.Mesh(geometry, createTerrainMaterial());
-    mesh.receiveShadow = true;
-    mesh.castShadow = true;
-
-    return mesh;
+    
+    window.addEventListener('keyup', (e) => {
+        if (keyState.hasOwnProperty(e.code)) {
+            keyState[e.code] = false;
+        }
+    });
+    
+    setInterval(() => {
+        if (!window.Ammo) return;
+        
+        if (keyState.ArrowUp || keyState.KeyW) applyImpulseToSphere('UP', objects);
+        if (keyState.ArrowDown || keyState.KeyS) applyImpulseToSphere('DOWN', objects);
+        if (keyState.ArrowLeft || keyState.KeyA) applyImpulseToSphere('LEFT', objects);
+        if (keyState.ArrowRight || keyState.KeyD) applyImpulseToSphere('RIGHT', objects);
+        if (keyState.Space) applyImpulseToSphere('SPACE', objects);
+    }, 50);
 }

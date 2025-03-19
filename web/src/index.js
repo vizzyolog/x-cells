@@ -4,10 +4,16 @@ import { initScene, scene, camera, renderer } from './scene.js';
 import { stepPhysics, updatePhysicsObjects, applyImpulseToSphere, physicsSettings, objects } from './physics.js';
 import { initNetwork } from './network.js';
 import { createVisualObject, createPhysicsObject } from './objects.js';
-import { testAmmo } from './ammo-test.js';
 
 // Создаем часы для отслеживания времени
 const clock = new THREE.Clock();
+
+// Настройки камеры
+const cameraSettings = {
+    height: 30,    // Высота камеры
+    distance: 50,  // Расстояние от объекта
+    smoothness: 0.05  // Плавность движения камеры (меньше = плавнее)
+};
 
 function animate() {
     requestAnimationFrame(animate);
@@ -19,39 +25,46 @@ function animate() {
 
     // Обновляем физику
     const deltaTime = clock.getDelta();
-    stepPhysics(deltaTime);
-
-    // Обновляем позиции объектов
-    updatePhysicsObjects(objects);
-
-    // Отладочный вывод состояния объектов (только раз в секунду)
-    if (physicsSettings.debugMode && Math.random() < 0.01) {
-        console.log("[Debug] Объекты в сцене:", Object.keys(objects));
-        for (let id in objects) {
-            const obj = objects[id];
-            if (obj.mesh) {
-                console.log(`[Debug] Позиция ${id}:`, obj.mesh.position);
-            }
-        }
+    if (deltaTime > 0) {  // Проверяем, что deltaTime валидный
+        stepPhysics(deltaTime);
+        updatePhysicsObjects(objects);
     }
 
-    // Пример обновления камеры: следим за первым найденным шаром
+    // Находим целевой объект для камеры
     let targetObject = null;
     for (let id in objects) {
         let obj = objects[id];
-        if (obj && obj.mesh && obj.mesh.geometry && obj.mesh.geometry.type === "SphereGeometry") {
+        if (obj && obj.mesh && obj.object_type === "sphere") {
             targetObject = obj;
             break;
         }
     }
 
-    if (targetObject) {
+    // Обновляем позицию камеры
+    if (targetObject && targetObject.mesh) {
         const targetPos = targetObject.mesh.position;
-        const offset = new THREE.Vector3(0, 50, 100);
-        const cameraTarget = targetPos.clone().add(offset);
+        
+        // Создаем желаемую позицию камеры
+        const cameraTarget = new THREE.Vector3(
+            targetPos.x,
+            targetPos.y + cameraSettings.height,
+            targetPos.z + cameraSettings.distance
+        );
 
-        camera.position.lerp(cameraTarget, 0.1);
-        camera.lookAt(targetPos);
+        // Плавно перемещаем камеру
+        camera.position.lerp(cameraTarget, cameraSettings.smoothness);
+        
+        // Настраиваем точку, на которую смотрит камера
+        const lookAtPoint = new THREE.Vector3(
+            targetPos.x,
+            targetPos.y,
+            targetPos.z
+        );
+        camera.lookAt(lookAtPoint);
+    } else {
+        // Если нет целевого объекта, устанавливаем камеру в стандартную позицию
+        camera.position.set(0, 30, 50);
+        camera.lookAt(0, 0, 0);
     }
 
     // Рендеринг сцены

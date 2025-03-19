@@ -10,9 +10,9 @@ const clock = new THREE.Clock();
 
 // Настройки камеры
 const cameraSettings = {
-    height: 30,    // Высота камеры
-    distance: 50,  // Расстояние от объекта
-    smoothness: 0.05  // Плавность движения камеры (меньше = плавнее)
+    height: 20,     // Уменьшенная высота камеры
+    distance: 30,   // Уменьшенное расстояние от объекта
+    smoothness: 0.1 // Увеличенная плавность движения камеры
 };
 
 function animate() {
@@ -63,7 +63,7 @@ function animate() {
         camera.lookAt(lookAtPoint);
     } else {
         // Если нет целевого объекта, устанавливаем камеру в стандартную позицию
-        camera.position.set(0, 30, 50);
+        camera.position.set(0, 20, 30);
         camera.lookAt(0, 0, 0);
     }
 

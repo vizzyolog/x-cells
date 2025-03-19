@@ -72,33 +72,6 @@ export async function initScene() {
     } else {
         console.log("[Scene] Ammo.js не найден, запуск без физики");
     }
-    
-    // Запускаем цикл анимации
-    animate();
-}
-
-let previousTime = 0;
-
-function animate() {
-    requestAnimationFrame(animate);
-    
-    const currentTime = performance.now();
-    let deltaTime = (currentTime - previousTime) / 1000;
-    previousTime = currentTime;
-    
-    if (deltaTime > 0.1) deltaTime = 0.1;
-    
-    // Проверяем доступность физики перед обновлением
-    if (window.Ammo && !physicsSettings.useServerPhysics && localPhysicsWorld) {
-        try {
-            stepPhysics(deltaTime);
-            updatePhysicsObjects(objects);
-        } catch (error) {
-            console.error("[Scene] Ошибка обновления физики:", error);
-        }
-    }
-    
-    renderer.render(scene, camera);
 }
 
 function initKeyboardControls() {

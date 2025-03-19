@@ -1,126 +1,123 @@
 <!doctype html><html><head><meta charset="utf-8"><title>X-Cells</title><style>* { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; overflow: hidden; position: fixed; }
-        canvas { display: block; width: 100%; height: 100%; }
-        
-        /* Стили для экрана загрузки */
-        #loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #111;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
+        canvas { display: block; width: 100%; height: 100%; }</style><script defer="defer" src="bundle.js"></script></head><body><script>// Создаем глобальное пространство имен для нашего приложения
+        window.XCells = {
+            isAmmoReady: false,
+            onAmmoReady: [],  // Массив колбэков для выполнения после инициализации
+            debug: true       // Включаем отладочные сообщения
+        };
+
+        // Функция для регистрации колбэков
+        window.XCells.registerAmmoCallback = function(callback) {
+            if (window.XCells.isAmmoReady) {
+                callback();
+            } else {
+                window.XCells.onAmmoReady.push(callback);
+            }
+        };
+
+        // Функция для проверки доступности Ammo.js
+        function checkAmmo() {
+            const ammo = window.Ammo || window.AmmoLib;
+            if (window.XCells.debug) {
+                console.log('[Physics] Проверка Ammo.js:', {
+                    windowAmmo: typeof window.Ammo,
+                    windowAmmoLib: typeof window.AmmoLib,
+                    isReady: window.XCells.isAmmoReady
+                });
+            }
+            return ammo;
         }
-        .loading-text {
-            font-family: Arial, sans-serif;
-            font-size: 24px;
-            margin-bottom: 20px;
+
+        // Функция для загрузки Ammo.js
+        function loadAmmo() {
+            return new Promise((resolve, reject) => {
+                // Проверяем, не загружен ли уже Ammo.js
+                if (checkAmmo()) {
+                    console.log('[Physics] Ammo.js уже загружен');
+                    window.XCells.isAmmoReady = true;
+                    resolve(window.Ammo || window.AmmoLib);
+                    return;
+                }
+
+                console.log('[Physics] Начало загрузки Ammo.js...');
+                const script = document.createElement('script');
+                script.src = '/ammo/ammo.wasm.js';
+                script.async = true;
+                
+                script.onload = () => {
+                    console.log('[Physics] Скрипт Ammo.js загружен, ожидание инициализации...');
+                    
+                    if (typeof Ammo === 'function') {
+                        console.log('[Physics] Ammo.js найден, начало инициализации...');
+                        Ammo()
+                            .then(AmmoLib => {
+                                console.log('[Physics] Ammo.js успешно инициализирован');
+                                window.Ammo = AmmoLib;
+                                window.AmmoLib = AmmoLib;
+                                window.XCells.isAmmoReady = true;
+                                
+                                // Вызываем все зарегистрированные колбэки
+                                while (window.XCells.onAmmoReady.length > 0) {
+                                    const callback = window.XCells.onAmmoReady.shift();
+                                    try {
+                                        callback();
+                                    } catch (error) {
+                                        console.error('[Physics] Ошибка в колбэке:', error);
+                                    }
+                                }
+                                
+                                resolve(AmmoLib);
+                            })
+                            .catch(error => {
+                                console.error('[Physics] Ошибка инициализации Ammo.js:', error);
+                                reject(error);
+                            });
+                    } else {
+                        const error = new Error('[Physics] Ammo.js не найден после загрузки скрипта');
+                        console.error(error);
+                        reject(error);
+                    }
+                };
+                
+                script.onerror = (error) => {
+                    console.error('[Physics] Ошибка загрузки скрипта Ammo.js:', error);
+                    reject(error);
+                };
+                
+                document.head.appendChild(script);
+            });
         }
-        .loading-progress {
-            width: 300px;
-            height: 5px;
-            background-color: #333;
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        .loading-bar {
-            height: 100%;
-            width: 0%;
-            background-color: #4CAF50;
-            transition: width 0.3s;
-        }</style><script src="https://cdn.jsdelivr.net/npm/ammo.js@latest/builds/ammo.wasm.js"></script><script defer="defer" src="bundle.js"></script></head><body><div id="loading-screen"><div class="loading-text">Загрузка физического движка...</div><div class="loading-progress"><div class="loading-bar" id="loading-bar"></div></div></div><script>// Функция обновления прогресса загрузки
-        function updateLoadingProgress(percent) {
-            document.getElementById('loading-bar').style.width = percent + '%';
-            document.querySelector('.loading-text').textContent = 
-                'Загрузка физического движка... ' + Math.round(percent) + '%';
-        }
-        
-        // Загрузка бандла
-        function loadBundle() {
-            console.log('Загрузка бандла...');
-            document.querySelector('.loading-text').textContent = 'Загрузка приложения...';
+
+        // Загружаем приложение
+        function loadApp() {
+            console.log('[App] Загрузка основного приложения...');
+            console.log('[App] Состояние Ammo перед загрузкой bundle.js:', {
+                Ammo: typeof window.Ammo,
+                AmmoLib: typeof window.AmmoLib,
+                isReady: window.XCells.isAmmoReady
+            });
             
             const script = document.createElement('script');
             script.src = 'bundle.js';
-            script.onload = function() {
-                console.log('Бандл загружен, скрываем экран загрузки');
-                setTimeout(function() {
-                    document.getElementById('loading-screen').style.opacity = '0';
-                    document.getElementById('loading-screen').style.transition = 'opacity 0.5s';
-                    setTimeout(function() {
-                        document.getElementById('loading-screen').style.display = 'none';
-                    }, 500);
-                }, 500);
-            };
-            
             document.body.appendChild(script);
         }
-        
-        // Инициализация Ammo.js
-        function initAmmo() {
-            if (typeof Ammo === 'function') {
-                console.log('Ammo загружен как функция, инициализируем');
-                return Ammo().then(function(ammo) {
-                    console.log('Ammo.js инициализирован успешно');
-                    window.AmmoLib = ammo;
-                    window.Ammo = ammo;
-                    return ammo;
-                });
-            } else if (typeof Ammo === 'object') {
-                console.log('Ammo загружен как объект, используем напрямую');
-                window.AmmoLib = Ammo;
-                return Promise.resolve(Ammo);
-            } else {
-                console.error('Ammo не найден в глобальном объекте');
-                return Promise.reject(new Error('Ammo не найден'));
-            }
-        }
-        
-        // Запуск при загрузке страницы
-        window.addEventListener('load', function() {
-            console.log('Страница загружена, инициализируем Ammo.js');
-            updateLoadingProgress(30);
-            
-            // Резервный загрузчик на случай, если скрипт в head не загрузился
-            if (typeof Ammo === 'undefined') {
-                console.log('Ammo не загружен, пробуем загрузить локальную версию');
-                const script = document.createElement('script');
-                script.src = 'ammo/ammo.wasm.js';
-                script.onload = continueLoading;
-                script.onerror = function() {
-                    console.error('Не удалось загрузить Ammo.js ни с CDN, ни локально');
-                    loadBundle(); // Всё равно пытаемся загрузить бандл
-                };
-                document.head.appendChild(script);
-            } else {
-                continueLoading();
-            }
-            
-            function continueLoading() {
-                updateLoadingProgress(60);
+
+        // Основная последовательность загрузки
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                console.log('[App] Начало загрузки Ammo.js...');
+                await loadAmmo();
+                console.log('[App] Ammo.js успешно загружен и инициализирован');
                 
-                initAmmo()
-                    .then(function(ammo) {
-                        // Проверяем наличие ключевых методов
-                        console.log('Объект Ammo доступен:', !!window.Ammo);
-                        console.log('Объект AmmoLib доступен:', !!window.AmmoLib);
-                        
-                        // Защита для checkIsAmmoLoaded
-                        window.checkIsAmmoLoaded = function() { return true; };
-                        
-                        updateLoadingProgress(100);
-                        loadBundle();
-                    })
-                    .catch(function(error) {
-                        console.error('Ошибка инициализации Ammo.js:', error);
-                        // Всё равно пытаемся загрузить бандл
-                        loadBundle();
-                    });
+                // Дополнительная проверка перед загрузкой приложения
+                if (!checkAmmo()) {
+                    throw new Error('Ammo.js не инициализирован после загрузки');
+                }
+                
+                loadApp();
+            } catch (error) {
+                console.warn('[App] Запуск приложения без физики:', error);
+                loadApp();
             }
         });</script></body></html>

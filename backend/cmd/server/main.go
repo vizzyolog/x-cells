@@ -24,8 +24,9 @@ const (
 	terrainPhysicalDepth = 100.0
 
 	// Размеры сетки террейна
-	terrainVisualGridSize  = 128 // Детализация для визуальной модели
-	terrainPhysicsGridSize = 64  // Пониженная детализация для физики (можно настроить)
+	terrainGridSize  = 128 // Одинаковая детализация для соответствия примеру three.js
+	terrainHalfWidth = terrainGridSize / 2
+	terrainHalfDepth = terrainGridSize / 2
 
 	// Диапазон высот
 	terrainMinHeight = -2.0
@@ -260,13 +261,13 @@ func createObjectInGo(obj *Object, client pb.PhysicsClient) {
 	}
 }
 
-// Генерация данных террейна
+// Генерация данных террейна - реализуем точно так же, как в примере three.js
 func generateTerrainData(w, h int) []float32 {
 	data := make([]float32, w*h)
 
 	// Центр сетки
-	w2 := float64(w-1) / 2.0
-	d2 := float64(h-1) / 2.0
+	w2 := float64(w) / 2.0
+	d2 := float64(h) / 2.0
 
 	// Параметры волн
 	phaseMult := 12.0
@@ -275,13 +276,14 @@ func generateTerrainData(w, h int) []float32 {
 	for j := 0; j < h; j++ {
 		for i := 0; i < w; i++ {
 			// Нормализуем координаты относительно центра
-			x := float64(i) - w2
-			z := float64(j) - d2
+			nx := float64(i-int(w2)) / w2
+			nz := float64(j-int(d2)) / d2
 
 			// Вычисляем нормализованное расстояние от центра
-			radius := math.Sqrt((x*x)/(w2*w2) + (z*z)/(d2*d2))
+			radius := math.Sqrt(nx*nx + nz*nz)
 
 			// Создаем круговую волну и масштабируем её в нужный диапазон высот
+			// Точно такая же формула как в примере three.js
 			height := (math.Sin(radius*phaseMult)+1.0)*0.5*heightRange + terrainMinHeight
 			data[j*w+i] = float32(height)
 		}
@@ -352,11 +354,12 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 	radius := float32(1.0)      // Фиксированный радиус
 	mass := float32(1.0)        // Фиксированная масса
 
+	// Размещаем сферу над террейном на достаточной высоте
 	sphereObj := &Object{
 		ID:         sphereID,
 		ObjectType: "sphere",
-		X:          -2.5,
-		Y:          30, // Начальная высота
+		X:          0,
+		Y:          terrainMaxHeight + 10, // Размещаем выше максимальной высоты террейна
 		Z:          0,
 		Mass:       mass,
 		Radius:     radius,
@@ -483,7 +486,7 @@ func main() {
 	defer physicsClient.Close()
 
 	// Создаем террейн
-	terrainData := generateTerrainData(terrainPhysicsGridSize, terrainPhysicsGridSize) // Используем пониженную детализацию для физики
+	terrainData := generateTerrainData(terrainGridSize, terrainGridSize)
 	terrain := &Object{
 		ID:         "terrain1",
 		ObjectType: "terrain",
@@ -491,16 +494,15 @@ func main() {
 		Y:          0,
 		Z:          0,
 		HeightData: terrainData,
-		HeightmapW: terrainPhysicsGridSize,
-		HeightmapH: terrainPhysicsGridSize,
-		Color:      "#888888",
+		HeightmapW: terrainGridSize,
+		HeightmapH: terrainGridSize,
+		Color:      "#5c8a50",
 		Mass:       0,
-		// Масштаб для равномерного распределения точек по физическому размеру
-		ScaleX:    float32(terrainPhysicalWidth / float64(terrainPhysicsGridSize-1)),
-		ScaleY:    1.0,
-		ScaleZ:    float32(terrainPhysicalDepth / float64(terrainPhysicsGridSize-1)),
-		MinHeight: terrainMinHeight,
-		MaxHeight: terrainMaxHeight,
+		ScaleX:     float32(terrainPhysicalWidth / float64(terrainGridSize-1)),
+		ScaleY:     1.0,
+		ScaleZ:     float32(terrainPhysicalDepth / float64(terrainGridSize-1)),
+		MinHeight:  terrainMinHeight,
+		MaxHeight:  terrainMaxHeight,
 	}
 	createObjectInGo(terrain, physicsClient)
 
@@ -512,12 +514,27 @@ func main() {
 		wsHandler(w, r, physicsClient)
 	})
 
+	// Специальный обработчик для файлов Ammo.js
+	http.HandleFunc("/ammo/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		// Добавляем заголовки для кэширования
+		w.Header().Set("Cache-Control", "public, max-age=31536000")
+		w.Header().Set("Vary", "Accept-Encoding")
+
+		// Путь к статическим файлам
+		staticDir := "../../../dist"
+		http.ServeFile(w, r, staticDir+r.URL.Path)
+	})
+
 	// Добавим проверку существования директории
 	staticDir := "../../../dist"
 	if _, err := os.Stat(staticDir); os.IsNotExist(err) {
 		log.Printf("Warning: Directory %s does not exist", staticDir)
 	}
 
+	// Обработчик для остальных статических файлов
 	fs := http.FileServer(http.Dir(staticDir))
 	http.Handle("/", http.StripPrefix("/", fs))
 

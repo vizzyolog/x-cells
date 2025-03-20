@@ -1,16 +1,16 @@
 // physics.js
-import { THREE } from './three-exports';
+import * as THREE from 'three';
+
+export const objectsRef = {
+    objects: {} // Будет обновлено из objects.js
+};
 
 // Экспортируем явно с начальным значением null
 export let localPhysicsWorld = null;
-export const objects = {};  // Хранилище для всех объектов
 
 // Добавляем глобальные настройки физики
 export const physicsSettings = {
-    useServerPhysics: false,  // false = локальная физика, true = серверная физика
     interpolationAlpha: 0.1,  // Коэффициент интерполяции для серверных данных
-    debugMode: false,         // Выключаем режим отладки
-    sphereOffset: 2.0         // Расстояние между сферами для дебага
 };
 
 // Флаг для отслеживания, была ли уже выполнена инициализация
@@ -25,9 +25,9 @@ export function togglePhysicsMode() {
 // Функция для проверки доступности Ammo.js
 function getAmmoLib() {
     const ammo = window.AmmoLib || window.Ammo;
-    if (ammo) {
-        console.log("[Physics] Найдена библиотека Ammo.js:", ammo ? "присутствует" : "отсутствует");
-    }
+    // if (ammo) {
+    //     console.log("[Physics] Найдена библиотека Ammo.js:", ammo ? "присутствует" : "отсутствует");
+    // }
     return ammo;
 }
 
@@ -132,12 +132,12 @@ export async function initAmmo() {
 // Функция выполнения шага физической симуляции
 export function stepPhysics(deltaTime) {
     // Пропускаем, если физика не инициализирована или используется серверная физика
-    if (!localPhysicsWorld || physicsSettings.useServerPhysics) {
-        if (!localPhysicsWorld) {
-            console.warn("[Physics] stepPhysics: localPhysicsWorld не инициализирован");
-        }
-        return;
-    }
+    // if (!localPhysicsWorld || physicsSettings.useServerPhysics) {
+    //     if (!localPhysicsWorld) {
+    //         console.warn("[Physics] stepPhysics: localPhysicsWorld не инициализирован");
+    //     }
+    //     return;
+    // }
     
     try {
         // Используем фиксированный шаг времени для стабильности
@@ -151,34 +151,50 @@ export function stepPhysics(deltaTime) {
 }
 
 // Функция обновления объектов по физике
-export function updatePhysicsObjects(objects) {
-    const AmmoLib = getAmmoLib();
-    // Пропускаем, если физика не инициализирована
-    if (!localPhysicsWorld || !AmmoLib) {
-        if (!localPhysicsWorld) {
-            console.warn("[Physics] updatePhysicsObjects: localPhysicsWorld не инициализирован");
-        }
-        if (!AmmoLib) {
-            console.warn("[Physics] updatePhysicsObjects: AmmoLib не найден");
-        }
+export function updatePhysicsObjects() {
+    if (!localPhysicsWorld || !window.AmmoLib) {
+        console.Error(`  !!!!! физика не инициализированна`)
+        return; // Физика не инициализирована
+    }
+
+    // Используем objectsRef.objects вместо импортированного objects
+    const objects = objectsRef.objects;
+
+    // Выводим список объектов перед обновлением
+    console.log("[Physics] Обновление объектов. Список всех объектов:", JSON.stringify(Object.keys(objects), null, 2));
+    
+    // Проверка на количество объектов
+    const objectsCount = Object.keys(objects).length;
+    console.log(`[Physics] Количество объектов для обновления: ${objectsCount}`);
+    
+    if (objectsCount === 0) {
+        console.warn("[Physics] Список объектов пуст - нечего обновлять");
         return;
     }
-    
-    try {
-        for (let id in objects) {
+
+    for (const id in objects) {
+        try {
             const obj = objects[id];
-            if (!obj.mesh) continue;
+            console.log(`[Physics] Обновление объекта ${id}, тип: ${obj.object_type}`);
+            
+            if (obj.body && obj.mesh) {
+                const ms = obj.body.getMotionState();
+                if (ms) {
+                    const trans = new window.AmmoLib.btTransform();
+                    ms.getWorldTransform(trans);
 
-            // Обновляем по физике если есть физическое тело
-            if (obj.body) {
-                const trans = new AmmoLib.btTransform();
-                obj.body.getMotionState().getWorldTransform(trans);
-
-                const pos = trans.getOrigin();
-                const rot = trans.getRotation();
-                
-                obj.mesh.position.set(pos.x(), pos.y(), pos.z());
-                obj.mesh.quaternion.set(rot.x(), rot.y(), rot.z(), rot.w());
+                    const pos = trans.getOrigin();
+                    const rot = trans.getRotation();
+                    
+                    obj.mesh.position.set(pos.x(), pos.y(), pos.z());
+                    obj.mesh.quaternion.set(rot.x(), rot.y(), rot.z(), rot.w());
+                } else {
+                    console.warn(`[Physics] Нет MotionState для объекта ${id}`);
+                }
+            } else {
+                console.warn(`[Physics] У объекта ${id} отсутствует body или mesh:`, 
+                            obj.body ? "body есть" : "body отсутствует", 
+                            obj.mesh ? "mesh есть" : "mesh отсутствует");
             }
 
             // Корректируем по данным сервера если есть расхождение
@@ -197,12 +213,12 @@ export function updatePhysicsObjects(objects) {
                         const newY = obj.mesh.position.y + dy * alpha;
                         const newZ = obj.mesh.position.z + dz * alpha;
                         
-                        const correction = new AmmoLib.btTransform();
+                        const correction = new window.AmmoLib.btTransform();
                         correction.setIdentity();
-                        correction.setOrigin(new AmmoLib.btVector3(newX, newY, newZ));
+                        correction.setOrigin(new window.AmmoLib.btVector3(newX, newY, newZ));
                         
                         if (obj.serverRot) {
-                            correction.setRotation(new AmmoLib.btQuaternion(
+                            correction.setRotation(new window.AmmoLib.btQuaternion(
                                 obj.serverRot.x,
                                 obj.serverRot.y,
                                 obj.serverRot.z,
@@ -222,28 +238,15 @@ export function updatePhysicsObjects(objects) {
                     }
                 }
             }
+        } catch (error) {
+            console.error(`[Physics] Ошибка при обновлении объекта ${id}:`, error);
         }
-    } catch (error) {
-        console.error("[Physics] Ошибка при обновлении объектов:", error);
     }
 }
 
 // Функция применения импульса к сфере
-export function applyImpulseToSphere(cmd, objects) {
+export function applyImpulseToSphere(cmd) {
     console.log("[Physics] Попытка применить импульс:", cmd);
-    
-    // Пропускаем, если физика не инициализирована
-    if (!localPhysicsWorld) {
-        console.warn("[Physics] localPhysicsWorld не инициализирован");
-        // Если физический мир не инициализирован, попытаемся инициализировать его
-        console.log("[Physics] Попытка повторной инициализации физического мира");
-        initAmmo().then(() => {
-            console.log("[Physics] Повторная инициализация завершена, статус:", !!localPhysicsWorld);
-        }).catch(error => {
-            console.error("[Physics] Ошибка повторной инициализации:", error);
-        });
-        return;
-    }
     
     const AmmoLib = getAmmoLib();
     if (!AmmoLib) {
@@ -253,6 +256,9 @@ export function applyImpulseToSphere(cmd, objects) {
     
     try {
         const IMPULSE_STRENGTH = 10; // Сила импульса
+        
+        // Используем objectsRef.objects вместо импортированного objects
+        const objects = objectsRef.objects;
         
         // Получаем список всех объектов
         const objectIds = Object.keys(objects);
@@ -332,16 +338,14 @@ export function createPhysicsObject(obj) {
                     obj.mass, motionState, shape, localInertia);
                     
                 obj.body = new window.Ammo.btRigidBody(rbInfo);
-                
-                // Улучшенные параметры для более реалистичной физики
-                obj.body.setRestitution(0.4);   // упругость - меньше отскок
-                obj.body.setFriction(0.6);      // трение - лучше сцепление с поверхностью
-                
+                    
                 // Активируем тело
                 obj.body.activate(true);
                 obj.body.setCollisionFlags(0); // CF_DYNAMIC_OBJECT
                 
                 localPhysicsWorld.addRigidBody(obj.body);
+
+                console.log(`Физическое тело для ${obj.id} успешно созданно`)
                 break;
                 
             case "terrain":
@@ -413,37 +417,12 @@ export function createPhysicsObject(obj) {
     }
 }
 
-// Добавляем кнопку для отладки физики
-export function initDebugUI() {
-    // Кнопка переключения режима физики
-    const debugButton = document.createElement('button');
-    debugButton.style.position = 'fixed';
-    debugButton.style.top = '10px';
-    debugButton.style.right = '10px';
-    debugButton.style.zIndex = '1000';
-    debugButton.style.padding = '10px';
-    debugButton.style.backgroundColor = '#4CAF50';
-    debugButton.style.color = 'white';
-    debugButton.style.border = 'none';
-    debugButton.style.borderRadius = '5px';
-    debugButton.style.cursor = 'pointer';
-    debugButton.textContent = 'Toggle Physics Mode';
-    debugButton.onclick = togglePhysicsMode;
-    document.body.appendChild(debugButton);
-    
-    // Кнопка прыжка
-    const jumpButton = document.createElement('button');
-    jumpButton.style.position = 'fixed';
-    jumpButton.style.top = '60px';
-    jumpButton.style.right = '10px';
-    jumpButton.style.zIndex = '1000';
-    jumpButton.style.padding = '10px';
-    jumpButton.style.backgroundColor = '#2196F3';
-    jumpButton.style.color = 'white';
-    jumpButton.style.border = 'none';
-    jumpButton.style.borderRadius = '5px';
-    jumpButton.style.cursor = 'pointer';
-    jumpButton.textContent = 'Jump';
-    jumpButton.onclick = () => applyImpulseToSphere('SPACE', objects);
-    document.body.appendChild(jumpButton);
-}
+// // Обновляем список экспортов
+// export { 
+//     stepPhysics, 
+//     updatePhysicsObjects, 
+//     applyImpulseToSphere, 
+//     physicsSettings, 
+//     createPhysicsObject,
+//     objects 
+// };

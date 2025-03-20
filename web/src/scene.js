@@ -1,10 +1,11 @@
 // scene.js
 import * as THREE from 'three';
-import { initAmmo, stepPhysics, updatePhysicsObjects, objects, physicsSettings, localPhysicsWorld, applyImpulseToSphere } from './physics.js';
+import { initAmmo, localPhysicsWorld, applyImpulseToSphere } from './physics.js';
+import { objects } from './objects.js'; // Импортируем objects из objects.js
 
 export let scene, camera, renderer;
 export const clock = new THREE.Clock(); // Экспортируем часы для использования в index.js
-
+export const dynamicObjects = [];
 // Активные клавиши
 const activeKeys = {};
 
@@ -86,16 +87,7 @@ export async function initScene() {
         directionalLight.shadow.camera.bottom = -d;
         
         scene.add(directionalLight);
-        
-        // Добавляем вспомогательные объекты для отладки (оси, сетку)
-        if (physicsSettings.debugMode) {
-            const axesHelper = new THREE.AxesHelper(10);
-            scene.add(axesHelper);
-            
-            const gridHelper = new THREE.GridHelper(100, 100);
-            scene.add(gridHelper);
-        }
-        
+         
         // Настраиваем обработчики клавиш
         window.addEventListener('keydown', (event) => {
             console.log("[Scene] Нажата клавиша:", event.code);
@@ -143,9 +135,10 @@ export async function initScene() {
         setInterval(() => {
             // Проверяем наличие mainPlayer
             if (!objects["mainPlayer"]) {
+                console.warn("!!!не найден mainPlayer")
                 return;
             }
-            
+                       
             for (const key in activeKeys) {
                 if (activeKeys[key]) {
                     let cmd = null;
@@ -168,6 +161,7 @@ export async function initScene() {
                             break;
                         case "Space":
                             cmd = "SPACE";
+                            console.warn("to SPACE!!")
                             break;
                     }
                     
@@ -179,10 +173,75 @@ export async function initScene() {
             }
         }, 100); // Проверяем каждые 100 мс
         
+
+        createNewObject();
+
         console.log("[Scene] Сцена успешно инициализирована");
         return Promise.resolve();
     } catch (error) {
         console.error("[Scene] Ошибка при инициализации сцены:", error);
         return Promise.reject(error);
+    }
+}
+
+function createNewObject() {
+    // Создаем геометрию и материал для сферы
+    const radius = 1;
+    const geometry = new THREE.SphereGeometry(radius, 32, 32);
+    const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+
+    // Устанавливаем начальную позицию
+    mesh.position.set(0, 10, 0);
+
+    // Добавляем меш в сцену
+    scene.add(mesh);
+
+    // Создаем физическое тело
+    const shape = new Ammo.btSphereShape(radius);
+    shape.setMargin(0.05);
+
+    const mass = 1;
+    const localInertia = new Ammo.btVector3(0, 0, 0);
+    shape.calculateLocalInertia(mass, localInertia);
+
+    const transform = new Ammo.btTransform();
+    transform.setIdentity();
+    transform.setOrigin(new Ammo.btVector3(mesh.position.x, mesh.position.y, mesh.position.z));
+
+    const motionState = new Ammo.btDefaultMotionState(transform);
+    const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
+    const body = new Ammo.btRigidBody(rbInfo);
+
+    // Добавляем физическое тело в физический мир
+    localPhysicsWorld.addRigidBody(body);
+
+    // Связываем физическое тело с мешем
+    mesh.userData.physicsBody = body;
+
+    // Добавляем объект в список динамических объектов для обновления
+    dynamicObjects.push(mesh);
+}
+
+export function updatePhysics(deltaTime) {
+    localPhysicsWorld.stepSimulation(deltaTime, 10);
+
+    for (let i = 0; i < dynamicObjects.length; i++) {
+        const objThree = dynamicObjects[i];
+        const objPhys = objThree.userData.physicsBody;
+        const ms = objPhys.getMotionState();
+
+        if (ms) {
+            const transformAux1 = new Ammo.btTransform();
+            ms.getWorldTransform(transformAux1);
+
+            const p = transformAux1.getOrigin();
+            const q = transformAux1.getRotation();
+
+            objThree.position.set(p.x(), p.y(), p.z());
+            objThree.quaternion.set(q.x(), q.y(), q.z(), q.w());
+        }
     }
 }

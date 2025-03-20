@@ -1,9 +1,9 @@
 // index.js
 import * as THREE from 'three';
 import { initScene, scene, camera, renderer, clock } from './scene.js';
-import { stepPhysics, updatePhysicsObjects, applyImpulseToSphere, physicsSettings, objects, createPhysicsObject } from './physics.js';
+import { stepPhysics, updatePhysicsObjects, applyImpulseToSphere, physicsSettings, createPhysicsObject } from './physics.js';
 import { initNetwork } from './network.js';
-import { createMeshAndBodyForObject } from './objects.js';
+import { objects, createMeshAndBodyForObject } from './objects.js';
 
 // Настройки камеры
 const cameraSettings = {
@@ -27,14 +27,16 @@ function animate() {
         return;
     }
     
+
+    
     // Обновляем физику
     const deltaTime = clock.getDelta();
     if (deltaTime > 0) {
-        console.log("[Animate] Шаг физики, deltaTime:", deltaTime);
+        console.log("stepPhysics in index.js")
         stepPhysics(deltaTime);
         
         // Обновляем объекты на основе физики
-        updatePhysicsObjects(objects);
+        updatePhysicsObjects();
         
         // Выводим информацию о положении объектов (только для отладки)
         if (Math.random() < 0.01) { // Примерно раз в 100 кадров
@@ -49,16 +51,8 @@ function animate() {
     
     // Находим целевой объект для камеры - теперь это mainPlayer
     let targetObject = objects["mainPlayer"];
-    
-    // Если mainPlayer не найден, ищем любую доступную сферу
-    if (!targetObject || !targetObject.mesh) {
-        for (let id in objects) {
-            let obj = objects[id];
-            if (obj && obj.mesh && obj.object_type === "sphere") {
-                targetObject = obj;
-                break;
-            }
-        }
+    if (targetObject) {
+        checkObjectActive(targetObject);
     }
     
     // Обновляем позицию камеры
@@ -104,9 +98,6 @@ async function start() {
         initNetwork();
         console.log("[Start] Сеть инициализирована");
         
-        // Создаем базовые элементы сцены, например, пол
-        createBasicSceneElements();
-        
         // Выводим список всех объектов перед запуском анимации
         console.log("[Start] Список объектов перед запуском анимации:", Object.keys(objects));
         
@@ -122,101 +113,73 @@ async function start() {
 }
 
 // Функция для создания базовых элементов сцены
-function createBasicSceneElements() {
-    // Создаем плоскость для пола, если её ещё нет
-    if (!objects["floor"]) {
-        console.log("[Index] Создание пола");
+// function createBasicSceneElements() {
+//     // Создаем плоскость для пола, если её ещё нет
+//     if (!objects["floor"]) {
+//         console.log("[Index] Создание пола");
         
-        // Создаем визуальную плоскость
-        const floorGeometry = new THREE.PlaneGeometry(100, 100);
-        const floorMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x888888,
-            roughness: 0.8,
-            metalness: 0.2
-        });
+//         // Создаем визуальную плоскость
+//         const floorGeometry = new THREE.PlaneGeometry(100, 100);
+//         const floorMaterial = new THREE.MeshStandardMaterial({ 
+//             color: 0x888888,
+//             roughness: 0.8,
+//             metalness: 0.2
+//         });
         
-        const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
-        floorMesh.rotation.x = -Math.PI / 2; // Поворачиваем горизонтально
-        floorMesh.position.y = 0;
-        floorMesh.receiveShadow = true;
+//         const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
+//         floorMesh.rotation.x = -Math.PI / 2; // Поворачиваем горизонтально
+//         floorMesh.position.y = 0;
+//         floorMesh.receiveShadow = true;
         
-        // Добавляем в сцену
-        scene.add(floorMesh);
+//         // Добавляем в сцену
+//         scene.add(floorMesh);
         
-        // Создаем объект пола
-        const floor = {
-            id: "floor",
-            object_type: "box",
-            x: 0,
-            y: -0.5, // Чуть ниже нуля, чтобы сфера не проваливалась
-            z: 0,
-            mass: 0,  // Масса 0 = статический объект
-            width: 100,
-            height: 1,
-            depth: 100
-        };
+//         // Создаем объект пола
+//         const floor = {
+//             id: "floor",
+//             object_type: "box",
+//             x: 0,
+//             y: -0.5, // Чуть ниже нуля, чтобы сфера не проваливалась
+//             z: 0,
+//             mass: 0,  // Масса 0 = статический объект
+//             width: 100,
+//             height: 1,
+//             depth: 100
+//         };
         
-        floor.mesh = floorMesh;
-        objects["floor"] = floor;
+//         floor.mesh = floorMesh;
+//         objects["floor"] = floor;
         
-        // Создаем физическое тело для пола
-        if (window.Ammo) {
-            try {
-                const transform = new window.Ammo.btTransform();
-                transform.setIdentity();
-                transform.setOrigin(new window.Ammo.btVector3(0, -0.5, 0));
+//         // Создаем физическое тело для пола
+//         if (window.Ammo) {
+//             try {
+//                 const transform = new window.Ammo.btTransform();
+//                 transform.setIdentity();
+//                 transform.setOrigin(new window.Ammo.btVector3(0, -0.5, 0));
                 
-                const shape = new window.Ammo.btBoxShape(new window.Ammo.btVector3(50, 0.5, 50));
+//                 const shape = new window.Ammo.btBoxShape(new window.Ammo.btVector3(50, 0.5, 50));
                 
-                const motionState = new window.Ammo.btDefaultMotionState(transform);
-                const rbInfo = new window.Ammo.btRigidBodyConstructionInfo(
-                    0, // Масса 0 для статики
-                    motionState, 
-                    shape, 
-                    new window.Ammo.btVector3(0, 0, 0)
-                );
+//                 const motionState = new window.Ammo.btDefaultMotionState(transform);
+//                 const rbInfo = new window.Ammo.btRigidBodyConstructionInfo(
+//                     0, // Масса 0 для статики
+//                     motionState, 
+//                     shape, 
+//                     new window.Ammo.btVector3(0, 0, 0)
+//                 );
                 
-                floor.body = new window.Ammo.btRigidBody(rbInfo);
-                floor.body.setFriction(0.5);
-                floor.body.setRestitution(0.2);
-                floor.body.setCollisionFlags(1); // CF_STATIC_OBJECT
+//                 floor.body = new window.Ammo.btRigidBody(rbInfo);
+//                 floor.body.setFriction(0.5);
+//                 floor.body.setRestitution(0.2);
+//                 floor.body.setCollisionFlags(1); // CF_STATIC_OBJECT
                 
-                // Добавляем в физический мир
-                window.physicsWorld.addRigidBody(floor.body);
-            } catch(e) {
-                console.error("[Index] Ошибка при создании физического тела пола:", e);
-            }
-        }
-    }
-}
-
-function handleWebSocketMessage(event) {
-    const message = JSON.parse(event.data);
-
-    if (message.type === "create") {
-        const obj = {
-            id: message.id,
-            object_type: message.object_type,
-            x: message.x,
-            y: message.y,
-            z: message.z,
-            mass: message.mass,
-            radius: message.radius,
-            color: message.color,
-            height_data: message.height_data,
-            heightmap_w: message.heightmap_w,
-            heightmap_h: message.heightmap_h,
-            scale_x: message.scale_x,
-            scale_y: message.scale_y,
-            scale_z: message.scale_z,
-        };
-
-        createMeshAndBodyForObject(obj);
-        // Создаем физическое тело для объекта
-        createPhysicsObject(obj);
-        objects[obj.id] = obj;
-    }
-}
+//                 // Добавляем в физический мир
+//                 window.physicsWorld.addRigidBody(floor.body);
+//             } catch(e) {
+//                 console.error("[Index] Ошибка при создании физического тела пола:", e);
+//             }
+//         }
+//     }
+// }
 
 // Добавляем обработчик клавиш
 function handleKeyDown(event) {
@@ -225,19 +188,19 @@ function handleKeyDown(event) {
 
     switch (event.code) {
         case 'ArrowLeft':
-            applyImpulseToSphere('LEFT', objects);
+            applyImpulseToSphere('LEFT');
             break;
         case 'ArrowRight':
-            applyImpulseToSphere('RIGHT', objects);
+            applyImpulseToSphere('RIGHT');
             break;
         case 'ArrowUp':
-            applyImpulseToSphere('UP', objects);
+            applyImpulseToSphere('UP');
             break;
         case 'ArrowDown':
-            applyImpulseToSphere('DOWN', objects);
+            applyImpulseToSphere('DOWN');
             break;
         case 'Space':
-            applyImpulseToSphere('SPACE', objects);
+            applyImpulseToSphere('SPACE');
             break;
     }
 }
@@ -260,3 +223,14 @@ console.log('[Init] Запуск приложения...');
 start().catch(error => {
     console.error('[Fatal Error] Критическая ошибка при запуске:', error);
 });
+
+export function checkObjectActive(obj) {
+    if (obj.body) {
+        const isActive = obj.body.isActive();
+        console.log(`[Physics] Объект ${obj.id} активен: ${isActive}`);
+        return isActive;
+    } else {
+        console.warn(`[Physics] У объекта ${obj.id} нет физического тела`);
+        return false;
+    }
+}

@@ -1,7 +1,6 @@
 // network.js
 import { objects, createMeshAndBodyForObject } from './objects';
-import { createPhysicsObject } from './physics';
-import { applyImpulseToSphere } from './physics';
+import { createPhysicsObject, applyImpulseToSphere } from './physics';
 
 let socket = null;
 let connected = false;
@@ -34,7 +33,8 @@ export function initNetwork() {
                 const message = JSON.parse(event.data);
                 console.log("[Network] Получено сообщение от сервера:", message);
                 
-                handleMessage(message);
+                // Используем функцию handleWebSocketMessage для обработки сообщений
+                handleWebSocketMessage(message);
             } catch (error) {
                 console.error("[Network] Ошибка обработки сообщения:", error);
             }
@@ -75,12 +75,11 @@ export function sendCommand(cmd, data) {
 }
 
 // Обработчик сообщений от сервера
-function handleMessage(message) {
-    // Отладочный вывод для всех входящих сообщений
+function handleWebSocketMessage(message) {
     console.log("[Network] Обработка сообщения:", message);
+    console.log(`[Network] Текущее состояние objects: ${Object.keys(objects).length} объектов, ключи: ${Object.keys(objects).join(', ')}`);
     
     if (message.type === "create") {
-        // Проверяем, существует ли уже такой объект
         if (objects[message.id]) {
             console.log(`[Network] Объект ${message.id} уже существует:`, objects[message.id]);
             return;
@@ -88,7 +87,6 @@ function handleMessage(message) {
         
         console.log(`[Network] Создание объекта ${message.id} типа ${message.object_type}`);
         
-        // Создание объекта
         const obj = {
             id: message.id,
             object_type: message.object_type,
@@ -97,20 +95,26 @@ function handleMessage(message) {
             z: message.z || 0,
             mass: message.mass || 1,
             radius: message.radius || 1,
-            color: message.color || "#ff0000"
+            color: message.color || "#ff0000",
+            height_data: message.height_data,
+            heightmap_w: message.heightmap_w,
+            heightmap_h: message.heightmap_h,
+            scale_x: message.scale_x,
+            scale_y: message.scale_y,
+            scale_z: message.scale_z
         };
         
-        // Специальная обработка для mainPlayer
-        if (message.id === "mainPlayer") {
-            console.log("[Network] Создан основной игрок (mainPlayer)");
-        }
+        console.log(`[Network] Создан объект для добавления:`, obj);
         
-        objects[message.id] = obj;
+        // Важно! Сначала добавляем в objects, затем создаем меш и физическое тело
+        objects[message.id] = obj; // Добавляем в objects напрямую
+        console.log(`[Network] Объект ${message.id} добавлен в objects. Текущий список: ${Object.keys(objects).join(', ')}`);
+        
         createMeshAndBodyForObject(obj);
         console.log(`[Network] Объект ${message.id} создан и добавлен в сцену`);
+        console.log(`[Network] Обновленное состояние objects после создания: ${Object.keys(objects).length} объектов, ключи: ${Object.keys(objects).join(', ')}`);
     }
     else if (message.type === "update") {
-        // Получаем объект для обновления
         const obj = objects[message.id];
         
         if (!obj) {
@@ -118,7 +122,6 @@ function handleMessage(message) {
             return;
         }
         
-        // Обновляем положение и вращение
         if (obj.mesh) {
             if (message.position) {
                 obj.mesh.position.set(
@@ -138,15 +141,12 @@ function handleMessage(message) {
         }
     }
     else if (message.type === "command") {
-        // Обработка команд от сервера
         console.log("[Network] Получена команда от сервера:", message.cmd);
         
-        if (message.cmd === "CREATE_PLAYER" && message.data) {
-            // Если сервер отправил команду на создание игрока с данными
+        if (message.cmd === "create" && message.data) {
             try {
                 const playerData = JSON.parse(message.data);
                 
-                // Создаем объект игрока, если его еще нет
                 if (!objects["mainPlayer"]) {
                     const playerObj = {
                         id: "mainPlayer",
@@ -166,7 +166,7 @@ function handleMessage(message) {
             } catch (error) {
                 console.error("[Network] Ошибка создания игрока по команде:", error);
             }
-        }
+        } 
     }
 }
 
@@ -200,12 +200,12 @@ function handleKeyPress(event) {
         console.log("[Network] Отправка команды:", cmd);
         sendCommand(cmd, "");
         
-        applyImpulseToSphere(cmd, objects);
+        applyImpulseToSphere(cmd);
     } else if (cmd) {
         console.warn("[Network] Не удалось отправить команду: WebSocket не готов");
         
         // Если нет соединения с сервером, всё равно применяем импульс
-        applyImpulseToSphere(cmd, objects);
+        applyImpulseToSphere(cmd);
     }
 }
 

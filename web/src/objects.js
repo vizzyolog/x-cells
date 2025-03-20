@@ -1,9 +1,11 @@
 // objects.js
 import * as THREE from 'three';
 import { scene } from './scene';
-import { localPhysicsWorld, createPhysicsObject } from './physics';
+import { objectsRef, localPhysicsWorld, createPhysicsObject } from './physics';
 
-export let objects = {}; // Словарь объектов: id -> { mesh, body, serverPos, ... }
+// Создаем объект objects и сразу обновляем ссылку в physics.js
+export let objects = {};
+objectsRef.objects = objects; // Устанавливаем ссылку на наш objects
 
 export function createMeshAndBodyForObject(obj) {
     if (!obj) {
@@ -12,6 +14,7 @@ export function createMeshAndBodyForObject(obj) {
     }
     
     console.log(`[Objects] Создание меша для объекта ${obj.id} типа ${obj.object_type}`);
+    console.log(`[Objects] Текущее состояние objects перед добавлением: ${Object.keys(objects).length} объектов`);
     
     // Специальная обработка для mainPlayer (ранее server_sphere)
     if (obj.id === "mainPlayer") {
@@ -108,6 +111,9 @@ export function createMeshAndBodyForObject(obj) {
     
     // Сохраняем объект в общий список
     objects[obj.id] = obj;
+    console.log(`[Objects] Объект ${obj.id} добавлен в список objects. Текущий список: ${Object.keys(objects).join(', ')}`);
+    console.log(`[Objects] Обновленное состояние objects: ${Object.keys(objects).length} объектов`);
+    
     return obj;
 }
 
@@ -263,16 +269,16 @@ function createTreeMesh(data) {
     return group;
 }
 
-function createDefaultMesh(data) {
-    const geo = new THREE.BoxGeometry(1, 1, 1);
-    const mesh = new THREE.Mesh(
-        geo,
-        new THREE.MeshLambertMaterial({ color: parseColor(data.color || "#888888") })
-    );
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    return mesh;
-}
+// function createDefaultMesh(data) {
+//     const geo = new THREE.BoxGeometry(1, 1, 1);
+//     const mesh = new THREE.Mesh(
+//         geo,
+//         new THREE.MeshLambertMaterial({ color: parseColor(data.color || "#888888") })
+//     );
+//     mesh.castShadow = true;
+//     mesh.receiveShadow = true;
+//     return mesh;
+// }
 
 function parseColor(colorStr) {
     if (!colorStr) return 0x888888;

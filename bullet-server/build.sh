@@ -1,4 +1,4 @@
-rm -rf build
+rm -rf buildк
 
 #!/bin/bash
 

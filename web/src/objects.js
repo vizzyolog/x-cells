@@ -5,77 +5,64 @@ import { localPhysicsWorld } from './physics';
 
 export let objects = {}; // Словарь объектов: id -> { mesh, body, serverPos, ... }
 
-export function createMeshAndBodyForObject(obj) {
-    console.log("[Objects] Создание объекта:", obj.object_type, obj.id);
+export function createMeshAndBodyForObject(data) {
+    if (!data || !data.object_type) {
+        console.error("Invalid data received for object creation:", data);
+        return null;
+    }
 
-    let mesh;
-    switch (obj.object_type) {
+    const type = data.object_type;
+    let mesh, body = null;
+
+    switch (type) {
         case "terrain":
-            mesh = createTerrainMesh(obj);
+            mesh = createTerrainMesh(data);
             break;
-        case "sphere": {
-            const geometry = new THREE.SphereGeometry(obj.radius || 1);
-            const material = new THREE.MeshPhongMaterial({ color: obj.color || 0xff0000 });
-            mesh = new THREE.Mesh(geometry, material);
-            console.log("[Objects] Создан меш для сферы:", mesh);
+        case "sphere":
+            mesh = createSphereMesh(data);
+            body = createPhysicsBodyForSphere(data);
             break;
-        }
         case "tree":
-            mesh = createTreeMesh(obj);
+            mesh = createTreeMesh(data);
             break;
         default:
-            console.warn(`Unknown object type: ${obj.object_type}`);
-            mesh = createDefaultMesh(obj);
+            console.warn(`Unknown object type: ${type}`);
+            mesh = createDefaultMesh(data);
             break;
     }
 
-    if (mesh) {
-        mesh.position.set(obj.x || 0, obj.y || 0, obj.z || 0);
-        scene.add(mesh);
-        obj.mesh = mesh;
-        console.log("[Objects] Добавлен меш к объекту:", obj.id, obj.mesh);
-    }
-
-    return obj;
+    scene.add(mesh);
+    return { mesh, body };
 }
 
-function createTerrainMesh(obj) {
-    const geometry = new THREE.PlaneGeometry(
-        obj.scale_x * obj.heightmap_w,
-        obj.scale_z * obj.heightmap_h,
-        obj.heightmap_w - 1,
-        obj.heightmap_h - 1
+function createTerrainMesh(data) {
+    const w = data.heightmap_w || 64;
+    const h = data.heightmap_h || 64;
+    const geo = new THREE.PlaneGeometry(
+        w * data.scale_x,
+        h * data.scale_z,
+        w - 1,
+        h - 1
     );
+    geo.rotateX(-Math.PI / 2);
 
-    // Поворачиваем плоскость в горизонтальное положение
-    geometry.rotateX(-Math.PI / 2);
-
-    // Применяем данные высот напрямую
-    const vertices = geometry.attributes.position.array;
-    for (let i = 0; i < obj.heightmap_h; i++) {
-        for (let j = 0; j < obj.heightmap_w; j++) {
-            const index = (i * obj.heightmap_w + j);
-            const vertex_index = index * 3;
-            vertices[vertex_index + 1] = obj.height_data[index] * obj.scale_y;
+    if (data.height_data) {
+        const verts = geo.attributes.position.array;
+        for (let i = 0; i < verts.length; i += 3) {
+            const ix = (i / 3) % w;
+            const iz = Math.floor(i / 3 / w);
+            verts[i + 1] = data.height_data[iz * w + ix] * data.scale_y;
         }
+        geo.computeVertexNormals();
     }
 
-    // Пересчитываем нормали для правильного освещения
-    geometry.computeVertexNormals();
-
-    // Создаем материал
-    const material = new THREE.MeshPhongMaterial({
-        color: obj.color || 0xC7C7C7,
-        side: THREE.DoubleSide,
-        wireframe: false,
-        flatShading: true
-    });
-
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.receiveShadow = true;
-    mesh.castShadow = true;
-
-    return mesh;
+    return new THREE.Mesh(
+        geo,
+        new THREE.MeshLambertMaterial({
+            color: parseColor(data.color || "#888888"),
+            wireframe: true,
+        })
+    );
 }
 
 export function createSphereMesh(data) {

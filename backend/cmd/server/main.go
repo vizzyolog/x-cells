@@ -414,7 +414,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 
 			// Применяем импульс только к серверной сфере
 			_, err := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
-				Id:      "server_sphere", // Всегда используем ID серверной сферы
+				Id:      "mainPlayer", // Всегда используем ID серверной сферы
 				Impulse: &impulse,
 			})
 			if err != nil {

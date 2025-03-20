@@ -1,252 +1,109 @@
 // objects.js
 import * as THREE from 'three';
 import { scene } from './scene';
-import { objectsRef, localPhysicsWorld, createPhysicsObject } from './physics';
+import { localPhysicsWorld } from './physics';
 
-// Создаем объект objects и сразу обновляем ссылку в physics.js
-export let objects = {};
-objectsRef.objects = objects; // Устанавливаем ссылку на наш objects
+export let objects = {}; // Словарь объектов: id -> { mesh, body, serverPos, ... }
 
-export function createMeshAndBodyForObject(obj) {
-    if (!obj) {
-        console.error("[Objects] Попытка создать меш для undefined объекта");
-        return;
+export function createMeshAndBodyForObject(data) {
+    if (!data || !data.object_type) {
+        console.error("Invalid data received for object creation:", data);
+        return null;
     }
-    
-    console.log(`[Objects] Создание меша для объекта ${obj.id} типа ${obj.object_type}`);
-    console.log(`[Objects] Текущее состояние objects перед добавлением: ${Object.keys(objects).length} объектов`);
-    
-    // Специальная обработка для mainPlayer (ранее server_sphere)
-    if (obj.id === "mainPlayer") {
-        console.log("[Objects] Создание основного игрока (mainPlayer)");
-    }
-    
-    let mesh;
-    
-    // Создаем меш в зависимости от типа объекта
-    switch(obj.object_type) {
-        case "sphere":
-            // Создаем сферу
-            const geometry = new THREE.SphereGeometry(obj.radius || 1, 32, 32);
-            const material = new THREE.MeshStandardMaterial({
-                color: obj.color || 0xff0000,
-                roughness: 0.5,
-                metalness: 0.2
-            });
-            
-            mesh = new THREE.Mesh(geometry, material);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            
-            // Если это главный игрок, добавляем визуальные индикаторы
-            if (obj.id === "mainPlayer") {
-                // Добавляем стрелку направления для наглядности
-                const arrowHelper = new THREE.ArrowHelper(
-                    new THREE.Vector3(1, 0, 0), // направление по х
-                    new THREE.Vector3(0, 0, 0), // начало
-                    obj.radius * 2, // длина
-                    0x00ff00, // цвет
-                    obj.radius * 0.2, // размер головки
-                    obj.radius * 0.1  // размер хвоста
-                );
-                mesh.add(arrowHelper);
-                
-                // Добавляем оси для ориентации
-                const axesHelper = new THREE.AxesHelper(obj.radius * 1.5);
-                mesh.add(axesHelper);
-                
-                console.log("[Objects] К mainPlayer добавлены индикаторы направления");
-            }
-            break;
-            
-        case "box":
-            // Создаем куб
-            const boxGeometry = new THREE.BoxGeometry(
-                obj.width || 1,
-                obj.height || 1,
-                obj.depth || 1
-            );
-            const boxMaterial = new THREE.MeshStandardMaterial({
-                color: obj.color || 0x00ff00,
-                roughness: 0.7,
-                metalness: 0.1
-            });
-            
-            mesh = new THREE.Mesh(boxGeometry, boxMaterial);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            break;
-            
+
+    const type = data.object_type;
+    let mesh, body = null;
+
+    switch (type) {
         case "terrain":
-            mesh = createTerrainMesh(obj);
+            mesh = createTerrainMesh(data);
+            break;
+        case "sphere":
+            mesh = createSphereMesh(data);
+            body = createPhysicsBodyForSphere(data);
             break;
         case "tree":
-            mesh = createTreeMesh(obj);
+            mesh = createTreeMesh(data);
             break;
         default:
-            console.warn(`[Objects] Неизвестный тип объекта: ${obj.object_type}`);
-            return;
+            console.warn(`Unknown object type: ${type}`);
+            mesh = createDefaultMesh(data);
+            break;
     }
-    
-    // Устанавливаем позицию объекта
-    mesh.position.set(obj.x || 0, obj.y || 0, obj.z || 0);
-    
-    // Добавляем объект в сцену
-    if (scene) {
-        scene.add(mesh);
-        console.log(`[Objects] Объект ${obj.id} добавлен в сцену`);
-    } else {
-        console.warn("[Objects] Сцена не инициализирована, невозможно добавить объект");
-    }
-    
-    // Сохраняем меш в объекте
-    obj.mesh = mesh;
-    
-    console.log(`[Objects] Создан меш для объекта ${obj.id}:`, mesh);
-    
-    // Создаем физическое тело только для объектов с физикой
-    if (obj.object_type === "sphere" || obj.object_type === "terrain") {
-        createPhysicsObject(obj);
-    }
-    
-    // Сохраняем объект в общий список
-    objects[obj.id] = obj;
-    console.log(`[Objects] Объект ${obj.id} добавлен в список objects. Текущий список: ${Object.keys(objects).join(', ')}`);
-    console.log(`[Objects] Обновленное состояние objects: ${Object.keys(objects).length} объектов`);
-    
-    return obj;
+
+    scene.add(mesh);
+    return { mesh, body };
 }
 
-function createTerrainMesh(obj) {
-    console.log("[Objects] Создание визуальной модели террейна", obj);
-    
-    // Проверяем наличие необходимых данных
-    if (!obj.height_data || !obj.heightmap_w || !obj.heightmap_h) {
-        console.error("[Objects] Отсутствуют данные для создания террейна:", obj);
-        return new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({color: 0xff0000}));
-    }
-    
-    // Получаем параметры террейна с сервера
-    const terrainWidth = obj.heightmap_w;
-    const terrainDepth = obj.heightmap_h;
-    const scaleX = obj.scale_x || 1;
-    const scaleY = obj.scale_y || 1;
-    const scaleZ = obj.scale_z || 1;
-    
-    // Определяем диапазон высот
-    const heightData = obj.height_data;
-    const minHeight = obj.min_height !== undefined ? obj.min_height : Math.min(...heightData);
-    const maxHeight = obj.max_height !== undefined ? obj.max_height : Math.max(...heightData);
-    
-    console.log("[Objects] Параметры террейна:", {
-        ширина: terrainWidth,
-        глубина: terrainDepth,
-        минВысота: minHeight,
-        максВысота: maxHeight,
-        масштаб: { x: scaleX, y: scaleY, z: scaleZ }
-    });
-    
-    try {
-        // Создаем геометрию плоскости с нужным количеством сегментов
-        const geometry = new THREE.PlaneGeometry(
-            terrainWidth * scaleX,
-            terrainDepth * scaleZ,
-            terrainWidth - 1,
-            terrainDepth - 1
-        );
-        
-        // Поворачиваем для соответствия координатам в физическом мире
-        geometry.rotateX(-Math.PI / 2);
-        
-        // Применяем данные высот к вершинам
-        const positions = geometry.attributes.position.array;
-        
-        // Для каждой вершины применяем соответствующую высоту
-        for (let i = 0, j = 0; i < positions.length; i += 3, j++) {
-            const x = Math.floor(j % (terrainWidth));
-            const z = Math.floor(j / (terrainWidth));
-            
-            if (x < terrainWidth && z < terrainDepth) {
-                const index = z * terrainWidth + x;
-                if (index < heightData.length) {
-                    // В повернутой геометрии Y-координата отвечает за высоту
-                    positions[i + 1] = heightData[index] * scaleY;
-                }
-            }
+function createTerrainMesh(data) {
+    const w = data.heightmap_w || 64;
+    const h = data.heightmap_h || 64;
+    const geo = new THREE.PlaneGeometry(
+        w * data.scale_x,
+        h * data.scale_z,
+        w - 1,
+        h - 1
+    );
+    geo.rotateX(-Math.PI / 2);
+
+    if (data.height_data) {
+        const verts = geo.attributes.position.array;
+        for (let i = 0; i < verts.length; i += 3) {
+            const ix = (i / 3) % w;
+            const iz = Math.floor(i / 3 / w);
+            verts[i + 1] = data.height_data[iz * w + ix] * data.scale_y;
         }
-        
-        // Обновляем нормали для правильного освещения
-        geometry.computeVertexNormals();
-        
-        // Смещаем геометрию по Y для выравнивания с физическим телом
-        geometry.translate(0, (maxHeight + minHeight) / 2 * scaleY, 0);
-        
-        // Создаем материал
-        const material = new THREE.MeshStandardMaterial({
-            color: obj.color ? parseColor(obj.color) : 0x5c8a50,
-            roughness: 0.8,
-            metalness: 0.1,
-            flatShading: false,
-            side: THREE.DoubleSide
-        });
-        
-        // Создаем меш
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.receiveShadow = true;
-        mesh.castShadow = true;
-        
-        console.log("[Objects] Террейн успешно создан");
-        return mesh;
-    } catch (error) {
-        console.error("[Objects] Ошибка при создании террейна:", error);
-        // Возвращаем простой меш для отладки
-        return new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.MeshBasicMaterial({color: 0xff0000, wireframe: true}));
+        geo.computeVertexNormals();
     }
+
+    return new THREE.Mesh(
+        geo,
+        new THREE.MeshLambertMaterial({
+            color: parseColor(data.color || "#888888"),
+            wireframe: true,
+        })
+    );
 }
 
 export function createSphereMesh(data) {
-    // Создаем геометрию и материал сферы
-    const geometry = new THREE.SphereGeometry(data.radius || 1, 32, 32);
-    const material = new THREE.MeshPhongMaterial({ 
-        color: parseColor(data.color || "#ff0000"),
-        shininess: 30,
-        specular: 0x444444
-    });
-    
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    
-    return mesh;
+    const geo = new THREE.SphereGeometry(data.radius || 1, 16, 16);
+    return new THREE.Mesh(
+        geo,
+        new THREE.MeshLambertMaterial({ color: parseColor(data.color || "#888888") })
+    );
 }
 
 function createTreeMesh(data) {
     const group = new THREE.Group();
 
-    // Создаем ветки, если они заданы
     if (data.branches && Array.isArray(data.branches)) {
-        data.branches.forEach(branch => {
-            // Проверяем наличие необходимых координат
-            if (!branch.startX || !branch.startY || !branch.startZ || 
-                !branch.endX || !branch.endY || !branch.endZ) {
+        data.branches.forEach((branch, index) => {
+            if (
+                branch.startX === undefined ||
+                branch.startY === undefined ||
+                branch.startZ === undefined ||
+                branch.endX === undefined ||
+                branch.endY === undefined ||
+                branch.endZ === undefined
+            ) {
+                console.warn(
+                    `Branch coordinates are missing or invalid at index ${index}:`,
+                    branch
+                );
                 return;
             }
 
-            // Создаем геометрию и материал для ветки
             const branchGeo = new THREE.CylinderGeometry(
-                branch.radiusTop || branch.radius || 0.1,
-                branch.radiusBottom || branch.radius || 0.2,
+                branch.radiusTop || branch.radius || 0.1,    // верхний радиус
+                branch.radiusBottom || branch.radius || 0.2, // нижний радиус
                 1,
                 8
             );
-            
             const branchMat = new THREE.MeshStandardMaterial({
                 color: parseColor(branch.color || "#654321"),
             });
-            
             const branchMesh = new THREE.Mesh(branchGeo, branchMat);
 
-            // Позиционируем и ориентируем ветку
             const midX = (branch.startX + branch.endX) / 2;
             const midY = (branch.startY + branch.endY) / 2;
             const midZ = (branch.startZ + branch.endZ) / 2;
@@ -254,7 +111,6 @@ function createTreeMesh(data) {
             branchMesh.position.set(midX, midY, midZ);
             branchMesh.lookAt(new THREE.Vector3(branch.endX, branch.endY, branch.endZ));
 
-            // Масштабируем ветку по длине
             const length = new THREE.Vector3(
                 branch.endX - branch.startX,
                 branch.endY - branch.startY,
@@ -262,6 +118,7 @@ function createTreeMesh(data) {
             ).length();
 
             branchMesh.scale.set(1, length, 1);
+
             group.add(branchMesh);
         });
     }
@@ -269,20 +126,62 @@ function createTreeMesh(data) {
     return group;
 }
 
-// function createDefaultMesh(data) {
-//     const geo = new THREE.BoxGeometry(1, 1, 1);
-//     const mesh = new THREE.Mesh(
-//         geo,
-//         new THREE.MeshLambertMaterial({ color: parseColor(data.color || "#888888") })
-//     );
-//     mesh.castShadow = true;
-//     mesh.receiveShadow = true;
-//     return mesh;
-// }
+function createDefaultMesh(data) {
+    const geo = new THREE.BoxGeometry(1, 1, 1);
+    return new THREE.Mesh(
+        geo,
+        new THREE.MeshLambertMaterial({ color: parseColor(data.color || "#888888") })
+    );
+}
+
+function createPhysicsBodyForSphere(data) {
+    try {
+        if (typeof Ammo === 'undefined') {
+            console.error('Ammo.js не инициализирован');
+            return null;
+        }
+
+        if (!localPhysicsWorld) {
+            console.error('Физический мир не инициализирован');
+            return null;
+        }
+
+        const radius = data.radius || 1;
+        const mass = data.mass || 1;
+
+        // Создаем все Ammo объекты через window.Ammo
+        const shape = new window.Ammo.btSphereShape(radius);
+        const transform = new window.Ammo.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(new window.Ammo.btVector3(data.x || 0, data.y || 0, data.z || 0));
+
+        const localInertia = new window.Ammo.btVector3(0, 0, 0);
+        shape.calculateLocalInertia(mass, localInertia);
+
+        const motionState = new window.Ammo.btDefaultMotionState(transform);
+        const rbInfo = new window.Ammo.btRigidBodyConstructionInfo(
+            mass,
+            motionState,
+            shape,
+            localInertia
+        );
+        const body = new window.Ammo.btRigidBody(rbInfo);
+
+        localPhysicsWorld.addRigidBody(body);
+
+        // Очистка памяти
+        window.Ammo.destroy(rbInfo);
+        window.Ammo.destroy(localInertia);
+
+        return body;
+    } catch (error) {
+        console.error('Ошибка при создании физического тела:', error);
+        return null;
+    }
+}
 
 function parseColor(colorStr) {
     if (!colorStr) return 0x888888;
-    if (typeof colorStr === 'number') return colorStr;
     if (colorStr.startsWith("#")) {
         return parseInt(colorStr.slice(1), 16);
     }

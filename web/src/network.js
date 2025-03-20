@@ -3,45 +3,170 @@ import { objects, createMeshAndBodyForObject } from './objects';
 import { createPhysicsObject } from './physics';
 import { applyImpulseToSphere } from './physics';
 
-let ws = null;
+let socket = null;
+let connected = false;
 
-function handleMessage(data) {      
+export function initNetwork() {
+    console.log("[Network] Инициализация сети");
+    
+    // WebSocket URL
+    // const wsURL = "ws://" + window.location.host + "/ws";
+    const wsURL = "ws://localhost:8080/ws";
+    
+    // Создание WebSocket соединения
     try {
-        if (data.type === "create" && data.id) {
-            if (data.object_type !== 'terrain') {
-                console.log("[WS] Создан объект:", data.object_type, data.id);
-            }
-            const obj = {
-                id: data.id,
-                object_type: data.object_type,
-                x: data.x,
-                y: data.y,
-                z: data.z,
-                mass: data.mass,
-                radius: data.radius,
-                color: data.color,
-                height_data: data.height_data,
-                heightmap_w: data.heightmap_w,
-                heightmap_h: data.heightmap_h,
-                scale_x: data.scale_x,
-                scale_y: data.scale_y,
-                scale_z: data.scale_z,
-            };
+        socket = new WebSocket(wsURL);
+        console.log("[Network] Создано соединение WebSocket:", wsURL);
+        
+        // Обработчик открытия соединения
+        socket.onopen = function() {
+            console.log("[Network] WebSocket соединение установлено");
+            connected = true;
             
-            objects[data.id] = obj;
-            createMeshAndBodyForObject(obj);
-            createPhysicsObject(obj);
-        } 
-        else if (data.type === "update" && data.id && objects[data.id]) {
-            const obj = objects[data.id];
-            obj.serverPos = {
-                x: data.x || 0,
-                y: data.y || 0,
-                z: data.z || 0
-            };
-        }
+            // Запрашиваем у сервера создание mainPlayer
+            sendCommand("CREATE_PLAYER", "");
+            console.log("[Network] Отправлен запрос на создание mainPlayer");
+        };
+        
+        // Обработчик сообщений от сервера
+        socket.onmessage = function(event) {
+            try {
+                const message = JSON.parse(event.data);
+                console.log("[Network] Получено сообщение от сервера:", message);
+                
+                handleMessage(message);
+            } catch (error) {
+                console.error("[Network] Ошибка обработки сообщения:", error);
+            }
+        };
+        
+        // Обработчик закрытия соединения
+        socket.onclose = function() {
+            console.log("[Network] WebSocket соединение закрыто");
+            connected = false;
+        };
+        
+        // Обработчик ошибок
+        socket.onerror = function(error) {
+            console.error("[Network] Ошибка WebSocket:", error);
+        };
     } catch (error) {
-        console.error("[WS] Ошибка при обработке сообщения:", error);
+        console.error("[Network] Ошибка при создании WebSocket:", error);
+    }
+}
+
+// Функция отправки команды на сервер
+export function sendCommand(cmd, data) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        const message = {
+            cmd: cmd,
+            data: data
+        };
+        
+        try {
+            socket.send(JSON.stringify(message));
+            console.log("[Network] Отправлена команда:", cmd, data);
+        } catch (error) {
+            console.error("[Network] Ошибка отправки команды:", error);
+        }
+    } else {
+        console.warn("[Network] WebSocket не готов для отправки команды:", cmd);
+    }
+}
+
+// Обработчик сообщений от сервера
+function handleMessage(message) {
+    // Отладочный вывод для всех входящих сообщений
+    console.log("[Network] Обработка сообщения:", message);
+    
+    if (message.type === "create") {
+        // Проверяем, существует ли уже такой объект
+        if (objects[message.id]) {
+            console.log(`[Network] Объект ${message.id} уже существует:`, objects[message.id]);
+            return;
+        }
+        
+        console.log(`[Network] Создание объекта ${message.id} типа ${message.object_type}`);
+        
+        // Создание объекта
+        const obj = {
+            id: message.id,
+            object_type: message.object_type,
+            x: message.x || 0,
+            y: message.y || 1,
+            z: message.z || 0,
+            mass: message.mass || 1,
+            radius: message.radius || 1,
+            color: message.color || "#ff0000"
+        };
+        
+        // Специальная обработка для mainPlayer
+        if (message.id === "mainPlayer") {
+            console.log("[Network] Создан основной игрок (mainPlayer)");
+        }
+        
+        objects[message.id] = obj;
+        createMeshAndBodyForObject(obj);
+        console.log(`[Network] Объект ${message.id} создан и добавлен в сцену`);
+    }
+    else if (message.type === "update") {
+        // Получаем объект для обновления
+        const obj = objects[message.id];
+        
+        if (!obj) {
+            console.warn(`[Network] Не найден объект ${message.id} для обновления`);
+            return;
+        }
+        
+        // Обновляем положение и вращение
+        if (obj.mesh) {
+            if (message.position) {
+                obj.mesh.position.set(
+                    message.position.x || obj.mesh.position.x,
+                    message.position.y || obj.mesh.position.y,
+                    message.position.z || obj.mesh.position.z
+                );
+            }
+            
+            if (message.rotation) {
+                obj.mesh.rotation.set(
+                    message.rotation.x || obj.mesh.rotation.x,
+                    message.rotation.y || obj.mesh.rotation.y,
+                    message.rotation.z || obj.mesh.rotation.z
+                );
+            }
+        }
+    }
+    else if (message.type === "command") {
+        // Обработка команд от сервера
+        console.log("[Network] Получена команда от сервера:", message.cmd);
+        
+        if (message.cmd === "CREATE_PLAYER" && message.data) {
+            // Если сервер отправил команду на создание игрока с данными
+            try {
+                const playerData = JSON.parse(message.data);
+                
+                // Создаем объект игрока, если его еще нет
+                if (!objects["mainPlayer"]) {
+                    const playerObj = {
+                        id: "mainPlayer",
+                        object_type: "sphere",
+                        x: playerData.x || 0,
+                        y: playerData.y || 1,
+                        z: playerData.z || 0,
+                        mass: playerData.mass || 1,
+                        radius: playerData.radius || 1,
+                        color: playerData.color || "#ff0000"
+                    };
+                    
+                    objects["mainPlayer"] = playerObj;
+                    createMeshAndBodyForObject(playerObj);
+                    console.log("[Network] Создан игрок по команде сервера:", playerObj);
+                }
+            } catch (error) {
+                console.error("[Network] Ошибка создания игрока по команде:", error);
+            }
+        }
     }
 }
 
@@ -71,46 +196,17 @@ function handleKeyPress(event) {
             break;
     }
 
-    if (cmd) {
-        ws.send(JSON.stringify({
-            type: "cmd",
-            cmd: cmd
-        }));
+    if (cmd && socket && socket.readyState === WebSocket.OPEN) {
+        console.log("[Network] Отправка команды:", cmd);
+        sendCommand(cmd, "");
+        
+        applyImpulseToSphere(cmd, objects);
+    } else if (cmd) {
+        console.warn("[Network] Не удалось отправить команду: WebSocket не готов");
+        
+        // Если нет соединения с сервером, всё равно применяем импульс
         applyImpulseToSphere(cmd, objects);
     }
 }
 
-export function initNetwork() {
-    try {
-        ws = new WebSocket("ws://localhost:8080/ws");
-        
-        ws.onopen = () => {
-            console.log("[WS] Подключено");
-            ws.send(JSON.stringify({ type: "ping" }));
-        };
-
-        ws.onmessage = (evt) => {
-            try {
-                const data = JSON.parse(evt.data);
-                if (!data || typeof data !== 'object') {
-                    throw new Error('Неверный формат данных');
-                }
-                handleMessage(data);
-            } catch (error) {
-                console.error("[WS] Ошибка обработки сообщения:", error);
-            }
-        };
-
-        ws.onerror = (error) => {
-            console.error("[WS] Ошибка WebSocket:", error);
-        };
-
-        ws.onclose = (event) => {
-            console.log("[WS] Соединение закрыто");
-        };
-
-        document.addEventListener("keydown", handleKeyPress);
-    } catch (error) {
-        console.error("[WS] Ошибка при создании WebSocket:", error);
-    }
-}
+document.addEventListener("keydown", handleKeyPress);

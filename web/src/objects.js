@@ -6,38 +6,106 @@ import { localPhysicsWorld, createPhysicsObject } from './physics';
 export let objects = {}; // Словарь объектов: id -> { mesh, body, serverPos, ... }
 
 export function createMeshAndBodyForObject(obj) {
-    console.log("[Objects] Создание объекта:", obj.object_type, obj.id);
-
-    // Создаем меш в зависимости от типа объекта
+    if (!obj) {
+        console.error("[Objects] Попытка создать меш для undefined объекта");
+        return;
+    }
+    
+    console.log(`[Objects] Создание меша для объекта ${obj.id} типа ${obj.object_type}`);
+    
+    // Специальная обработка для mainPlayer (ранее server_sphere)
+    if (obj.id === "mainPlayer") {
+        console.log("[Objects] Создание основного игрока (mainPlayer)");
+    }
+    
     let mesh;
-    switch (obj.object_type) {
+    
+    // Создаем меш в зависимости от типа объекта
+    switch(obj.object_type) {
+        case "sphere":
+            // Создаем сферу
+            const geometry = new THREE.SphereGeometry(obj.radius || 1, 32, 32);
+            const material = new THREE.MeshStandardMaterial({
+                color: obj.color || 0xff0000,
+                roughness: 0.5,
+                metalness: 0.2
+            });
+            
+            mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            
+            // Если это главный игрок, добавляем визуальные индикаторы
+            if (obj.id === "mainPlayer") {
+                // Добавляем стрелку направления для наглядности
+                const arrowHelper = new THREE.ArrowHelper(
+                    new THREE.Vector3(1, 0, 0), // направление по х
+                    new THREE.Vector3(0, 0, 0), // начало
+                    obj.radius * 2, // длина
+                    0x00ff00, // цвет
+                    obj.radius * 0.2, // размер головки
+                    obj.radius * 0.1  // размер хвоста
+                );
+                mesh.add(arrowHelper);
+                
+                // Добавляем оси для ориентации
+                const axesHelper = new THREE.AxesHelper(obj.radius * 1.5);
+                mesh.add(axesHelper);
+                
+                console.log("[Objects] К mainPlayer добавлены индикаторы направления");
+            }
+            break;
+            
+        case "box":
+            // Создаем куб
+            const boxGeometry = new THREE.BoxGeometry(
+                obj.width || 1,
+                obj.height || 1,
+                obj.depth || 1
+            );
+            const boxMaterial = new THREE.MeshStandardMaterial({
+                color: obj.color || 0x00ff00,
+                roughness: 0.7,
+                metalness: 0.1
+            });
+            
+            mesh = new THREE.Mesh(boxGeometry, boxMaterial);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            break;
+            
         case "terrain":
             mesh = createTerrainMesh(obj);
-            break;
-        case "sphere":
-            mesh = createSphereMesh(obj);
             break;
         case "tree":
             mesh = createTreeMesh(obj);
             break;
         default:
-            console.warn(`Неизвестный тип объекта: ${obj.object_type}`);
-            mesh = createDefaultMesh(obj);
-            break;
+            console.warn(`[Objects] Неизвестный тип объекта: ${obj.object_type}`);
+            return;
     }
-
-    if (mesh) {
-        // Позиционируем и добавляем меш в сцену
-        mesh.position.set(obj.x || 0, obj.y || 0, obj.z || 0);
+    
+    // Устанавливаем позицию объекта
+    mesh.position.set(obj.x || 0, obj.y || 0, obj.z || 0);
+    
+    // Добавляем объект в сцену
+    if (scene) {
         scene.add(mesh);
-        obj.mesh = mesh;
-        
-        // Создаем физическое тело только для объектов с физикой
-        if (obj.object_type === "sphere" || obj.object_type === "terrain") {
-            createPhysicsObject(obj);
-        }
+        console.log(`[Objects] Объект ${obj.id} добавлен в сцену`);
+    } else {
+        console.warn("[Objects] Сцена не инициализирована, невозможно добавить объект");
     }
-
+    
+    // Сохраняем меш в объекте
+    obj.mesh = mesh;
+    
+    console.log(`[Objects] Создан меш для объекта ${obj.id}:`, mesh);
+    
+    // Создаем физическое тело только для объектов с физикой
+    if (obj.object_type === "sphere" || obj.object_type === "terrain") {
+        createPhysicsObject(obj);
+    }
+    
     // Сохраняем объект в общий список
     objects[obj.id] = obj;
     return obj;

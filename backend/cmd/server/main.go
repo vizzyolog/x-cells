@@ -349,10 +349,10 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 	}
 
 	// Создаём личную сферу для нового подключения
-	sphereID := "server_sphere" // Фиксированный ID для серверной сферы
-	color := "#ff0000"          // Красный цвет
-	radius := float32(1.0)      // Фиксированный радиус
-	mass := float32(1.0)        // Фиксированная масса
+	sphereID := "mainPLayer" // Фиксированный ID для серверной сферы
+	color := "#ff0000"       // Красный цвет
+	radius := float32(1.0)   // Фиксированный радиус
+	mass := float32(1.0)     // Фиксированная масса
 
 	// Размещаем сферу над террейном на достаточной высоте
 	sphereObj := &Object{

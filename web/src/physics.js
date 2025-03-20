@@ -13,6 +13,9 @@ export const physicsSettings = {
     sphereOffset: 2.0         // Расстояние между сферами для дебага
 };
 
+// Флаг для отслеживания, была ли уже выполнена инициализация
+let ammoInitialized = false;
+
 // Функция для переключения режима физики
 export function togglePhysicsMode() {
     physicsSettings.useServerPhysics = !physicsSettings.useServerPhysics;
@@ -21,16 +24,46 @@ export function togglePhysicsMode() {
 
 // Функция для проверки доступности Ammo.js
 function getAmmoLib() {
-    return window.AmmoLib || window.Ammo;
+    const ammo = window.AmmoLib || window.Ammo;
+    if (ammo) {
+        console.log("[Physics] Найдена библиотека Ammo.js:", ammo ? "присутствует" : "отсутствует");
+    }
+    return ammo;
 }
 
 // Инициализация Ammo.js
 export async function initAmmo() {
-    console.log("[Physics] Инициализация физики...");
+    console.log("[Physics] Начало инициализации физики...");
+    
+    // Если физика уже инициализирована, возвращаем существующий мир
+    if (ammoInitialized && localPhysicsWorld) {
+        console.log("[Physics] Физика уже инициализирована, повторная инициализация не требуется");
+        return Promise.resolve();
+    }
     
     // Проверяем готовность Ammo.js
     if (!window.XCells?.isAmmoReady) {
         console.log("[Physics] Ожидание инициализации Ammo.js...");
+        
+        // Проверяем, определен ли объект XCells
+        if (!window.XCells) {
+            console.warn("[Physics] window.XCells не определен, создаем его");
+            window.XCells = {
+                isAmmoReady: false,
+                ammoCallbacks: []
+            };
+        }
+        
+        // Проверяем, определен ли метод регистрации колбэков
+        if (!window.XCells.registerAmmoCallback) {
+            console.warn("[Physics] window.XCells.registerAmmoCallback не определен, создаем его");
+            window.XCells.registerAmmoCallback = function(callback) {
+                if (!window.XCells.ammoCallbacks) {
+                    window.XCells.ammoCallbacks = [];
+                }
+                window.XCells.ammoCallbacks.push(callback);
+            };
+        }
         
         // Ждем готовности Ammo.js
         await new Promise((resolve, reject) => {
@@ -67,6 +100,8 @@ export async function initAmmo() {
             throw new Error("Ammo.js не найден после ожидания инициализации");
         }
         
+        console.log("[Physics] Ammo.js доступен, создаем физический мир");
+        
         // Создаем физический мир
         const collisionConfiguration = new AmmoLib.btDefaultCollisionConfiguration();
         const dispatcher = new AmmoLib.btCollisionDispatcher(collisionConfiguration);
@@ -83,6 +118,9 @@ export async function initAmmo() {
         const gravity = new AmmoLib.btVector3(0, -9.81, 0);
         localPhysicsWorld.setGravity(gravity);
         
+        // Устанавливаем флаг, что инициализация выполнена
+        ammoInitialized = true;
+        
         console.log("[Physics] Физический мир успешно создан");
         return Promise.resolve();
     } catch (error) {
@@ -95,6 +133,9 @@ export async function initAmmo() {
 export function stepPhysics(deltaTime) {
     // Пропускаем, если физика не инициализирована или используется серверная физика
     if (!localPhysicsWorld || physicsSettings.useServerPhysics) {
+        if (!localPhysicsWorld) {
+            console.warn("[Physics] stepPhysics: localPhysicsWorld не инициализирован");
+        }
         return;
     }
     
@@ -114,6 +155,12 @@ export function updatePhysicsObjects(objects) {
     const AmmoLib = getAmmoLib();
     // Пропускаем, если физика не инициализирована
     if (!localPhysicsWorld || !AmmoLib) {
+        if (!localPhysicsWorld) {
+            console.warn("[Physics] updatePhysicsObjects: localPhysicsWorld не инициализирован");
+        }
+        if (!AmmoLib) {
+            console.warn("[Physics] updatePhysicsObjects: AmmoLib не найден");
+        }
         return;
     }
     
@@ -183,21 +230,50 @@ export function updatePhysicsObjects(objects) {
 
 // Функция применения импульса к сфере
 export function applyImpulseToSphere(cmd, objects) {
+    console.log("[Physics] Попытка применить импульс:", cmd);
+    
     // Пропускаем, если физика не инициализирована
-    if (!localPhysicsWorld || !window.Ammo) {
+    if (!localPhysicsWorld) {
+        console.warn("[Physics] localPhysicsWorld не инициализирован");
+        // Если физический мир не инициализирован, попытаемся инициализировать его
+        console.log("[Physics] Попытка повторной инициализации физического мира");
+        initAmmo().then(() => {
+            console.log("[Physics] Повторная инициализация завершена, статус:", !!localPhysicsWorld);
+        }).catch(error => {
+            console.error("[Physics] Ошибка повторной инициализации:", error);
+        });
+        return;
+    }
+    
+    const AmmoLib = getAmmoLib();
+    if (!AmmoLib) {
+        console.warn("[Physics] AmmoLib не найден");
         return;
     }
     
     try {
         const IMPULSE_STRENGTH = 10; // Сила импульса
         
-        // Находим первый сферический объект
-        let targetSphere = Object.values(objects).find(obj => 
-            obj && obj.mesh && obj.body && obj.object_type === "sphere");
+        // Получаем список всех объектов
+        const objectIds = Object.keys(objects);
+        console.log("[Physics] Доступные объекты:", objectIds);
         
-        if (!targetSphere) return;
-
-        const impulse = new window.Ammo.btVector3(0, 0, 0);
+        // Находим сферу mainPlayer (ранее server_sphere)
+        let targetSphere = objects["mainPlayer"];
+        
+        if (!targetSphere) {
+            console.warn("[Physics] Объект mainPlayer не найден. Импульс не может быть применен.");
+            return;
+        } else {
+            console.log("[Physics] Найден объект mainPlayer:", targetSphere);
+        }
+        
+        if (!targetSphere.body) {
+            console.warn("[Physics] У объекта mainPlayer нет физического тела. Импульс не может быть применен.");
+            return;
+        }
+        
+        const impulse = new AmmoLib.btVector3(0, 0, 0);
         
         switch(cmd) {
             case "LEFT": impulse.setValue(-IMPULSE_STRENGTH, 0, 0); break;
@@ -207,9 +283,19 @@ export function applyImpulseToSphere(cmd, objects) {
             case "SPACE": impulse.setValue(0, IMPULSE_STRENGTH * 2.0, 0); break;
             default: return;
         }
-
+        
+        console.log(`[Physics] Применение импульса к ${targetSphere.id}: ${cmd}`);
+        
         targetSphere.body.activate(true);
         targetSphere.body.applyCentralImpulse(impulse);
+        
+        // Выводим текущую позицию после применения импульса
+        const trans = new AmmoLib.btTransform();
+        targetSphere.body.getMotionState().getWorldTransform(trans);
+        const pos = trans.getOrigin();
+        console.log(`[Physics] Позиция ${targetSphere.id} после импульса:`, 
+            pos.x().toFixed(2), pos.y().toFixed(2), pos.z().toFixed(2));
+            
     } catch (error) {
         console.error("[Physics] Ошибка при применении импульса:", error);
     }
@@ -326,54 +412,6 @@ export function createPhysicsObject(obj) {
         console.error("[Physics] Ошибка при создании физического объекта:", error);
     }
 }
-
-// Создание отладочных сфер для тестирования физики
-// export function createDebugSpheres(scene) {
-//     try {
-//         if (!window.Ammo || !localPhysicsWorld) {
-//             console.warn("[Physics] Невозможно создать отладочные сферы: физика не инициализирована");
-//             return [];
-//         }
-        
-//         const localSphere = {
-//             id: "local_sphere",
-//             object_type: "sphere",
-//             x: 0, // Центрируем сферу над террейном
-//             y: 20, // Начальная высота над террейном
-//             z: 0,
-//             mass: 1.0,
-//             radius: 1.0,
-//             color: 0x0000ff,
-//             isLocalControlled: true
-//         };
-        
-//         // Создаем меш для сферы
-//         const geometry = new THREE.SphereGeometry(localSphere.radius, 32, 32);
-//         const material = new THREE.MeshPhongMaterial({ 
-//             color: localSphere.color,
-//             shininess: 30,
-//             specular: 0x444444
-//         });
-        
-//         localSphere.mesh = new THREE.Mesh(geometry, material);
-//         localSphere.mesh.position.set(localSphere.x, localSphere.y, localSphere.z);
-//         localSphere.mesh.castShadow = true;
-//         localSphere.mesh.receiveShadow = true;
-        
-//         scene.add(localSphere.mesh);
-        
-//         // Создаем физику для сферы
-//         createPhysicsObject(localSphere);
-//         objects[localSphere.id] = localSphere;
-        
-//         return [localSphere];
-//     } catch (error) {
-//         if (physicsSettings.debugMode) {
-//             console.error("[Physics] Ошибка при создании отладочной сферы:", error);
-//         }
-//         return [];
-//     }
-// }
 
 // Добавляем кнопку для отладки физики
 export function initDebugUI() {

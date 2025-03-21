@@ -2,7 +2,7 @@
 import { initScene, scene, camera, renderer } from './scene';
 import { initAmmo, stepPhysics, updatePhysicsObjects, applyImpulseToSphere } from './physics';
 import { initNetwork } from './network';
-import { objects } from './objects';
+import { objects, debugPhysicsWorld, createTestSphere } from './objects';
 import * as THREE from 'three';
 
 function animate() {
@@ -45,6 +45,8 @@ async function start() {
         // Добавляем небольшую задержку перед инициализацией
         await new Promise(resolve => setTimeout(resolve, 500));
         await initAmmo();
+        // Создаем тестовую сферу после инициализации Ammo
+        createTestSphere();
         initNetwork();
         animate();
     } catch (error) {

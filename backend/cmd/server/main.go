@@ -242,7 +242,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 		Mass:       float32(1.0),
 		Radius:     float32(1.0),
 		Color:      "#ff0000",
-		PhysicsBy:  "ammo",
+		PhysicsBy:  "both",
 	}
 	createObjectInGo(sphereObj1, client)
 
@@ -260,7 +260,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 		Mass:       float32(1.0),
 		Radius:     float32(1.0),
 		Color:      "#00ff00",
-		PhysicsBy:  "both",
+		PhysicsBy:  "bullet",
 	}
 	createObjectInGo(sphereObj2, client)
 
@@ -278,7 +278,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 		Mass:       float32(1.0),
 		Radius:     float32(1.0),
 		Color:      "#0000ff",
-		PhysicsBy:  "bullet",
+		PhysicsBy:  "ammo",
 	}
 	createObjectInGo(sphereObj3, client)
 
@@ -325,29 +325,29 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 			if err != nil {
 				log.Printf("[Go] Ошибка применения импульса: %v", err)
 			} else {
-				log.Printf("[Go] Применен импульс к: (%f, %f, %f)",
+				log.Printf("[Go] Применен импульс к mainPlayer1: (%f, %f, %f)",
 					impulse.X, impulse.Y, impulse.Z)
 			}
 
 			_, err2 := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
-				Id:      "mainPlayer2", // Всегда используем ID серверной сферы
+				Id:      "mainPlayer2",
 				Impulse: &impulse,
 			})
 			if err2 != nil {
 				log.Printf("[Go] Ошибка применения импульса: %v", err2)
 			} else {
-				log.Printf("[Go] Применен импульс к: (%f, %f, %f)",
+				log.Printf("[Go] Применен импульс к mainPlayer2: (%f, %f, %f)",
 					impulse.X, impulse.Y, impulse.Z)
 			}
 
 			_, err3 := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
-				Id:      "mainPlayer3", // Всегда используем ID серверной сферы
+				Id:      "mainPlayer3",
 				Impulse: &impulse,
 			})
-			if err2 != nil {
-				log.Printf("[Go] Ошибка применения импульса: %v", err3)
+			if err3 != nil {
+				log.Printf("[Go] Ошибка применения импульса mainPlayer3: %v", err3)
 			} else {
-				log.Printf("[Go] Применен импульс к: (%f, %f, %f)",
+				log.Printf("[Go] Применен импульс к mainPlayer3: (%f, %f, %f)",
 					impulse.X, impulse.Y, impulse.Z)
 			}
 		}
@@ -381,6 +381,7 @@ func sendCreateForAllObjects(ws *websocket.Conn) error {
 			"height":      obj.Height,
 			"depth":       obj.Depth,
 			"color":       obj.Color,
+			"physics_by":  obj.PhysicsBy,
 		}
 		if obj.ObjectType == "terrain" {
 			msg["height_data"] = obj.HeightData
@@ -430,6 +431,7 @@ func main() {
 		ScaleZ:     float32(terrainPhysicalDepth / float64(terrainGridSize-1)),
 		MinHeight:  terrainMinHeight,
 		MaxHeight:  terrainMaxHeight,
+		PhysicsBy:  "both",
 	}
 	createObjectInGo(terrain, physicsClient)
 

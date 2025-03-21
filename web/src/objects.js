@@ -47,41 +47,83 @@ function createPhysicsBodyForTerrain(data) {
         return null;
     }
 
-    const w = data.heightmap_w || 64;
-    const h = data.heightmap_h || 64;
-    const scaleX = data.scale_x || 1;
-    const scaleY = data.scale_y || 1;
-    const scaleZ = data.scale_z || 1;
+    const w = data.heightmap_w;
+    const h = data.heightmap_h;
+    const scaleX = data.scale_x;
+    const scaleZ = data.scale_z;
 
+    // Создаем буфер в памяти Ammo для данных высот
+    const ammoHeightData = Ammo._malloc(4 * w * h);
+    
+    // Копируем данные высот в память Ammo
+    let p = 0;
+    let p2 = 0;
+    for (let j = 0; j < h; j++) {
+        for (let i = 0; i < w; i++) {
+            Ammo.HEAPF32[ammoHeightData + p2 >> 2] = data.height_data[p];
+            p++;
+            p2 += 4;
+        }
+    }
+
+    // Создаем форму террейна
     const shape = new Ammo.btHeightfieldTerrainShape(
         w,
         h,
-        data.height_data,
-        data.scaleY,
-        data.terrainMinHeight,
-        data.terrainMaxHeight,
-        1,
+        ammoHeightData,
+        1,  // heightScale
+        data.min_height,
+        data.max_height,
+        1,  // up axis = 1 для Y
         Ammo.PHY_FLOAT,
-        false
+        false  // flipQuadEdges
     );
 
-    shape.setLocalScaling(new Ammo.btVector3(scaleX, 1, scaleZ));
+    // Устанавливаем масштабирование
+    shape.setLocalScaling(new Ammo.btVector3(scaleX, data.scale_y, scaleZ));
     shape.setMargin(0.05);
 
+    // Создаем трансформацию
     const transform = new Ammo.btTransform();
     transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(data.x || 0, data.y || 0, data.z || 0));
+    
+    // Важно! Смещаем террейн, так как Bullet центрирует его по ограничивающему боксу
+    transform.setOrigin(new Ammo.btVector3(
+        data.x || 0,
+        (data.min_height + data.max_height) / 2,
+        data.z || 0
+    ));
 
+    const mass = 0; // Статическое тело
     const localInertia = new Ammo.btVector3(0, 0, 0);
     const motionState = new Ammo.btDefaultMotionState(transform);
-    const rbInfo = new Ammo.btRigidBodyConstructionInfo(0, motionState, shape, localInertia);
+    const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
     const body = new Ammo.btRigidBody(rbInfo);
 
-    localPhysicsWorld.addRigidBody(body);
+    // Устанавливаем флаги для статического объекта
+    body.setCollisionFlags(body.getCollisionFlags() | 1); // CF_STATIC_OBJECT
+    body.setActivationState(4); // DISABLE_DEACTIVATION
+
+    // Добавляем тело в физический мир с правильными параметрами коллизий
+    const collisionFilterGroup = 1;  // группа для террейна
+    const collisionFilterMask = -1;  // коллизии со всеми объектами
+    localPhysicsWorld.addRigidBody(body, collisionFilterGroup, collisionFilterMask);
 
     // Очистка памяти
     Ammo.destroy(rbInfo);
     Ammo.destroy(localInertia);
+
+    console.log("[Terrain] Физическое тело создано:", {
+        размеры: { w, h },
+        масштаб: { x: scaleX, y: data.scale_y, z: scaleZ },
+        позиция: { 
+            x: data.x || 0, 
+            y: (data.min_height + data.max_height) / 2,
+            z: data.z || 0 
+        },
+        минВысота: data.min_height,
+        максВысота: data.max_height
+    });
 
     return body;
 }
@@ -218,7 +260,13 @@ function createPhysicsBodyForSphere(data) {
         );
         const body = new window.Ammo.btRigidBody(rbInfo);
 
-        localPhysicsWorld.addRigidBody(body);
+        // Устанавливаем активацию
+        body.setActivationState(4); // DISABLE_DEACTIVATION
+
+        // Добавляем тело в физический мир с правильными параметрами коллизий
+        const collisionFilterGroup = 2;  // группа для динамических объектов
+        const collisionFilterMask = -1;  // коллизии со всеми объектами
+        localPhysicsWorld.addRigidBody(body, collisionFilterGroup, collisionFilterMask);
 
         // Очистка памяти
         window.Ammo.destroy(rbInfo);
@@ -231,10 +279,93 @@ function createPhysicsBodyForSphere(data) {
     }
 }
 
+// export function debugPhysicsWorld() {
+//     if (!localPhysicsWorld) {
+//         console.error("[Physics Debug] Физический мир не инициализирован");
+//         return;
+//     }
+    
+//     const numBodies = localPhysicsWorld.getNumCollisionObjects();
+//     console.log(`[Physics Debug] В физическом мире ${numBodies} объектов`);
+    
+//     for (let i = 0; i < numBodies; i++) {
+//         const obj = localPhysicsWorld.getCollisionObjectArray().at(i);
+//         const transform = new Ammo.btTransform();
+        
+//         if (obj.getMotionState()) {
+//             obj.getMotionState().getWorldTransform(transform);
+//         } else {
+//             obj.getWorldTransform(transform);
+//         }
+        
+//         const pos = transform.getOrigin();
+//         const rot = transform.getRotation();
+        
+//         console.log(`[Physics Debug] Объект #${i}:`, {
+//             позиция: { x: pos.x(), y: pos.y(), z: pos.z() },
+//             вращение: { x: rot.x(), y: rot.y(), z: rot.z(), w: rot.w() },
+//             активен: obj.isActive(),
+//             статичен: obj.isStaticObject(),
+//             кинематичен: obj.isKinematicObject()
+//         });
+//     }
+// }
+
 function parseColor(colorStr) {
     if (!colorStr) return 0x888888;
     if (colorStr.startsWith("#")) {
         return parseInt(colorStr.slice(1), 16);
     }
     return 0x888888;
+}
+
+export function createTestSphere() {
+    // Создаем визуальную сферу
+    const radius = 1;
+    const geometry = new THREE.SphereGeometry(radius, 32, 32);
+    const material = new THREE.MeshLambertMaterial({ color: 0xff00ff });
+    const mesh = new THREE.Mesh(geometry, material);
+    
+    // Позиционируем сферу высоко над террейном
+    mesh.position.set(-20, 20, 0);
+    scene.add(mesh);
+
+    // Создаем физическое тело
+    const shape = new Ammo.btSphereShape(radius);
+    const mass = 1;
+    
+    const transform = new Ammo.btTransform();
+    transform.setIdentity();
+    transform.setOrigin(new Ammo.btVector3(-20, 20, 0));
+
+    const localInertia = new Ammo.btVector3(-20, 0, 0);
+    shape.calculateLocalInertia(mass, localInertia);
+
+    const motionState = new Ammo.btDefaultMotionState(transform);
+    const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
+    const body = new Ammo.btRigidBody(rbInfo);
+
+    // Важные настройки для физического тела
+    body.setActivationState(4); // DISABLE_DEACTIVATION
+    body.setFriction(0.5);
+    body.setRollingFriction(0.1);
+    body.setRestitution(0.5); // Упругость
+
+    // Добавляем тело в физический мир
+    localPhysicsWorld.addRigidBody(body);
+
+    // Очистка памяти
+    Ammo.destroy(rbInfo);
+    Ammo.destroy(localInertia);
+
+    // Добавляем объект в наш список объектов
+    const testSphereObj = {
+        mesh,
+        body,
+        object_type: "test_sphere",
+        physicsBy: "both"
+    };
+    objects["test_sphere"] = testSphereObj;
+
+    return testSphereObj;
 }

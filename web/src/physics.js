@@ -30,7 +30,7 @@ export async function initAmmo() {
                     collisionConfiguration
                 );
                 localPhysicsWorld.setGravity(new AmmoLib.btVector3(0, -9.81, 0));
-                
+                           
                 console.log("[Ammo] Инициализация успешна");
                 resolve(AmmoLib);
             }).catch(reject);
@@ -55,12 +55,11 @@ export function stepPhysics(deltaTime) {
             deltaTime = 1/60; // используем фиксированный шаг если что-то не так
         }
         
-        // Добавляем периодическую диагностику (каждую секунду)
-        if (Math.random() < 0.016) { // примерно раз в секунду при 60 FPS
-            console.log("[Physics] Шаг симуляции:", {
-                deltaTime: deltaTime,
-            });
-        }
+        // if (Math.random() < 0.016) { // примерно раз в секунду при 60 FPS
+        //     console.log("[Physics] Шаг симуляции:", {
+        //         deltaTime: deltaTime,
+        //     });
+        // }
         
         localPhysicsWorld.stepSimulation(deltaTime, 10);
     } else {
@@ -78,7 +77,7 @@ export function updatePhysicsObjects(objects) {
         switch (obj.physicsBy) {
             case "ammo":
                 // Обновление только по физике Ammo.js
-                if (obj.body) {
+                if (obj.body && obj.object_type !== "terrain") {
                     const trans = new window.Ammo.btTransform();
                     obj.body.getMotionState().getWorldTransform(trans);
 
@@ -98,42 +97,44 @@ export function updatePhysicsObjects(objects) {
 
             case "bullet":
                 // Обновление только по серверным данным
-                if (obj.serverPos) {
+                if (obj.serverPos && obj.object_type !== "terrain") {
                     obj.mesh.position.set(obj.serverPos.x, obj.serverPos.y, obj.serverPos.z);
                 }
                 break;
 
             case "both":
                 // Обновление по обоим источникам
-                if (obj.body) {
-                    const trans = new window.Ammo.btTransform();
-                    obj.body.getMotionState().getWorldTransform(trans);
+                if (obj.object_type !== "terrain") {
+                    if (obj.body) {
+                        const trans = new window.Ammo.btTransform();
+                        obj.body.getMotionState().getWorldTransform(trans);
 
-                    const locX = trans.getOrigin().x();
-                    const locY = trans.getOrigin().y();
-                    const locZ = trans.getOrigin().z();
+                        const locX = trans.getOrigin().x();
+                        const locY = trans.getOrigin().y();
+                        const locZ = trans.getOrigin().z();
 
-                    const qx = trans.getRotation().x();
-                    const qy = trans.getRotation().y();
-                    const qz = trans.getRotation().z();
-                    const qw = trans.getRotation().w();
+                        const qx = trans.getRotation().x();
+                        const qy = trans.getRotation().y();
+                        const qz = trans.getRotation().z();
+                        const qw = trans.getRotation().w();
 
-                    obj.mesh.position.set(locX, locY, locZ);
-                    obj.mesh.quaternion.set(qx, qy, qz, qw);
-                }
+                        obj.mesh.position.set(locX, locY, locZ);
+                        obj.mesh.quaternion.set(qx, qy, qz, qw);
+                    }
 
-                if (obj.serverPos) {
-                    const dx = obj.serverPos.x - obj.mesh.position.x;
-                    const dy = obj.serverPos.y - obj.mesh.position.y;
-                    const dz = obj.serverPos.z - obj.mesh.position.z;
+                    if (obj.serverPos) {
+                        const dx = obj.serverPos.x - obj.mesh.position.x;
+                        const dy = obj.serverPos.y - obj.mesh.position.y;
+                        const dz = obj.serverPos.z - obj.mesh.position.z;
 
-                    if (dx * dx + dy * dy + dz * dz > 0.01) {
-                        const alpha = 0.1;
-                        const newX = obj.mesh.position.x + dx * alpha;
-                        const newY = obj.mesh.position.y + dy * alpha;
-                        const newZ = obj.mesh.position.z + dz * alpha;
+                        if (dx * dx + dy * dy + dz * dz > 0.01) {
+                            const alpha = 0.1;
+                            const newX = obj.mesh.position.x + dx * alpha;
+                            const newY = obj.mesh.position.y + dy * alpha;
+                            const newZ = obj.mesh.position.z + dz * alpha;
 
-                        obj.mesh.position.set(newX, newY, newZ);
+                            obj.mesh.position.set(newX, newY, newZ);
+                        }
                     }
                 }
                 break;

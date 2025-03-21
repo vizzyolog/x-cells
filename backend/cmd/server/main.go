@@ -251,41 +251,41 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 		return
 	}
 
-	sphereObj2 := &Object{
-		ID:         "mainPlayer2",
-		ObjectType: "sphere",
-		X:          0,
-		Y:          terrainMaxHeight + 50, // Размещаем выше максимальной высоты террейна
-		Z:          0,
-		Mass:       float32(1.0),
-		Radius:     float32(1.0),
-		Color:      "#00ff00",
-		PhysicsBy:  "bullet",
-	}
-	createObjectInGo(sphereObj2, client)
+	// sphereObj2 := &Object{
+	// 	ID:         "mainPlayer2",
+	// 	ObjectType: "sphere",
+	// 	X:          0,
+	// 	Y:          terrainMaxHeight + 50, // Размещаем выше максимальной высоты террейна
+	// 	Z:          0,
+	// 	Mass:       float32(1.0),
+	// 	Radius:     float32(1.0),
+	// 	Color:      "#00ff00",
+	// 	PhysicsBy:  "bullet",
+	// }
+	// createObjectInGo(sphereObj2, client)
 
-	if err := ws.WriteJSON(sphereObj2); err != nil {
-		log.Println("[Go] Error sending sphere creation message:", err)
-		return
-	}
+	// if err := ws.WriteJSON(sphereObj2); err != nil {
+	// 	log.Println("[Go] Error sending sphere creation message:", err)
+	// 	return
+	// }
 
-	sphereObj3 := &Object{
-		ID:         "mainPlayer3",
-		ObjectType: "sphere",
-		X:          0,
-		Y:          terrainMaxHeight + 50, // Размещаем выше максимальной высоты террейна
-		Z:          0,
-		Mass:       float32(1.0),
-		Radius:     float32(1.0),
-		Color:      "#0000ff",
-		PhysicsBy:  "ammo",
-	}
-	createObjectInGo(sphereObj3, client)
+	// sphereObj3 := &Object{
+	// 	ID:         "mainPlayer3",
+	// 	ObjectType: "sphere",
+	// 	X:          0,
+	// 	Y:          terrainMaxHeight + 50, // Размещаем выше максимальной высоты террейна
+	// 	Z:          0,
+	// 	Mass:       float32(1.0),
+	// 	Radius:     float32(1.0),
+	// 	Color:      "#0000ff",
+	// 	PhysicsBy:  "ammo",
+	// }
+	// createObjectInGo(sphereObj3, client)
 
-	if err := ws.WriteJSON(sphereObj3); err != nil {
-		log.Println("[Go] Error sending sphere creation message:", err)
-		return
-	}
+	// if err := ws.WriteJSON(sphereObj3); err != nil {
+	// 	log.Println("[Go] Error sending sphere creation message:", err)
+	// 	return
+	// }
 
 	// Стримим состояние объектов
 	go streamStates(ws, client)

@@ -57,9 +57,9 @@ function createPhysicsBodyForTerrain(data) {
         w,
         h,
         data.height_data,
-        scaleY,
-        terrainMinHeight,
-        terrainMaxHeight,
+        data.scaleY,
+        data.terrainMinHeight,
+        data.terrainMaxHeight,
         1,
         Ammo.PHY_FLOAT,
         false

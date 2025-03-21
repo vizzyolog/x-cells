@@ -17,6 +17,7 @@ export function createMeshAndBodyForObject(data) {
     switch (type) {
         case "terrain":
             mesh = createTerrainMesh(data);
+            body = createPhysicsBodyForTerrain(data);
             break;
         case "sphere":
             mesh = createSphereMesh(data);
@@ -33,6 +34,56 @@ export function createMeshAndBodyForObject(data) {
 
     scene.add(mesh);
     return { mesh, body };
+}
+
+function createPhysicsBodyForTerrain(data) {
+    if (typeof Ammo === 'undefined') {
+        console.error('Ammo.js не инициализирован');
+        return null;
+    }
+
+    if (!localPhysicsWorld) {
+        console.error('Физический мир не инициализирован');
+        return null;
+    }
+
+    const w = data.heightmap_w || 64;
+    const h = data.heightmap_h || 64;
+    const scaleX = data.scale_x || 1;
+    const scaleY = data.scale_y || 1;
+    const scaleZ = data.scale_z || 1;
+
+    const shape = new Ammo.btHeightfieldTerrainShape(
+        w,
+        h,
+        data.height_data,
+        scaleY,
+        terrainMinHeight,
+        terrainMaxHeight,
+        1,
+        Ammo.PHY_FLOAT,
+        false
+    );
+
+    shape.setLocalScaling(new Ammo.btVector3(scaleX, 1, scaleZ));
+    shape.setMargin(0.05);
+
+    const transform = new Ammo.btTransform();
+    transform.setIdentity();
+    transform.setOrigin(new Ammo.btVector3(data.x || 0, data.y || 0, data.z || 0));
+
+    const localInertia = new Ammo.btVector3(0, 0, 0);
+    const motionState = new Ammo.btDefaultMotionState(transform);
+    const rbInfo = new Ammo.btRigidBodyConstructionInfo(0, motionState, shape, localInertia);
+    const body = new Ammo.btRigidBody(rbInfo);
+
+    localPhysicsWorld.addRigidBody(body);
+
+    // Очистка памяти
+    Ammo.destroy(rbInfo);
+    Ammo.destroy(localInertia);
+
+    return body;
 }
 
 function createTerrainMesh(data) {

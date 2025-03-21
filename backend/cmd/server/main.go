@@ -52,6 +52,7 @@ type Object struct {
 	ScaleZ     float32   `json:"scale_z,omitempty"`
 	MinHeight  float32   `json:"min_height,omitempty"`
 	MaxHeight  float32   `json:"max_height,omitempty"`
+	PhysicsBy  string    `json:"physics_by"`
 }
 
 var (
@@ -232,22 +233,17 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 		return
 	}
 
-	// Создаём личную сферу для нового подключения
-	sphereID := "mainPlayer" // Фиксированный ID для серверной сферы
-	color := "#ff0000"       // Красный цвет
-	radius := float32(1.0)   // Фиксированный радиус
-	mass := float32(1.0)     // Фиксированная масса
-
 	// Размещаем сферу над террейном на достаточной высоте
 	sphereObj := &Object{
-		ID:         sphereID,
+		ID:         "mainPlayer1",
 		ObjectType: "sphere",
 		X:          0,
 		Y:          terrainMaxHeight + 50, // Размещаем выше максимальной высоты террейна
 		Z:          0,
-		Mass:       mass,
-		Radius:     radius,
-		Color:      color,
+		Mass:       float32(1.0),
+		Radius:     float32(1.0),
+		Color:      "#ff0000",
+		PhysicsBy:  "bullet",
 	}
 	createObjectInGo(sphereObj, client)
 

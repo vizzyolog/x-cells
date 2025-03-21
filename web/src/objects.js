@@ -145,21 +145,36 @@ function createTerrainMesh(data) {
         geo.computeVertexNormals();
     }
 
-    return new THREE.Mesh(
+    const mesh = new THREE.Mesh(
         geo,
-        new THREE.MeshLambertMaterial({
+        new THREE.MeshPhongMaterial({
             color: parseColor(data.color || "#888888"),
-            wireframe: true,
+            wireframe: false,
+            flatShading: true
         })
     );
+    
+    // Включаем тени для террейна
+    mesh.receiveShadow = true;
+    
+    return mesh;
 }
 
 export function createSphereMesh(data) {
-    const geo = new THREE.SphereGeometry(data.radius || 1, 16, 16);
-    return new THREE.Mesh(
+    const geo = new THREE.SphereGeometry(data.radius || 1, 32, 32);
+    const mesh = new THREE.Mesh(
         geo,
-        new THREE.MeshLambertMaterial({ color: parseColor(data.color || "#888888") })
+        new THREE.MeshPhongMaterial({ 
+            color: parseColor(data.color || "#888888"),
+            shininess: 30
+        })
     );
+    
+    // Включаем тени для сфер
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    
+    return mesh;
 }
 
 function createTreeMesh(data) {
@@ -188,10 +203,15 @@ function createTreeMesh(data) {
                 1,
                 8
             );
-            const branchMat = new THREE.MeshStandardMaterial({
+            const branchMat = new THREE.MeshPhongMaterial({
                 color: parseColor(branch.color || "#654321"),
+                shininess: 10
             });
             const branchMesh = new THREE.Mesh(branchGeo, branchMat);
+            
+            // Включаем тени для веток
+            branchMesh.castShadow = true;
+            branchMesh.receiveShadow = true;
 
             const midX = (branch.startX + branch.endX) / 2;
             const midY = (branch.startY + branch.endY) / 2;
@@ -316,8 +336,15 @@ export function createTestSphere() {
     // Создаем визуальную сферу
     const radius = 1;
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
-    const material = new THREE.MeshLambertMaterial({ color: 0xff00ff });
+    const material = new THREE.MeshPhongMaterial({ 
+        color: 0xff00ff,
+        shininess: 30
+    });
     const mesh = new THREE.Mesh(geometry, material);
+    
+    // Включаем тени для тестовой сферы
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     
     // Позиционируем сферу высоко над террейном
     const startY = 58; // Высота над террейном

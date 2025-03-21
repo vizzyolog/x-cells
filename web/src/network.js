@@ -8,7 +8,13 @@ function handleMessage(data) {
     try {
         if (data.type === "create" && data.id) {
             console.log("[WS] Обработка create сообщения для id:", data.id);
-            objects[data.id] = createMeshAndBodyForObject(data);
+            
+            // Создаем объект и добавляем его в список объектов
+            const obj = createMeshAndBodyForObject(data);
+            obj.physicsBy = data.physics_by || "both"; // Убедитесь, что свойство устанавливается
+            objects[data.id] = obj;
+
+            console.log(`[WS] Объект ${data.id} создан с physicsBy: ${obj.physicsBy}`); // Логирование установленного свойства
         } 
         else if (data.type === "update" && data.id && objects[data.id]) {
             console.log("[WS] Обработка update сообщения для id:", data.id);
@@ -40,7 +46,7 @@ function handleKeyDown(e) {
 
     try {
         ws.send(JSON.stringify({ type: "cmd", cmd }));
-        applyImpulseToSphere(cmd);
+        applyImpulseToSphere(cmd, objects);
     } catch (error) {
         console.error("[WS] Ошибка отправки:", error);
     }
@@ -70,7 +76,6 @@ export function initNetwork() {
                     throw new Error('Неверный формат данных');
                 }
 
-                // Дальнейшая обработка...
                 handleMessage(data);
             } catch (error) {
                 console.error("[WS] Полная ошибка:", error);

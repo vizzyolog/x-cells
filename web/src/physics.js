@@ -71,50 +71,82 @@ export function stepPhysics(deltaTime) {
 export function updatePhysicsObjects(objects) {
     for (let id in objects) {
         const obj = objects[id];
-        if (!obj.body || !obj.mesh) continue;
+        if (!obj.mesh) continue;
 
-        const trans = new window.Ammo.btTransform();
-        obj.body.getMotionState().getWorldTransform(trans);
+        console.log(`[Physics] Обновление объекта ${id} с physicsBy: ${obj.physicsBy}`); 
 
-        const locX = trans.getOrigin().x();
-        const locY = trans.getOrigin().y();
-        const locZ = trans.getOrigin().z();
+        switch (obj.physicsBy) {
+            case "ammo":
+                // Обновление только по физике Ammo.js
+                if (obj.body) {
+                    const trans = new window.Ammo.btTransform();
+                    obj.body.getMotionState().getWorldTransform(trans);
 
-        const qx = trans.getRotation().x();
-        const qy = trans.getRotation().y();
-        const qz = trans.getRotation().z();
-        const qw = trans.getRotation().w();
+                    const locX = trans.getOrigin().x();
+                    const locY = trans.getOrigin().y();
+                    const locZ = trans.getOrigin().z();
 
-        obj.mesh.position.set(locX, locY, locZ);
-        obj.mesh.quaternion.set(qx, qy, qz, qw);
+                    const qx = trans.getRotation().x();
+                    const qy = trans.getRotation().y();
+                    const qz = trans.getRotation().z();
+                    const qw = trans.getRotation().w();
 
-        if (obj.serverPos) {
-            const dx = obj.serverPos.x - locX;
-            const dy = obj.serverPos.y - locY;
-            const dz = obj.serverPos.z - locZ;
+                    obj.mesh.position.set(locX, locY, locZ);
+                    obj.mesh.quaternion.set(qx, qy, qz, qw);
+                }
+                break;
 
-            if (dx * dx + dy * dy + dz * dz > 0.01) {
-                const alpha = 0.1;
-                const newX = locX + dx * alpha;
-                const newY = locY + dy * alpha;
-                const newZ = locZ + dz * alpha;
+            case "bullet":
+                // Обновление только по серверным данным
+                if (obj.serverPos) {
+                    obj.mesh.position.set(obj.serverPos.x, obj.serverPos.y, obj.serverPos.z);
+                }
+                break;
 
-                const correction = new window.Ammo.btTransform();
-                correction.setIdentity();
-                correction.setOrigin(new window.Ammo.btVector3(newX, newY, newZ));
-                correction.setRotation(trans.getRotation());
+            case "both":
+                // Обновление по обоим источникам
+                if (obj.body) {
+                    const trans = new window.Ammo.btTransform();
+                    obj.body.getMotionState().getWorldTransform(trans);
 
-                obj.body.activate(true);
-                obj.body.getMotionState().setWorldTransform(correction);
-                obj.body.setCenterOfMassTransform(correction);
+                    const locX = trans.getOrigin().x();
+                    const locY = trans.getOrigin().y();
+                    const locZ = trans.getOrigin().z();
 
-                obj.mesh.position.set(newX, newY, newZ);
-            }
+                    const qx = trans.getRotation().x();
+                    const qy = trans.getRotation().y();
+                    const qz = trans.getRotation().z();
+                    const qw = trans.getRotation().w();
+
+                    obj.mesh.position.set(locX, locY, locZ);
+                    obj.mesh.quaternion.set(qx, qy, qz, qw);
+                }
+
+                if (obj.serverPos) {
+                    const dx = obj.serverPos.x - obj.mesh.position.x;
+                    const dy = obj.serverPos.y - obj.mesh.position.y;
+                    const dz = obj.serverPos.z - obj.mesh.position.z;
+
+                    if (dx * dx + dy * dy + dz * dz > 0.01) {
+                        const alpha = 0.1;
+                        const newX = obj.mesh.position.x + dx * alpha;
+                        const newY = obj.mesh.position.y + dy * alpha;
+                        const newZ = obj.mesh.position.z + dz * alpha;
+
+                        obj.mesh.position.set(newX, newY, newZ);
+                    }
+                }
+                break;
+
+            default:
+                console.warn(`[Physics] Неизвестный тип physicsBy для объекта ${id}: ${obj.physicsBy}`);
+                break;
         }
     }
 }
 
 export function applyImpulseToSphere(cmd, objects) {
+    console.log("[Debug] Переданные объекты в applyImpulseToSphere:", objects);
     // Проверяем, что objects передан и является объектом
     if (!objects || typeof objects !== 'object') {
         console.warn("[Physics] Некорректные объекты переданы в applyImpulseToSphere");

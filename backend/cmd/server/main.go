@@ -233,7 +233,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 		return
 	}
 
-
 	sphereObj1 := &Object{
 		ID:         "mainPlayer1",
 		ObjectType: "sphere",

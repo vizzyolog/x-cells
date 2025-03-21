@@ -52,6 +52,7 @@ type Object struct {
 	ScaleZ     float32   `json:"scale_z,omitempty"`
 	MinHeight  float32   `json:"min_height,omitempty"`
 	MaxHeight  float32   `json:"max_height,omitempty"`
+	PhysicsBy  string    `json:"physics_by"`
 }
 
 var (
@@ -60,120 +61,6 @@ var (
 	upgrader     = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 )
 
-// // TreeBranch - структура ветки дерева
-// type TreeBranch struct {
-// 	StartX float32 `json:"start_x"`
-// 	StartY float32 `json:"start_y"`
-// 	StartZ float32 `json:"start_z"`
-// 	EndX   float32 `json:"end_x"`
-// 	EndY   float32 `json:"end_y"`
-// 	EndZ   float32 `json:"end_z"`
-// 	Radius float32 `json:"radius"`
-// 	Color  string  `json:"color"`
-// }
-
-// // TreeObject - структура дерева
-// type TreeObject struct {
-// 	ID         string       `json:"id"`
-// 	ObjectType string       `json:"object_type"`
-// 	X          float32      `json:"x"`
-// 	Y          float32      `json:"y"`
-// 	Z          float32      `json:"z"`
-// 	Branches   []TreeBranch `json:"branches"`
-// 	Color      string       `json:"color"`
-// }
-
-// func generateTree(x, z float32) *TreeObject {
-// 	tree := &TreeObject{
-// 		ID:         fmt.Sprintf("tree_%d", time.Now().UnixNano()),
-// 		ObjectType: "tree",
-// 		X:          x,
-// 		Y:          0,
-// 		Z:          z,
-// 		Color:      fmt.Sprintf("#%06x", rand.Intn(0xffffff)),
-// 	}
-
-// 	// Генерация веток
-// 	branchCount := 5 + rand.Intn(10)
-// 	for i := 0; i < branchCount; i++ {
-// 		startX := x + rand.Float32()*2 - 1
-// 		startY := float32(i)
-// 		startZ := z + rand.Float32()*2 - 1
-
-// 		endX := startX + rand.Float32()*4 - 2
-// 		endY := startY + rand.Float32()*2 + 1 // Добавляем 1 для гарантии разницы
-// 		endZ := startZ + rand.Float32()*4 - 2
-
-// 		// Проверяем, чтобы координаты начала и конца не совпадали
-// 		if startX == endX && startY == endY && startZ == endZ {
-// 			endY += 0.1 // Минимальная разница, чтобы избежать длины 0
-// 		}
-
-// 		branch := TreeBranch{
-// 			StartX: startX,
-// 			StartY: startY,
-// 			StartZ: startZ,
-// 			EndX:   endX,
-// 			EndY:   endY,
-// 			EndZ:   endZ,
-// 			Radius: 0.1 + rand.Float32()*0.2,
-// 			Color:  fmt.Sprintf("#%06x", rand.Intn(0xffffff)),
-// 		}
-// 		tree.Branches = append(tree.Branches, branch)
-// 	}
-
-// 	return tree
-// }
-
-// // createTreeInGo - добавление дерева в objects
-// func createTreeInGo(tree *TreeObject) {
-// 	objectsMutex.Lock()
-// 	defer objectsMutex.Unlock()
-// 	objects[tree.ID] = &Object{
-// 		ID:         tree.ID,
-// 		ObjectType: tree.ObjectType,
-// 		X:          tree.X,
-// 		Y:          tree.Y,
-// 		Z:          tree.Z,
-// 		Color:      tree.Color,
-// 	}
-// }
-
-// sendCreateTree - отправка дерева через WebSocket
-// func sendCreateTree(ws *websocket.Conn, tree *TreeObject) error {
-// 	branches := []map[string]interface{}{}
-// 	for _, branch := range tree.Branches {
-// 		if branch.StartX == 0 && branch.StartY == 0 && branch.StartZ == 0 &&
-// 			branch.EndX == 0 && branch.EndY == 0 && branch.EndZ == 0 {
-// 			log.Printf("Invalid branch detected: %+v", branch)
-// 		}
-// 		branches = append(branches, map[string]interface{}{
-// 			"startX": branch.StartX,
-// 			"startY": branch.StartY,
-// 			"startZ": branch.StartZ,
-// 			"endX":   branch.EndX,
-// 			"endY":   branch.EndY,
-// 			"endZ":   branch.EndZ,
-// 			"radius": branch.Radius,
-// 			"color":  branch.Color,
-// 		})
-// 	}
-
-// 	message := map[string]interface{}{
-// 		"type":        "create",
-// 		"id":          tree.ID,
-// 		"object_type": tree.ObjectType,
-// 		"x":           tree.X,
-// 		"y":           tree.Y,
-// 		"z":           tree.Z,
-// 		"color":       tree.Color,
-// 		"branches":    branches,
-// 	}
-// 	log.Printf("Sending tree data: %+v\n", message)
-// 	return ws.WriteJSON(message)
-// }
-
-// Генерация деревьев
 // func generateTrees(count int) {
 // 	for i := 0; i < count; i++ {
 // 		x := float32(rand.Intn(200) - 100)
@@ -346,38 +233,56 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 		return
 	}
 
-	// Создаём личную сферу для нового подключения
-	sphereID := "mainPlayer" // Фиксированный ID для серверной сферы
-	color := "#ff0000"       // Красный цвет
-	radius := float32(1.0)   // Фиксированный радиус
-	mass := float32(1.0)     // Фиксированная масса
-
-	// Размещаем сферу над террейном на достаточной высоте
-	sphereObj := &Object{
-		ID:         sphereID,
+	sphereObj1 := &Object{
+		ID:         "mainPlayer1",
 		ObjectType: "sphere",
 		X:          0,
 		Y:          terrainMaxHeight + 50, // Размещаем выше максимальной высоты террейна
 		Z:          0,
-		Mass:       mass,
-		Radius:     radius,
-		Color:      color,
+		Mass:       float32(1.0),
+		Radius:     float32(1.0),
+		Color:      "#ff0000",
+		PhysicsBy:  "ammo",
 	}
-	createObjectInGo(sphereObj, client)
+	createObjectInGo(sphereObj1, client)
 
-	// Отправляем сообщение о создании сферы клиенту
-	msg := map[string]interface{}{
-		"type":        "create",
-		"id":          sphereObj.ID,
-		"object_type": sphereObj.ObjectType,
-		"x":           sphereObj.X,
-		"y":           sphereObj.Y,
-		"z":           sphereObj.Z,
-		"mass":        sphereObj.Mass,
-		"radius":      sphereObj.Radius,
-		"color":       sphereObj.Color,
+	if err := ws.WriteJSON(sphereObj1); err != nil {
+		log.Println("[Go] Error sending sphere creation message:", err)
+		return
 	}
-	if err := ws.WriteJSON(msg); err != nil {
+
+	sphereObj2 := &Object{
+		ID:         "mainPlayer2",
+		ObjectType: "sphere",
+		X:          -10,
+		Y:          terrainMaxHeight + 50, // Размещаем выше максимальной высоты террейна
+		Z:          0,
+		Mass:       float32(1.0),
+		Radius:     float32(1.0),
+		Color:      "#00ff00",
+		PhysicsBy:  "both",
+	}
+	createObjectInGo(sphereObj2, client)
+
+	if err := ws.WriteJSON(sphereObj2); err != nil {
+		log.Println("[Go] Error sending sphere creation message:", err)
+		return
+	}
+
+	sphereObj3 := &Object{
+		ID:         "mainPlayer3",
+		ObjectType: "sphere",
+		X:          10,
+		Y:          terrainMaxHeight + 50, // Размещаем выше максимальной высоты террейна
+		Z:          0,
+		Mass:       float32(1.0),
+		Radius:     float32(1.0),
+		Color:      "#0000ff",
+		PhysicsBy:  "bullet",
+	}
+	createObjectInGo(sphereObj3, client)
+
+	if err := ws.WriteJSON(sphereObj3); err != nil {
 		log.Println("[Go] Error sending sphere creation message:", err)
 		return
 	}
@@ -414,13 +319,35 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 
 			// Применяем импульс только к серверной сфере
 			_, err := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
-				Id:      "mainPlayer", // Всегда используем ID серверной сферы
+				Id:      "mainPlayer1",
 				Impulse: &impulse,
 			})
 			if err != nil {
 				log.Printf("[Go] Ошибка применения импульса: %v", err)
 			} else {
-				log.Printf("[Go] Применен импульс к server_sphere: (%f, %f, %f)",
+				log.Printf("[Go] Применен импульс к: (%f, %f, %f)",
+					impulse.X, impulse.Y, impulse.Z)
+			}
+
+			_, err2 := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
+				Id:      "mainPlayer2", // Всегда используем ID серверной сферы
+				Impulse: &impulse,
+			})
+			if err2 != nil {
+				log.Printf("[Go] Ошибка применения импульса: %v", err2)
+			} else {
+				log.Printf("[Go] Применен импульс к: (%f, %f, %f)",
+					impulse.X, impulse.Y, impulse.Z)
+			}
+
+			_, err3 := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
+				Id:      "mainPlayer3", // Всегда используем ID серверной сферы
+				Impulse: &impulse,
+			})
+			if err2 != nil {
+				log.Printf("[Go] Ошибка применения импульса: %v", err3)
+			} else {
+				log.Printf("[Go] Применен импульс к: (%f, %f, %f)",
 					impulse.X, impulse.Y, impulse.Z)
 			}
 		}

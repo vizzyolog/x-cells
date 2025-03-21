@@ -233,8 +233,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 		return
 	}
 
-	// Размещаем сферу над террейном на достаточной высоте
-	sphereObj := &Object{
+
+	sphereObj1 := &Object{
 		ID:         "mainPlayer1",
 		ObjectType: "sphere",
 		X:          0,
@@ -243,23 +243,47 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 		Mass:       float32(1.0),
 		Radius:     float32(1.0),
 		Color:      "#ff0000",
+		PhysicsBy:  "ammo",
+	}
+	createObjectInGo(sphereObj1, client)
+
+	if err := ws.WriteJSON(sphereObj1); err != nil {
+		log.Println("[Go] Error sending sphere creation message:", err)
+		return
+	}
+
+	sphereObj2 := &Object{
+		ID:         "mainPlayer2",
+		ObjectType: "sphere",
+		X:          -10,
+		Y:          terrainMaxHeight + 50, // Размещаем выше максимальной высоты террейна
+		Z:          0,
+		Mass:       float32(1.0),
+		Radius:     float32(1.0),
+		Color:      "#00ff00",
+		PhysicsBy:  "both",
+	}
+	createObjectInGo(sphereObj2, client)
+
+	if err := ws.WriteJSON(sphereObj2); err != nil {
+		log.Println("[Go] Error sending sphere creation message:", err)
+		return
+	}
+
+	sphereObj3 := &Object{
+		ID:         "mainPlayer3",
+		ObjectType: "sphere",
+		X:          10,
+		Y:          terrainMaxHeight + 50, // Размещаем выше максимальной высоты террейна
+		Z:          0,
+		Mass:       float32(1.0),
+		Radius:     float32(1.0),
+		Color:      "#0000ff",
 		PhysicsBy:  "bullet",
 	}
-	createObjectInGo(sphereObj, client)
+	createObjectInGo(sphereObj3, client)
 
-	// Отправляем сообщение о создании сферы клиенту
-	msg := map[string]interface{}{
-		"type":        "create",
-		"id":          sphereObj.ID,
-		"object_type": sphereObj.ObjectType,
-		"x":           sphereObj.X,
-		"y":           sphereObj.Y,
-		"z":           sphereObj.Z,
-		"mass":        sphereObj.Mass,
-		"radius":      sphereObj.Radius,
-		"color":       sphereObj.Color,
-	}
-	if err := ws.WriteJSON(msg); err != nil {
+	if err := ws.WriteJSON(sphereObj3); err != nil {
 		log.Println("[Go] Error sending sphere creation message:", err)
 		return
 	}
@@ -296,13 +320,35 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 
 			// Применяем импульс только к серверной сфере
 			_, err := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
-				Id:      "mainPlayer", // Всегда используем ID серверной сферы
+				Id:      "mainPlayer1",
 				Impulse: &impulse,
 			})
 			if err != nil {
 				log.Printf("[Go] Ошибка применения импульса: %v", err)
 			} else {
-				log.Printf("[Go] Применен импульс к server_sphere: (%f, %f, %f)",
+				log.Printf("[Go] Применен импульс к: (%f, %f, %f)",
+					impulse.X, impulse.Y, impulse.Z)
+			}
+
+			_, err2 := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
+				Id:      "mainPlayer2", // Всегда используем ID серверной сферы
+				Impulse: &impulse,
+			})
+			if err2 != nil {
+				log.Printf("[Go] Ошибка применения импульса: %v", err2)
+			} else {
+				log.Printf("[Go] Применен импульс к: (%f, %f, %f)",
+					impulse.X, impulse.Y, impulse.Z)
+			}
+
+			_, err3 := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
+				Id:      "mainPlayer3", // Всегда используем ID серверной сферы
+				Impulse: &impulse,
+			})
+			if err2 != nil {
+				log.Printf("[Go] Ошибка применения импульса: %v", err3)
+			} else {
+				log.Printf("[Go] Применен импульс к: (%f, %f, %f)",
 					impulse.X, impulse.Y, impulse.Z)
 			}
 		}

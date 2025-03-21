@@ -81,7 +81,7 @@ function createPhysicsBodyForTerrain(data) {
 
     // Устанавливаем масштабирование
     shape.setLocalScaling(new Ammo.btVector3(scaleX, data.scale_y, scaleZ));
-    shape.setMargin(0.05);
+    shape.setMargin(0.5);
 
     // Создаем трансформацию
     const transform = new Ammo.btTransform();
@@ -100,14 +100,10 @@ function createPhysicsBodyForTerrain(data) {
     const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
     const body = new Ammo.btRigidBody(rbInfo);
 
-    // Устанавливаем флаги для статического объекта
-    body.setCollisionFlags(body.getCollisionFlags() | 1); // CF_STATIC_OBJECT
-    body.setActivationState(4); // DISABLE_DEACTIVATION
-
     // Добавляем тело в физический мир с правильными параметрами коллизий
-    const collisionFilterGroup = 1;  // группа для террейна
-    const collisionFilterMask = -1;  // коллизии со всеми объектами
-    localPhysicsWorld.addRigidBody(body, collisionFilterGroup, collisionFilterMask);
+    const TERRAIN_GROUP = 1;  // группа для террейна
+    const SPHERE_GROUP = 2;   // группа для сфер
+    localPhysicsWorld.addRigidBody(body, TERRAIN_GROUP, SPHERE_GROUP); // террейн сталкивается только со сферами
 
     // Очистка памяти
     Ammo.destroy(rbInfo);
@@ -260,13 +256,10 @@ function createPhysicsBodyForSphere(data) {
         );
         const body = new window.Ammo.btRigidBody(rbInfo);
 
-        // Устанавливаем активацию
-        body.setActivationState(4); // DISABLE_DEACTIVATION
-
         // Добавляем тело в физический мир с правильными параметрами коллизий
-        const collisionFilterGroup = 2;  // группа для динамических объектов
-        const collisionFilterMask = -1;  // коллизии со всеми объектами
-        localPhysicsWorld.addRigidBody(body, collisionFilterGroup, collisionFilterMask);
+        const TERRAIN_GROUP = 1;  // группа для террейна
+        const SPHERE_GROUP = 2;   // группа для сфер
+        localPhysicsWorld.addRigidBody(body, SPHERE_GROUP, TERRAIN_GROUP); // сферы сталкиваются только с террейном
 
         // Очистка памяти
         window.Ammo.destroy(rbInfo);
@@ -327,7 +320,8 @@ export function createTestSphere() {
     const mesh = new THREE.Mesh(geometry, material);
     
     // Позиционируем сферу высоко над террейном
-    mesh.position.set(-20, 20, 0);
+    const startY = 58; // Высота над террейном
+    mesh.position.set(0, startY, 0);
     scene.add(mesh);
 
     // Создаем физическое тело
@@ -336,9 +330,9 @@ export function createTestSphere() {
     
     const transform = new Ammo.btTransform();
     transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(-20, 20, 0));
+    transform.setOrigin(new Ammo.btVector3(0, startY, 0));
 
-    const localInertia = new Ammo.btVector3(-20, 0, 0);
+    const localInertia = new Ammo.btVector3(0, 0, 0);
     shape.calculateLocalInertia(mass, localInertia);
 
     const motionState = new Ammo.btDefaultMotionState(transform);
@@ -351,8 +345,10 @@ export function createTestSphere() {
     body.setRollingFriction(0.1);
     body.setRestitution(0.5); // Упругость
 
-    // Добавляем тело в физический мир
-    localPhysicsWorld.addRigidBody(body);
+    // Добавляем тело в физический мир с правильными параметрами коллизий
+    const TERRAIN_GROUP = 1;  // группа для террейна
+    const SPHERE_GROUP = 2;   // группа для сфер
+    localPhysicsWorld.addRigidBody(body, SPHERE_GROUP, TERRAIN_GROUP); // сферы сталкиваются только с террейном
 
     // Очистка памяти
     Ammo.destroy(rbInfo);
@@ -363,7 +359,7 @@ export function createTestSphere() {
         mesh,
         body,
         object_type: "test_sphere",
-        physicsBy: "both"
+        physicsBy: "ammo" // Изменено с "both" на "ammo", чтобы управлялось только локальной физикой
     };
     objects["test_sphere"] = testSphereObj;
 

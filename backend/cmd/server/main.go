@@ -254,7 +254,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 	sphereObj2 := &Object{
 		ID:         "mainPlayer2",
 		ObjectType: "sphere",
-		X:          -10,
+		X:          0,
 		Y:          terrainMaxHeight + 50, // Размещаем выше максимальной высоты террейна
 		Z:          0,
 		Mass:       float32(1.0),
@@ -272,7 +272,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 	sphereObj3 := &Object{
 		ID:         "mainPlayer3",
 		ObjectType: "sphere",
-		X:          10,
+		X:          0,
 		Y:          terrainMaxHeight + 50, // Размещаем выше максимальной высоты террейна
 		Z:          0,
 		Mass:       float32(1.0),

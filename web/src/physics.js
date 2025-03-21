@@ -105,36 +105,35 @@ export function updatePhysicsObjects(objects) {
             case "both":
                 // Обновление по обоим источникам
                 if (obj.object_type !== "terrain") {
-                    if (obj.body) {
-                        const trans = new window.Ammo.btTransform();
-                        obj.body.getMotionState().getWorldTransform(trans);
-
-                        const locX = trans.getOrigin().x();
-                        const locY = trans.getOrigin().y();
-                        const locZ = trans.getOrigin().z();
-
-                        const qx = trans.getRotation().x();
-                        const qy = trans.getRotation().y();
-                        const qz = trans.getRotation().z();
-                        const qw = trans.getRotation().w();
-
-                        obj.mesh.position.set(locX, locY, locZ);
-                        obj.mesh.quaternion.set(qx, qy, qz, qw);
-                    }
-
                     if (obj.serverPos) {
-                        const dx = obj.serverPos.x - obj.mesh.position.x;
-                        const dy = obj.serverPos.y - obj.mesh.position.y;
-                        const dz = obj.serverPos.z - obj.mesh.position.z;
-
-                        if (dx * dx + dy * dy + dz * dz > 0.01) {
-                            const alpha = 0.1;
-                            const newX = obj.mesh.position.x + dx * alpha;
-                            const newY = obj.mesh.position.y + dy * alpha;
-                            const newZ = obj.mesh.position.z + dz * alpha;
-
-                            obj.mesh.position.set(newX, newY, newZ);
+                        // Обновляем физическое тело на основе серверной позиции
+                        if (obj.body) {
+                            const ms = obj.body.getMotionState();
+                            if (ms) {
+                                const transform = new window.Ammo.btTransform();
+                                ms.getWorldTransform(transform);
+                                transform.setOrigin(new window.Ammo.btVector3(
+                                    obj.serverPos.x,
+                                    obj.serverPos.y,
+                                    obj.serverPos.z
+                                ));
+                                ms.setWorldTransform(transform);
+                                
+                                // Активируем тело, чтобы оно реагировало на физику
+                                obj.body.activate(true);
+                                
+                                // Сбрасываем скорость, чтобы избежать накопления
+                                const zero = new window.Ammo.btVector3(0, 0, 0);
+                                obj.body.setLinearVelocity(zero);
+                                obj.body.setAngularVelocity(zero);
+                                window.Ammo.destroy(zero);
+                                
+                                window.Ammo.destroy(transform);
+                            }
                         }
+                        
+                        // Обновляем меш
+                        obj.mesh.position.set(obj.serverPos.x, obj.serverPos.y, obj.serverPos.z);
                     }
                 }
                 break;
@@ -154,44 +153,44 @@ export function applyImpulseToSphere(cmd, objects) {
         return;
     }
 
-    let targetSphere = null;
-    // Используем переданный параметр objects вместо глобальной переменной
+    // Создаем импульс заранее, чтобы не создавать его для каждого шара
+    const impulse = new window.Ammo.btVector3(0, 0, 0);
+    if (cmd === "LEFT") impulse.setValue(-5, 0, 0);
+    if (cmd === "RIGHT") impulse.setValue(5, 0, 0);
+    if (cmd === "UP") impulse.setValue(0, 0, -5);
+    if (cmd === "DOWN") impulse.setValue(0, 0, 5);
+    if (cmd === "SPACE") impulse.setValue(0, 10, 0);
+
+    // Проходим по всем объектам и применяем импульс только к шарам с physicsBy: "ammo"
     for (let id in objects) {
         const obj = objects[id];
         if (
             obj &&
             obj.mesh &&
             obj.mesh.geometry &&
-            obj.mesh.geometry.type === "SphereGeometry"
+            obj.mesh.geometry.type === "SphereGeometry" &&
+            obj.body &&
+            obj.physicsBy === "ammo"  // Только для локально управляемых объектов
         ) {
-            targetSphere = obj;
-            break;
+            obj.body.activate(true);
+            obj.body.applyCentralImpulse(impulse);
+            
+            // Добавляем диагностику для каждого шара
+            const velocity = obj.body.getLinearVelocity();
+            console.log("[Physics] Состояние шара:", {
+                id: id,
+                physicsBy: obj.physicsBy,
+                команда: cmd,
+                позиция: obj.mesh.position,
+                скорость: {
+                    x: velocity.x(),
+                    y: velocity.y(),
+                    z: velocity.z()
+                }
+            });
         }
     }
-    if (!targetSphere || !targetSphere.body) {
-        console.warn("[Physics] Шар не найден или не имеет физического тела");
-        return;
-    }
 
-    const impulse = new window.Ammo.btVector3(0, 0, 0);
-    if (cmd === "LEFT") impulse.setValue(-2, 0, 0);
-    if (cmd === "RIGHT") impulse.setValue(2, 0, 0);
-    if (cmd === "UP") impulse.setValue(0, 0, -2);
-    if (cmd === "DOWN") impulse.setValue(0, 0, 2);
-    if (cmd === "SPACE") impulse.setValue(0, 5, 0);
-
-    targetSphere.body.activate(true);
-    targetSphere.body.applyCentralImpulse(impulse);
-    
-    // Добавляем диагностику
-    const velocity = targetSphere.body.getLinearVelocity();
-    console.log("[Physics] Состояние шара:", {
-        команда: cmd,
-        позиция: targetSphere.mesh.position,
-        скорость: {
-            x: velocity.x(),
-            y: velocity.y(),
-            z: velocity.z()
-        }
-    });
+    // Очищаем память
+    Ammo.destroy(impulse);
 }

@@ -45,8 +45,8 @@ async function start() {
         // Добавляем небольшую задержку перед инициализацией
         await new Promise(resolve => setTimeout(resolve, 500));
         await initAmmo();
-        // Создаем тестовую сферу после инициализации Ammo
-        createTestSphere();
+        
+        //createTestSphere();
         initNetwork();
         animate();
     } catch (error) {

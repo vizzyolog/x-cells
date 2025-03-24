@@ -107,6 +107,8 @@ PROTOBUF_CONSTEXPR TerrainData::TerrainData(
   , /*decltype(_impl_.scale_x_)*/0
   , /*decltype(_impl_.scale_y_)*/0
   , /*decltype(_impl_.scale_z_)*/0
+  , /*decltype(_impl_.min_height_)*/0
+  , /*decltype(_impl_.max_height_)*/0
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct TerrainDataDefaultTypeInternal {
   PROTOBUF_CONSTEXPR TerrainDataDefaultTypeInternal()
@@ -311,6 +313,8 @@ const uint32_t TableStruct_physics_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
   PROTOBUF_FIELD_OFFSET(::physics::TerrainData, _impl_.scale_x_),
   PROTOBUF_FIELD_OFFSET(::physics::TerrainData, _impl_.scale_y_),
   PROTOBUF_FIELD_OFFSET(::physics::TerrainData, _impl_.scale_z_),
+  PROTOBUF_FIELD_OFFSET(::physics::TerrainData, _impl_.min_height_),
+  PROTOBUF_FIELD_OFFSET(::physics::TerrainData, _impl_.max_height_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::physics::CreateObjectRequest, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -391,15 +395,15 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 30, -1, -1, sizeof(::physics::SphereData)},
   { 39, -1, -1, sizeof(::physics::BoxData)},
   { 50, -1, -1, sizeof(::physics::TerrainData)},
-  { 62, -1, -1, sizeof(::physics::CreateObjectRequest)},
-  { 72, -1, -1, sizeof(::physics::CreateObjectResponse)},
-  { 79, -1, -1, sizeof(::physics::ApplyImpulseRequest)},
-  { 87, -1, -1, sizeof(::physics::ApplyImpulseResponse)},
-  { 94, -1, -1, sizeof(::physics::ApplyTorqueRequest)},
-  { 102, -1, -1, sizeof(::physics::ApplyTorqueResponse)},
-  { 109, -1, -1, sizeof(::physics::GetObjectStateRequest)},
-  { 116, -1, -1, sizeof(::physics::ObjectState)},
-  { 126, -1, -1, sizeof(::physics::GetObjectStateResponse)},
+  { 64, -1, -1, sizeof(::physics::CreateObjectRequest)},
+  { 74, -1, -1, sizeof(::physics::CreateObjectResponse)},
+  { 81, -1, -1, sizeof(::physics::ApplyImpulseRequest)},
+  { 89, -1, -1, sizeof(::physics::ApplyImpulseResponse)},
+  { 96, -1, -1, sizeof(::physics::ApplyTorqueRequest)},
+  { 104, -1, -1, sizeof(::physics::ApplyTorqueResponse)},
+  { 111, -1, -1, sizeof(::physics::GetObjectStateRequest)},
+  { 118, -1, -1, sizeof(::physics::ObjectState)},
+  { 128, -1, -1, sizeof(::physics::GetObjectStateResponse)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -434,40 +438,41 @@ const char descriptor_table_protodef_physics_2eproto[] PROTOBUF_SECTION_VARIABLE
   "us\030\001 \001(\002\022\014\n\004mass\030\002 \001(\002\022\r\n\005color\030\003 \001(\t\"T\n"
   "\007BoxData\022\r\n\005width\030\001 \001(\002\022\016\n\006height\030\002 \001(\002\022"
   "\r\n\005depth\030\003 \001(\002\022\014\n\004mass\030\004 \001(\002\022\r\n\005color\030\005 "
-  "\001(\t\"q\n\013TerrainData\022\r\n\005width\030\001 \001(\005\022\r\n\005dep"
-  "th\030\002 \001(\005\022\021\n\theightmap\030\003 \003(\002\022\017\n\007scale_x\030\004"
-  " \001(\002\022\017\n\007scale_y\030\005 \001(\002\022\017\n\007scale_z\030\006 \001(\002\"\225"
-  "\001\n\023CreateObjectRequest\022\n\n\002id\030\001 \001(\t\022\"\n\010po"
-  "sition\030\002 \001(\0132\020.physics.Vector3\022%\n\010rotati"
-  "on\030\003 \001(\0132\023.physics.Quaternion\022\'\n\005shape\030\004"
-  " \001(\0132\030.physics.ShapeDescriptor\"&\n\024Create"
-  "ObjectResponse\022\016\n\006status\030\001 \001(\t\"D\n\023ApplyI"
-  "mpulseRequest\022\n\n\002id\030\001 \001(\t\022!\n\007impulse\030\002 \001"
-  "(\0132\020.physics.Vector3\"&\n\024ApplyImpulseResp"
-  "onse\022\016\n\006status\030\001 \001(\t\"B\n\022ApplyTorqueReque"
-  "st\022\n\n\002id\030\001 \001(\t\022 \n\006torque\030\002 \001(\0132\020.physics"
-  ".Vector3\"%\n\023ApplyTorqueResponse\022\016\n\006statu"
-  "s\030\001 \001(\t\"#\n\025GetObjectStateRequest\022\n\n\002id\030\001"
-  " \001(\t\"\257\001\n\013ObjectState\022\"\n\010position\030\001 \001(\0132\020"
-  ".physics.Vector3\022%\n\010rotation\030\002 \001(\0132\023.phy"
-  "sics.Quaternion\022)\n\017linear_velocity\030\003 \001(\013"
-  "2\020.physics.Vector3\022*\n\020angular_velocity\030\004"
-  " \001(\0132\020.physics.Vector3\"M\n\026GetObjectState"
-  "Response\022\016\n\006status\030\001 \001(\t\022#\n\005state\030\002 \001(\0132"
-  "\024.physics.ObjectState2\300\002\n\007Physics\022K\n\014Cre"
-  "ateObject\022\034.physics.CreateObjectRequest\032"
-  "\035.physics.CreateObjectResponse\022K\n\014ApplyI"
-  "mpulse\022\034.physics.ApplyImpulseRequest\032\035.p"
-  "hysics.ApplyImpulseResponse\022H\n\013ApplyTorq"
-  "ue\022\033.physics.ApplyTorqueRequest\032\034.physic"
-  "s.ApplyTorqueResponse\022Q\n\016GetObjectState\022"
-  "\036.physics.GetObjectStateRequest\032\037.physic"
-  "s.GetObjectStateResponseB,Z*x-cells/back"
-  "end/internal/physics/generatedb\006proto3"
+  "\001(\t\"\231\001\n\013TerrainData\022\r\n\005width\030\001 \001(\005\022\r\n\005de"
+  "pth\030\002 \001(\005\022\021\n\theightmap\030\003 \003(\002\022\017\n\007scale_x\030"
+  "\004 \001(\002\022\017\n\007scale_y\030\005 \001(\002\022\017\n\007scale_z\030\006 \001(\002\022"
+  "\022\n\nmin_height\030\007 \001(\002\022\022\n\nmax_height\030\010 \001(\002\""
+  "\225\001\n\023CreateObjectRequest\022\n\n\002id\030\001 \001(\t\022\"\n\010p"
+  "osition\030\002 \001(\0132\020.physics.Vector3\022%\n\010rotat"
+  "ion\030\003 \001(\0132\023.physics.Quaternion\022\'\n\005shape\030"
+  "\004 \001(\0132\030.physics.ShapeDescriptor\"&\n\024Creat"
+  "eObjectResponse\022\016\n\006status\030\001 \001(\t\"D\n\023Apply"
+  "ImpulseRequest\022\n\n\002id\030\001 \001(\t\022!\n\007impulse\030\002 "
+  "\001(\0132\020.physics.Vector3\"&\n\024ApplyImpulseRes"
+  "ponse\022\016\n\006status\030\001 \001(\t\"B\n\022ApplyTorqueRequ"
+  "est\022\n\n\002id\030\001 \001(\t\022 \n\006torque\030\002 \001(\0132\020.physic"
+  "s.Vector3\"%\n\023ApplyTorqueResponse\022\016\n\006stat"
+  "us\030\001 \001(\t\"#\n\025GetObjectStateRequest\022\n\n\002id\030"
+  "\001 \001(\t\"\257\001\n\013ObjectState\022\"\n\010position\030\001 \001(\0132"
+  "\020.physics.Vector3\022%\n\010rotation\030\002 \001(\0132\023.ph"
+  "ysics.Quaternion\022)\n\017linear_velocity\030\003 \001("
+  "\0132\020.physics.Vector3\022*\n\020angular_velocity\030"
+  "\004 \001(\0132\020.physics.Vector3\"M\n\026GetObjectStat"
+  "eResponse\022\016\n\006status\030\001 \001(\t\022#\n\005state\030\002 \001(\013"
+  "2\024.physics.ObjectState2\300\002\n\007Physics\022K\n\014Cr"
+  "eateObject\022\034.physics.CreateObjectRequest"
+  "\032\035.physics.CreateObjectResponse\022K\n\014Apply"
+  "Impulse\022\034.physics.ApplyImpulseRequest\032\035."
+  "physics.ApplyImpulseResponse\022H\n\013ApplyTor"
+  "que\022\033.physics.ApplyTorqueRequest\032\034.physi"
+  "cs.ApplyTorqueResponse\022Q\n\016GetObjectState"
+  "\022\036.physics.GetObjectStateRequest\032\037.physi"
+  "cs.GetObjectStateResponseB,Z*x-cells/bac"
+  "kend/internal/physics/generatedb\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_physics_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_physics_2eproto = {
-    false, false, 1718, descriptor_table_protodef_physics_2eproto,
+    false, false, 1759, descriptor_table_protodef_physics_2eproto,
     "physics.proto",
     &descriptor_table_physics_2eproto_once, nullptr, 0, 15,
     schemas, file_default_instances, TableStruct_physics_2eproto::offsets,
@@ -2146,12 +2151,14 @@ TerrainData::TerrainData(const TerrainData& from)
     , decltype(_impl_.scale_x_){}
     , decltype(_impl_.scale_y_){}
     , decltype(_impl_.scale_z_){}
+    , decltype(_impl_.min_height_){}
+    , decltype(_impl_.max_height_){}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   ::memcpy(&_impl_.width_, &from._impl_.width_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.scale_z_) -
-    reinterpret_cast<char*>(&_impl_.width_)) + sizeof(_impl_.scale_z_));
+    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.max_height_) -
+    reinterpret_cast<char*>(&_impl_.width_)) + sizeof(_impl_.max_height_));
   // @@protoc_insertion_point(copy_constructor:physics.TerrainData)
 }
 
@@ -2166,6 +2173,8 @@ inline void TerrainData::SharedCtor(
     , decltype(_impl_.scale_x_){0}
     , decltype(_impl_.scale_y_){0}
     , decltype(_impl_.scale_z_){0}
+    , decltype(_impl_.min_height_){0}
+    , decltype(_impl_.max_height_){0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -2196,8 +2205,8 @@ void TerrainData::Clear() {
 
   _impl_.heightmap_.Clear();
   ::memset(&_impl_.width_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&_impl_.scale_z_) -
-      reinterpret_cast<char*>(&_impl_.width_)) + sizeof(_impl_.scale_z_));
+      reinterpret_cast<char*>(&_impl_.max_height_) -
+      reinterpret_cast<char*>(&_impl_.width_)) + sizeof(_impl_.max_height_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -2254,6 +2263,22 @@ const char* TerrainData::_InternalParse(const char* ptr, ::_pbi::ParseContext* c
       case 6:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 53)) {
           _impl_.scale_z_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr);
+          ptr += sizeof(float);
+        } else
+          goto handle_unusual;
+        continue;
+      // float min_height = 7;
+      case 7:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 61)) {
+          _impl_.min_height_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr);
+          ptr += sizeof(float);
+        } else
+          goto handle_unusual;
+        continue;
+      // float max_height = 8;
+      case 8:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 69)) {
+          _impl_.max_height_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr);
           ptr += sizeof(float);
         } else
           goto handle_unusual;
@@ -2334,6 +2359,26 @@ uint8_t* TerrainData::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteFloatToArray(6, this->_internal_scale_z(), target);
   }
 
+  // float min_height = 7;
+  static_assert(sizeof(uint32_t) == sizeof(float), "Code assumes uint32_t and float are the same size.");
+  float tmp_min_height = this->_internal_min_height();
+  uint32_t raw_min_height;
+  memcpy(&raw_min_height, &tmp_min_height, sizeof(tmp_min_height));
+  if (raw_min_height != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteFloatToArray(7, this->_internal_min_height(), target);
+  }
+
+  // float max_height = 8;
+  static_assert(sizeof(uint32_t) == sizeof(float), "Code assumes uint32_t and float are the same size.");
+  float tmp_max_height = this->_internal_max_height();
+  uint32_t raw_max_height;
+  memcpy(&raw_max_height, &tmp_max_height, sizeof(tmp_max_height));
+  if (raw_max_height != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteFloatToArray(8, this->_internal_max_height(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -2398,6 +2443,24 @@ size_t TerrainData::ByteSizeLong() const {
     total_size += 1 + 4;
   }
 
+  // float min_height = 7;
+  static_assert(sizeof(uint32_t) == sizeof(float), "Code assumes uint32_t and float are the same size.");
+  float tmp_min_height = this->_internal_min_height();
+  uint32_t raw_min_height;
+  memcpy(&raw_min_height, &tmp_min_height, sizeof(tmp_min_height));
+  if (raw_min_height != 0) {
+    total_size += 1 + 4;
+  }
+
+  // float max_height = 8;
+  static_assert(sizeof(uint32_t) == sizeof(float), "Code assumes uint32_t and float are the same size.");
+  float tmp_max_height = this->_internal_max_height();
+  uint32_t raw_max_height;
+  memcpy(&raw_max_height, &tmp_max_height, sizeof(tmp_max_height));
+  if (raw_max_height != 0) {
+    total_size += 1 + 4;
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -2444,6 +2507,20 @@ void TerrainData::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PR
   if (raw_scale_z != 0) {
     _this->_internal_set_scale_z(from._internal_scale_z());
   }
+  static_assert(sizeof(uint32_t) == sizeof(float), "Code assumes uint32_t and float are the same size.");
+  float tmp_min_height = from._internal_min_height();
+  uint32_t raw_min_height;
+  memcpy(&raw_min_height, &tmp_min_height, sizeof(tmp_min_height));
+  if (raw_min_height != 0) {
+    _this->_internal_set_min_height(from._internal_min_height());
+  }
+  static_assert(sizeof(uint32_t) == sizeof(float), "Code assumes uint32_t and float are the same size.");
+  float tmp_max_height = from._internal_max_height();
+  uint32_t raw_max_height;
+  memcpy(&raw_max_height, &tmp_max_height, sizeof(tmp_max_height));
+  if (raw_max_height != 0) {
+    _this->_internal_set_max_height(from._internal_max_height());
+  }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -2463,8 +2540,8 @@ void TerrainData::InternalSwap(TerrainData* other) {
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   _impl_.heightmap_.InternalSwap(&other->_impl_.heightmap_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(TerrainData, _impl_.scale_z_)
-      + sizeof(TerrainData::_impl_.scale_z_)
+      PROTOBUF_FIELD_OFFSET(TerrainData, _impl_.max_height_)
+      + sizeof(TerrainData::_impl_.max_height_)
       - PROTOBUF_FIELD_OFFSET(TerrainData, _impl_.width_)>(
           reinterpret_cast<char*>(&_impl_.width_),
           reinterpret_cast<char*>(&other->_impl_.width_));

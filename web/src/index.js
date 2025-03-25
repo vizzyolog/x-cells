@@ -1,8 +1,8 @@
 // index.js
 import { initScene, scene, camera, renderer } from './scene';
-import { initAmmo, stepPhysics, updatePhysicsObjects, applyImpulseToSphere } from './physics';
+import { initAmmo, stepPhysics, updatePhysicsObjects, applyImpulseToSphere, receiveObjectUpdate } from './physics';
 import { initNetwork } from './network';
-import { objects, debugPhysicsWorld, createTestSphere } from './objects';
+import { objects } from './objects';
 import * as THREE from 'three';
 
 function animate() {
@@ -39,15 +39,16 @@ function animate() {
 }
 
 async function start() {
-    console.log("Start")
+    console.log("Start");
     initScene();
     try {
         // Добавляем небольшую задержку перед инициализацией
         await new Promise(resolve => setTimeout(resolve, 500));
         await initAmmo();
         
-        //createTestSphere();
+        // Инициализируем сетевое соединение
         initNetwork();
+        
         animate();
     } catch (error) {
         console.error("Ошибка при инициализации Ammo.js:", error);

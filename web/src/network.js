@@ -1,6 +1,6 @@
 // network.js
 import { objects, createMeshAndBodyForObject } from './objects';
-import { applyImpulseToSphere } from './physics';
+import { applyImpulseToSphere, receiveObjectUpdate } from './physics';
 
 let ws = null;
 
@@ -45,8 +45,32 @@ function handleKeyDown(e) {
     }
 
     try {
+        console.log(`[WS] Отправка команды: ${cmd}`);
         ws.send(JSON.stringify({ type: "cmd", cmd }));
-        applyImpulseToSphere(cmd, objects);
+        
+        // Применяем импульс локально для всех объектов, включая serverPlayer
+        for (let id in objects) {
+            const obj = objects[id];
+            if (obj && obj.body && obj.mesh && obj.mesh.geometry && 
+                obj.mesh.geometry.type === "SphereGeometry") {
+                console.log(`[WS] Применяем импульс к сфере ${id} с physicsBy=${obj.physicsBy}`);
+                
+                // Создаем импульс
+                const impulse = new window.Ammo.btVector3(0, 0, 0);
+                if (cmd === "LEFT") impulse.setValue(-5, 0, 0);
+                if (cmd === "RIGHT") impulse.setValue(5, 0, 0);
+                if (cmd === "UP") impulse.setValue(0, 0, -5);
+                if (cmd === "DOWN") impulse.setValue(0, 0, 5);
+                if (cmd === "SPACE") impulse.setValue(0, 10, 0);
+                
+                // Активируем тело и применяем импульс
+                obj.body.activate(true);
+                obj.body.applyCentralImpulse(impulse);
+                
+                // Очищаем память
+                window.Ammo.destroy(impulse);
+            }
+        }
     } catch (error) {
         console.error("[WS] Ошибка отправки:", error);
     }
@@ -76,10 +100,29 @@ export function initNetwork() {
                     throw new Error('Неверный формат данных');
                 }
 
-                handleMessage(data);
+                // Если приходит сообщение с id и object_type, но без type - это объект создания
+                if (!data.type && data.id && data.object_type) {
+                    console.log('[WS] Получен объект без type, считаем это create:', data);
+                    // Добавляем тип для совместимости с существующим кодом
+                    data.type = "create";
+                    // Обрабатываем как create
+                    handleMessage(data);
+                }
+                // Обрабатываем update сообщения через нашу новую функцию
+                else if (data.type === "update" && data.id) {
+                    console.log(`[WS] Получено обновление для ${data.id}:`, {
+                        x: data.x,
+                        y: data.y,
+                        z: data.z
+                    });
+                    receiveObjectUpdate(data);
+                } 
+                else if (data.type === "create" && data.id) {
+                    // Оставляем существующую логику создания объектов
+                    handleMessage(data);
+                }
             } catch (error) {
-                console.error("[WS] Полная ошибка:", error);
-                console.error("[WS] Стек вызовов:", error.stack);
+                console.error("[WS] Ошибка при обработке сообщения:", error);
             }
         };
 

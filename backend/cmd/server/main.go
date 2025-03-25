@@ -435,27 +435,27 @@ func wsHandler(w http.ResponseWriter, r *http.Request, client pb.PhysicsClient) 
 					impulse.X, impulse.Y, impulse.Z)
 			}
 
-			_, err2 := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
-				Id:      "mainPlayer2",
-				Impulse: &impulse,
-			})
-			if err2 != nil {
-				log.Printf("[Go] Ошибка применения импульса: %v", err2)
-			} else {
-				log.Printf("[Go] Применен импульс к mainPlayer2: (%f, %f, %f)",
-					impulse.X, impulse.Y, impulse.Z)
-			}
+			// _, err2 := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
+			// 	Id:      "mainPlayer2",
+			// 	Impulse: &impulse,
+			// })
+			// if err2 != nil {
+			// 	log.Printf("[Go] Ошибка применения импульса: %v", err2)
+			// } else {
+			// 	log.Printf("[Go] Применен импульс к mainPlayer2: (%f, %f, %f)",
+			// 		impulse.X, impulse.Y, impulse.Z)
+			// }
 
-			_, err3 := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
-				Id:      "mainPlayer3",
-				Impulse: &impulse,
-			})
-			if err3 != nil {
-				log.Printf("[Go] Ошибка применения импульса mainPlayer3: %v", err3)
-			} else {
-				log.Printf("[Go] Применен импульс к mainPlayer3: (%f, %f, %f)",
-					impulse.X, impulse.Y, impulse.Z)
-			}
+			// _, err3 := client.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
+			// 	Id:      "mainPlayer3",
+			// 	Impulse: &impulse,
+			// })
+			// if err3 != nil {
+			// 	log.Printf("[Go] Ошибка применения импульса mainPlayer3: %v", err3)
+			// } else {
+			// 	log.Printf("[Go] Применен импульс к mainPlayer3: (%f, %f, %f)",
+			// 		impulse.X, impulse.Y, impulse.Z)
+			// }
 		}
 	}
 }

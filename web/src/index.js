@@ -1,5 +1,5 @@
 // index.js
-import { initScene, scene, camera, renderer } from './scene';
+import { initScene, scene, camera, renderer, updateShadowCamera } from './scene';
 import { initAmmo, stepPhysics, updatePhysicsObjects, applyImpulseToSphere, receiveObjectUpdate, createDiagnosticScene } from './physics';
 import { initNetwork } from './network';
 import { objects } from './objects';
@@ -38,6 +38,9 @@ function animate() {
         camera.position.lerp(cameraTarget, 0.1);
         camera.lookAt(targetPos);
     }
+    
+    // Обновляем положение источника света относительно камеры, как солнце
+    updateShadowCamera();
 
     renderer.render(scene, camera);
 }

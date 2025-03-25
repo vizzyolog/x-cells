@@ -18,8 +18,8 @@ import (
 // Константы для террейна
 const (
 	// Физические размеры террейна в мире
-	terrainPhysicalWidth = 500.0
-	terrainPhysicalDepth = 500.0
+	terrainPhysicalWidth = 5000.0
+	terrainPhysicalDepth = 5000.0
 
 	// Размеры сетки террейна
 	terrainGridSize  = 128 // Одинаковая детализация для соответствия примеру three.js

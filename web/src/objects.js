@@ -100,10 +100,9 @@ function createPhysicsBodyForTerrain(data) {
     const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
     const body = new Ammo.btRigidBody(rbInfo);
 
-    // Добавляем тело в физический мир с правильными параметрами коллизий
-    const TERRAIN_GROUP = 1;  // группа для террейна
-    const SPHERE_GROUP = 2;   // группа для сфер
-    localPhysicsWorld.addRigidBody(body, TERRAIN_GROUP, SPHERE_GROUP); // террейн сталкивается только со сферами
+    // Добавляем тело в физический мир
+    const TERRAIN_GROUP = 1;
+    localPhysicsWorld.addRigidBody(body, TERRAIN_GROUP, -1); // Террейн сталкивается со всеми
 
     // Очистка памяти
     Ammo.destroy(rbInfo);
@@ -276,10 +275,9 @@ function createPhysicsBodyForSphere(data) {
         );
         const body = new window.Ammo.btRigidBody(rbInfo);
 
-        // Добавляем тело в физический мир с правильными параметрами коллизий
-        const TERRAIN_GROUP = 1;  // группа для террейна
-        const SPHERE_GROUP = 2;   // группа для сфер
-        localPhysicsWorld.addRigidBody(body, SPHERE_GROUP, TERRAIN_GROUP); // сферы сталкиваются только с террейном
+        // Добавляем тело в физический мир
+        const SPHERE_GROUP = 2;
+        localPhysicsWorld.addRigidBody(body, SPHERE_GROUP, -1); // Сферы сталкиваются со всеми
 
         // Очистка памяти
         window.Ammo.destroy(rbInfo);
@@ -291,38 +289,6 @@ function createPhysicsBodyForSphere(data) {
         return null;
     }
 }
-
-// export function debugPhysicsWorld() {
-//     if (!localPhysicsWorld) {
-//         console.error("[Physics Debug] Физический мир не инициализирован");
-//         return;
-//     }
-    
-//     const numBodies = localPhysicsWorld.getNumCollisionObjects();
-//     console.log(`[Physics Debug] В физическом мире ${numBodies} объектов`);
-    
-//     for (let i = 0; i < numBodies; i++) {
-//         const obj = localPhysicsWorld.getCollisionObjectArray().at(i);
-//         const transform = new Ammo.btTransform();
-        
-//         if (obj.getMotionState()) {
-//             obj.getMotionState().getWorldTransform(transform);
-//         } else {
-//             obj.getWorldTransform(transform);
-//         }
-        
-//         const pos = transform.getOrigin();
-//         const rot = transform.getRotation();
-        
-//         console.log(`[Physics Debug] Объект #${i}:`, {
-//             позиция: { x: pos.x(), y: pos.y(), z: pos.z() },
-//             вращение: { x: rot.x(), y: rot.y(), z: rot.z(), w: rot.w() },
-//             активен: obj.isActive(),
-//             статичен: obj.isStaticObject(),
-//             кинематичен: obj.isKinematicObject()
-//         });
-//     }
-// }
 
 function parseColor(colorStr) {
     if (!colorStr) return 0x888888;
@@ -372,10 +338,9 @@ export function createTestSphere() {
     body.setRollingFriction(0.1);
     body.setRestitution(0.5); // Упругость
 
-    // Добавляем тело в физический мир с правильными параметрами коллизий
-    const TERRAIN_GROUP = 1;  // группа для террейна
-    const SPHERE_GROUP = 2;   // группа для сфер
-    localPhysicsWorld.addRigidBody(body, SPHERE_GROUP, TERRAIN_GROUP); // сферы сталкиваются только с террейном
+    // Добавляем тело в физический мир
+    const SPHERE_GROUP = 2;
+    localPhysicsWorld.addRigidBody(body, SPHERE_GROUP, -1); // Тестовая сфера сталкивается со всеми
 
     // Очистка памяти
     Ammo.destroy(rbInfo);

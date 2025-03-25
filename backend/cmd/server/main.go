@@ -18,8 +18,8 @@ import (
 // Константы для террейна
 const (
 	// Физические размеры террейна в мире
-	terrainPhysicalWidth = 100.0
-	terrainPhysicalDepth = 100.0
+	terrainPhysicalWidth = 1500.0
+	terrainPhysicalDepth = 15000.0
 
 	// Размеры сетки террейна
 	terrainGridSize  = 128 // Одинаковая детализация для соответствия примеру three.js
@@ -27,8 +27,8 @@ const (
 	terrainHalfDepth = terrainGridSize / 2
 
 	// Диапазон высот
-	terrainMinHeight = -2.0
-	terrainMaxHeight = 8.0
+	terrainMinHeight = -50.0
+	terrainMaxHeight = 50.0 // Увеличиваем максимальную высоту для гор
 )
 
 // Object - локальная структура хранения
@@ -146,30 +146,136 @@ func createObjectInGo(obj *Object, client pb.PhysicsClient) {
 	}
 }
 
-// Генерация данных террейна - реализуем точно так же, как в примере three.js
+// Utility функция для шума Перлина
+func noise2D(x, y float64) float64 {
+	// Простая хеш-функция для псевдо-шума
+	// В реальном приложении стоит использовать настоящую библиотеку шума Перлина
+	h := x*12.9898 + y*78.233
+	sinH := math.Sin(h)
+	return math.Abs(sinH*43758.5453) - math.Floor(math.Abs(sinH*43758.5453))
+}
+
+// Плавная интерполяция между a и b
+func lerp(a, b, t float64) float64 {
+	return a + t*(b-a)
+}
+
+// Функция интерполяции для сглаживания
+func smoothstep(t float64) float64 {
+	return t * t * (3.0 - 2.0*t)
+}
+
+// Функция для получения сглаженного случайного шума
+func smoothNoise(x, y float64) float64 {
+	// Получаем целые координаты
+	x0 := math.Floor(x)
+	y0 := math.Floor(y)
+	x1 := x0 + 1.0
+	y1 := y0 + 1.0
+
+	// Интерполяционные коэффициенты
+	sx := smoothstep(x - x0)
+	sy := smoothstep(y - y0)
+
+	// Интерполяция между 4 углами
+	n00 := noise2D(x0, y0)
+	n10 := noise2D(x1, y0)
+	n01 := noise2D(x0, y1)
+	n11 := noise2D(x1, y1)
+
+	// Билинейная интерполяция
+	nx0 := lerp(n00, n10, sx)
+	nx1 := lerp(n01, n11, sx)
+	n := lerp(nx0, nx1, sy)
+
+	return n
+}
+
+// Генерация данных террейна с шумом Перлина для гор
 func generateTerrainData(w, h int) []float32 {
 	data := make([]float32, w*h)
 
-	// Центр сетки
-	w2 := float64(w) / 2.0
-	d2 := float64(h) / 2.0
+	// Параметры шума
+	scales := []float64{1.0, 0.5, 0.25, 0.125, 0.0625}         // Разные масштабы для фрактального шума
+	amplitudes := []float64{0.5, 0.25, 0.125, 0.0625, 0.03125} // Амплитуды для каждого масштаба
 
-	// Параметры волн
-	phaseMult := 12.0
+	// Расширяем диапазон высот для более драматичного рельефа
 	heightRange := terrainMaxHeight - terrainMinHeight
 
+	// Добавляем кратеры и горы
+	centerX := float64(w) / 2.0
+	centerZ := float64(h) / 2.0
+
+	maxRadius := math.Min(centerX, centerZ) * 0.8 // Радиус основного ландшафта
+
+	// Создаем несколько гор в случайных местах
+	numMountains := 5
+	mountains := make([]struct{ x, z, height, radius float64 }, numMountains)
+
+	// "Случайные" координаты для гор (для воспроизводимости используем фиксированные значения)
+	mountainPositions := []struct{ x, z float64 }{
+		{0.2, 0.3}, {0.7, 0.8}, {0.4, 0.7}, {0.8, 0.2}, {0.1, 0.9},
+	}
+
+	for i := 0; i < numMountains; i++ {
+		mountains[i].x = mountainPositions[i].x * float64(w)
+		mountains[i].z = mountainPositions[i].z * float64(h)
+		mountains[i].height = 0.5 + 0.5*math.Abs(noise2D(float64(i)*0.1, 0.5))  // Высота от 0.5 до 1.0
+		mountains[i].radius = 5.0 + 15.0*math.Abs(noise2D(0.5, float64(i)*0.1)) // Радиус от 5 до 20
+	}
+
+	// Вычисляем высоту для каждой точки
 	for j := 0; j < h; j++ {
 		for i := 0; i < w; i++ {
-			// Нормализуем координаты относительно центра
-			nx := float64(i-int(w2)) / w2
-			nz := float64(j-int(d2)) / d2
+			// Нормализуем координаты в диапазоне [0..1]
+			nx := float64(i) / float64(w-1)
+			nz := float64(j) / float64(h-1)
 
-			// Вычисляем нормализованное расстояние от центра
-			radius := math.Sqrt(nx*nx + nz*nz)
+			// Базовый шум Перлина для основного рельефа
+			noiseValue := 0.0
+			for layer := 0; layer < len(scales); layer++ {
+				// Многослойный шум (октавы) для создания фрактального рельефа
+				scale := scales[layer]
+				amplitude := amplitudes[layer]
+				noiseValue += smoothNoise(nx*scale*10.0, nz*scale*10.0) * amplitude
+			}
 
-			// Создаем круговую волну и масштабируем её в нужный диапазон высот
-			// Точно такая же формула как в примере three.js
-			height := (math.Sin(radius*phaseMult)+1.0)*0.5*heightRange + terrainMinHeight
+			// Нормализуем в диапазон [0..1]
+			noiseValue = (noiseValue + 0.5) * 0.5
+
+			// Добавление гор
+			elevation := noiseValue
+			for _, mountain := range mountains {
+				// Расстояние от точки до горы
+				dx := float64(i) - mountain.x
+				dz := float64(j) - mountain.z
+				distance := math.Sqrt(dx*dx + dz*dz)
+
+				// Если точка находится в радиусе горы
+				if distance < mountain.radius {
+					// Фактор затухания от центра горы (1 в центре, 0 на краю)
+					falloff := 1.0 - distance/mountain.radius
+					falloff = math.Pow(falloff, 2.0) // Квадратичное затухание для более крутых склонов
+
+					// Добавляем высоту горы
+					mountainHeight := mountain.height * falloff * 0.8 // 0.8 - коэффициент влияния горы
+					elevation += mountainHeight
+				}
+			}
+
+			// Создаем впадину по краям карты для естественного обрамления
+			distanceFromCenter := math.Sqrt(math.Pow(float64(i)-centerX, 2) + math.Pow(float64(j)-centerZ, 2))
+			if distanceFromCenter > maxRadius {
+				// За пределами основного радиуса создаем понижение
+				edgeFactor := (distanceFromCenter - maxRadius) / (math.Max(centerX, centerZ) - maxRadius)
+				edgeFactor = math.Min(1.0, edgeFactor) // Ограничиваем множитель до 1
+				elevation -= edgeFactor * 0.5          // Понижаем высоту к краям
+			}
+
+			// Масштабируем в нужный диапазон высот
+			height := elevation*heightRange + terrainMinHeight
+
+			// Сохраняем данные
 			data[j*w+i] = float32(height)
 		}
 	}

@@ -1253,6 +1253,8 @@ class TerrainData final :
     kScaleXFieldNumber = 4,
     kScaleYFieldNumber = 5,
     kScaleZFieldNumber = 6,
+    kMinHeightFieldNumber = 7,
+    kMaxHeightFieldNumber = 8,
   };
   // repeated float heightmap = 3;
   int heightmap_size() const;
@@ -1321,6 +1323,24 @@ class TerrainData final :
   void _internal_set_scale_z(float value);
   public:
 
+  // float min_height = 7;
+  void clear_min_height();
+  float min_height() const;
+  void set_min_height(float value);
+  private:
+  float _internal_min_height() const;
+  void _internal_set_min_height(float value);
+  public:
+
+  // float max_height = 8;
+  void clear_max_height();
+  float max_height() const;
+  void set_max_height(float value);
+  private:
+  float _internal_max_height() const;
+  void _internal_set_max_height(float value);
+  public:
+
   // @@protoc_insertion_point(class_scope:physics.TerrainData)
  private:
   class _Internal;
@@ -1335,6 +1355,8 @@ class TerrainData final :
     float scale_x_;
     float scale_y_;
     float scale_z_;
+    float min_height_;
+    float max_height_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -3688,6 +3710,46 @@ inline void TerrainData::_internal_set_scale_z(float value) {
 inline void TerrainData::set_scale_z(float value) {
   _internal_set_scale_z(value);
   // @@protoc_insertion_point(field_set:physics.TerrainData.scale_z)
+}
+
+// float min_height = 7;
+inline void TerrainData::clear_min_height() {
+  _impl_.min_height_ = 0;
+}
+inline float TerrainData::_internal_min_height() const {
+  return _impl_.min_height_;
+}
+inline float TerrainData::min_height() const {
+  // @@protoc_insertion_point(field_get:physics.TerrainData.min_height)
+  return _internal_min_height();
+}
+inline void TerrainData::_internal_set_min_height(float value) {
+  
+  _impl_.min_height_ = value;
+}
+inline void TerrainData::set_min_height(float value) {
+  _internal_set_min_height(value);
+  // @@protoc_insertion_point(field_set:physics.TerrainData.min_height)
+}
+
+// float max_height = 8;
+inline void TerrainData::clear_max_height() {
+  _impl_.max_height_ = 0;
+}
+inline float TerrainData::_internal_max_height() const {
+  return _impl_.max_height_;
+}
+inline float TerrainData::max_height() const {
+  // @@protoc_insertion_point(field_get:physics.TerrainData.max_height)
+  return _internal_max_height();
+}
+inline void TerrainData::_internal_set_max_height(float value) {
+  
+  _impl_.max_height_ = value;
+}
+inline void TerrainData::set_max_height(float value) {
+  _internal_set_max_height(value);
+  // @@protoc_insertion_point(field_set:physics.TerrainData.max_height)
 }
 
 // -------------------------------------------------------------------

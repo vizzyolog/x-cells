@@ -50,6 +50,13 @@ private:
         float scaleY = terrainData.scale_y();
         float scaleZ = terrainData.scale_z();
         
+        std::cout << "Creating terrain shape with:" << std::endl;
+        std::cout << "Width: " << width << ", Depth: " << depth << std::endl;
+        std::cout << "Scale: (" << scaleX << ", " 
+                  << scaleY << ", " << scaleZ << ")" << std::endl;
+        std::cout << "Height range: " << terrainData.min_height() 
+                  << " to " << terrainData.max_height() << std::endl;
+        
         btHeightfieldTerrainShape* terrainShape = new btHeightfieldTerrainShape(
             width,                          // ширина
             depth,                          // глубина
@@ -147,6 +154,7 @@ private:
             // Для динамических объектов включаем угловое движение
             body->setAngularFactor(btVector3(1.0f, 1.0f, 1.0f));
             body->setDamping(0.0f, 0.1f);  // Линейное и угловое затухание
+            body->setActivationState(DISABLE_DEACTIVATION); // Отключаем деактивацию
         }
 
         dynamicsWorld->addRigidBody(body);
@@ -233,6 +241,7 @@ public:
         dynamicsWorld = new btDiscreteDynamicsWorld(
             dispatcher, overlappingPairCache, solver, collisionConfiguration);
         
+        // Устанавливаем гравитацию по оси Y (как в Three.js)
         dynamicsWorld->setGravity(btVector3(0, -9.81f, 0));
         
         // Запускаем поток симуляции
@@ -353,12 +362,15 @@ void RunServer() {
     std::string server_address("0.0.0.0:50051");
     PhysicsServiceImpl service;
 
+    std::cout << "Bullet Physics Server v1.0.18" << std::endl;
+    std::cout << "==========================" << std::endl;
+    std::cout << "Сервер запущен на " << server_address << std::endl;
+
     ServerBuilder builder;
     builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
 
     std::unique_ptr<Server> server(builder.BuildAndStart());
-    std::cout << "Сервер запущен на " << server_address << std::endl;
 
     // Добавляем обработку сигналов для graceful shutdown
     signal(SIGINT, [](int) {

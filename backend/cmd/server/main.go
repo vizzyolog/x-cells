@@ -18,8 +18,8 @@ import (
 // Константы для террейна
 const (
 	// Физические размеры террейна в мире
-	terrainPhysicalWidth = 1500.0
-	terrainPhysicalDepth = 15000.0
+	terrainPhysicalWidth = 500.0
+	terrainPhysicalDepth = 500.0
 
 	// Размеры сетки террейна
 	terrainGridSize  = 128 // Одинаковая детализация для соответствия примеру three.js
@@ -128,6 +128,8 @@ func createObjectInGo(obj *Object, client pb.PhysicsClient) {
 				ScaleX:    obj.ScaleX,
 				ScaleY:    obj.ScaleY,
 				ScaleZ:    obj.ScaleZ,
+				MinHeight: obj.MinHeight,
+				MaxHeight: obj.MaxHeight,
 			},
 		}
 

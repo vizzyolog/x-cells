@@ -57,6 +57,8 @@ message TerrainData {
   float scale_x = 4;
   float scale_y = 5;
   float scale_z = 6;
+  float min_height = 7;
+  float max_height = 8;
 }
 
 // Сервисные сообщения

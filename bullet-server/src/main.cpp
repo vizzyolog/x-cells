@@ -50,20 +50,45 @@ private:
         float scaleY = terrainData.scale_y();
         float scaleZ = terrainData.scale_z();
         
+        // Получаем или вычисляем min_height и max_height
+        float minHeight = terrainData.min_height();
+        float maxHeight = terrainData.max_height();
+        
+        // Если min и max не заданы (равны 0), вычисляем их из heightmap
+        if (minHeight == 0 && maxHeight == 0 && terrainData.heightmap_size() > 0) {
+            minHeight = terrainData.heightmap(0);
+            maxHeight = terrainData.heightmap(0);
+            
+            // Находим минимум и максимум высоты в данных
+            for (int i = 1; i < terrainData.heightmap_size(); i++) {
+                float height = terrainData.heightmap(i);
+                if (height < minHeight) minHeight = height;
+                if (height > maxHeight) maxHeight = height;
+            }
+            
+            // Добавляем небольшой запас для безопасности
+            minHeight -= 1.0f;
+            maxHeight += 1.0f;
+        } else if (minHeight == 0 && maxHeight == 0) {
+            // Если данных нет, используем разумные значения по умолчанию
+            minHeight = -10.0f;
+            maxHeight = 10.0f;
+        }
+        
         std::cout << "Creating terrain shape with:" << std::endl;
         std::cout << "Width: " << width << ", Depth: " << depth << std::endl;
         std::cout << "Scale: (" << scaleX << ", " 
                   << scaleY << ", " << scaleZ << ")" << std::endl;
-        std::cout << "Height range: " << terrainData.min_height() 
-                  << " to " << terrainData.max_height() << std::endl;
+        std::cout << "Height range: " << minHeight 
+                  << " to " << maxHeight << std::endl;
         
         btHeightfieldTerrainShape* terrainShape = new btHeightfieldTerrainShape(
             width,                          // ширина
             depth,                          // глубина
             terrainData.heightmap().data(), // данные высот
             scaleY,                         // масштаб высоты
-            -10.0f,                         // используем фиксированные значения
-            10.0f,                          // вместо min_height и max_height
+            minHeight,                      // используем вычисленные или заданные значения
+            maxHeight,                      // вместо хардкода
             1,                              // up axis (1 = y)
             PHY_FLOAT,                      // тип данных высот
             false                           // flip quad edges

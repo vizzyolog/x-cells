@@ -40,6 +40,10 @@ private:
     std::thread* simulationThread;
     std::atomic<bool> isRunning;
     const float timeStep = 1.0f/60.0f; // 60 Hz
+    
+    // Переменные для регулярного вывода позиции
+    std::chrono::time_point<std::chrono::steady_clock> lastPositionLogTime;
+    const std::chrono::milliseconds positionLogInterval{1000}; // Интервал 1 секунда
 
     btCollisionShape* createTerrainShape(const physics::TerrainData& terrainData) {
         int width = terrainData.width();
@@ -50,20 +54,45 @@ private:
         float scaleY = terrainData.scale_y();
         float scaleZ = terrainData.scale_z();
         
+        // Получаем или вычисляем min_height и max_height
+        float minHeight = terrainData.min_height();
+        float maxHeight = terrainData.max_height();
+        
+        // Если min и max не заданы (равны 0), вычисляем их из heightmap
+        if (minHeight == 0 && maxHeight == 0 && terrainData.heightmap_size() > 0) {
+            minHeight = terrainData.heightmap(0);
+            maxHeight = terrainData.heightmap(0);
+            
+            // Находим минимум и максимум высоты в данных
+            for (int i = 1; i < terrainData.heightmap_size(); i++) {
+                float height = terrainData.heightmap(i);
+                if (height < minHeight) minHeight = height;
+                if (height > maxHeight) maxHeight = height;
+            }
+            
+            // Добавляем небольшой запас для безопасности
+            minHeight -= 1.0f;
+            maxHeight += 1.0f;
+        } else if (minHeight == 0 && maxHeight == 0) {
+            // Если данных нет, используем разумные значения по умолчанию
+            minHeight = -10.0f;
+            maxHeight = 10.0f;
+        }
+        
         std::cout << "Creating terrain shape with:" << std::endl;
         std::cout << "Width: " << width << ", Depth: " << depth << std::endl;
         std::cout << "Scale: (" << scaleX << ", " 
                   << scaleY << ", " << scaleZ << ")" << std::endl;
-        std::cout << "Height range: " << terrainData.min_height() 
-                  << " to " << terrainData.max_height() << std::endl;
+        std::cout << "Height range: " << minHeight 
+                  << " to " << maxHeight << std::endl;
         
         btHeightfieldTerrainShape* terrainShape = new btHeightfieldTerrainShape(
             width,                          // ширина
             depth,                          // глубина
             terrainData.heightmap().data(), // данные высот
             scaleY,                         // масштаб высоты
-            -10.0f,                         // используем фиксированные значения
-            10.0f,                          // вместо min_height и max_height
+            minHeight,                      // используем вычисленные или заданные значения
+            maxHeight,                      // вместо хардкода
             1,                              // up axis (1 = y)
             PHY_FLOAT,                      // тип данных высот
             false                           // flip quad edges
@@ -208,8 +237,57 @@ private:
         return true;
     }
 
+    // Функция для вывода позиции объекта mainPlayer1
+    void logMainPlayerPosition() {
+        auto now = std::chrono::steady_clock::now();
+        
+        // Проверяем, прошел ли заданный интервал времени
+        if (now - lastPositionLogTime < positionLogInterval) {
+            return;
+        }
+        
+        // Обновляем время последнего вывода
+        lastPositionLogTime = now;
+        
+        // Проверяем наличие объекта mainPlayer1
+        auto it = objects.find("mainPlayer1");
+        if (it == objects.end()) {
+            return;
+        }
+        
+        btRigidBody* body = it->second;
+        btTransform transform;
+        
+        // Получаем текущую трансформацию
+        if (body && body->getMotionState()) {
+            body->getMotionState()->getWorldTransform(transform);
+        } else {
+            transform = body->getWorldTransform();
+        }
+        
+        // Получаем позицию
+        const btVector3& position = transform.getOrigin();
+        
+        // Получаем линейную скорость
+        const btVector3& velocity = body->getLinearVelocity();
+        
+        // Выводим позицию и скорость
+        std::cout << "[C++] Позиция mainPlayer1 в мире Bullet: "
+                  << "X: " << position.x() << ", "
+                  << "Y: " << position.y() << ", "
+                  << "Z: " << position.z() << std::endl;
+                  
+        std::cout << "[C++] Скорость mainPlayer1 в мире Bullet: "
+                  << "VX: " << velocity.x() << ", "
+                  << "VY: " << velocity.y() << ", "
+                  << "VZ: " << velocity.z() << std::endl;
+    }
+
     void simulationLoop() {
         auto lastTime = std::chrono::high_resolution_clock::now();
+        
+        // Инициализируем время последнего вывода позиции
+        lastPositionLogTime = std::chrono::steady_clock::now();
         
         while (isRunning) {
             auto currentTime = std::chrono::high_resolution_clock::now();
@@ -217,6 +295,9 @@ private:
             
             // Обновляем физику
             dynamicsWorld->stepSimulation(deltaTime, 10);
+            
+            // Выводим позицию mainPlayer1
+            logMainPlayerPosition();
             
             // Ждем, чтобы поддерживать стабильные 60 FPS
             auto frameTime = std::chrono::high_resolution_clock::now() - currentTime;

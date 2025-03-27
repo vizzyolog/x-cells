@@ -81,7 +81,11 @@ function createPhysicsBodyForTerrain(data) {
 
     // Устанавливаем масштабирование
     shape.setLocalScaling(new Ammo.btVector3(scaleX, data.scale_y, scaleZ));
+    
+    // Устанавливаем margin для террейна (0.5 вместо 2.0, так как террейн меньше)
     shape.setMargin(0.5);
+    
+    console.log("[Terrain] Установлен margin террейна:", 0.5);
 
     // Создаем трансформацию
     const transform = new Ammo.btTransform();
@@ -274,10 +278,40 @@ function createPhysicsBodyForSphere(data) {
             localInertia
         );
         const body = new window.Ammo.btRigidBody(rbInfo);
+        
+        // Настраиваем физические свойства
+        body.setFriction(0.5);
+        body.setRollingFriction(0.1);
+        body.setRestitution(0.2); // Немного уменьшаем упругость для стабильности
+        body.setDamping(0.01, 0.01); // Небольшое линейное и угловое затухание
+        
+        // Включаем CCD для предотвращения проваливания сквозь террейн
+        // Для меньшего масштаба (100 вместо 15000) эти значения более оптимальны
+        body.setCcdMotionThreshold(radius * 0.8); // Увеличиваем порог для активации CCD
+        body.setCcdSweptSphereRadius(radius * 0.7); // Радиус сферы для CCD
+        
+        // Отключаем деактивацию
+        body.setActivationState(4); // DISABLE_DEACTIVATION
 
         // Добавляем тело в физический мир
         const SPHERE_GROUP = 2;
         localPhysicsWorld.addRigidBody(body, SPHERE_GROUP, -1); // Сферы сталкиваются со всеми
+        
+        console.log("[Sphere] Физическое тело создано:", {
+            radius,
+            mass,
+            position: {
+                x: data.x || 0,
+                y: data.y || 0,
+                z: data.z || 0
+            },
+            ccd: {
+                motionThreshold: radius * 0.8,
+                sweptSphereRadius: radius * 0.7
+            },
+            friction: 0.5,
+            restitution: 0.2
+        });
 
         // Очистка памяти
         window.Ammo.destroy(rbInfo);

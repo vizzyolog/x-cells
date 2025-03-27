@@ -7,7 +7,6 @@ import (
 	pb "x-cells/backend/internal/physics/generated"
 )
 
-
 // Factory интерфейс для создания объектов
 type Factory struct {
 	manager       *Manager

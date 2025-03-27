@@ -1,5 +1,24 @@
 package world
 
+// PhysicsType определяет, где обрабатывается физика объекта
+type PhysicsType string
+
+const (
+	PhysicsTypeAmmo   PhysicsType = "ammo"   // Физика только на клиенте (ammo.js)
+	PhysicsTypeBullet PhysicsType = "bullet" // Физика только на сервере (Bullet Physics)
+	PhysicsTypeBoth   PhysicsType = "both"   // Физика и на клиенте, и на сервере
+)
+
+// WorldObject расширяет базовый Object дополнительными полями для игрового мира
+type WorldObject struct {
+	*Object
+	PhysicsType PhysicsType
+	Mass        float32
+	Color       string
+	MinHeight   float32
+	MaxHeight   float32
+}
+
 type Object struct {
 	ID       string
 	Position Vector3

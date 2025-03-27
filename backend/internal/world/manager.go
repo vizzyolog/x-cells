@@ -19,12 +19,14 @@ func NewManager() *Manager {
 
 // AddObject добавляет базовый объект в карту объектов
 func (m *Manager) AddObject(obj *Object) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.objects[obj.ID] = obj
+	// Для обратной совместимости создаем WorldObject из Object
+	worldObj := &WorldObject{
+		Object: obj,
+	}
+	m.AddWorldObject(worldObj)
 }
 
-// AddWorldObject добавляет игровой объект в карты объектов
+// AddWorldObject добавляет WorldObject в менеджер
 func (m *Manager) AddWorldObject(obj *WorldObject) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -37,6 +39,9 @@ func (m *Manager) GetObject(id string) (*Object, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	obj, exists := m.objects[id]
+	if !exists {
+		return nil, false
+	}
 	return obj, exists
 }
 

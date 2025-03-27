@@ -9,8 +9,13 @@ export let camera;
 // Настройки камеры
 const CAMERA_HEIGHT = 50; // Высота камеры над объектом
 const CAMERA_DISTANCE = 100; // Расстояние камеры от объекта
+<<<<<<< HEAD
+const SMOOTH_FACTOR = 0.00; // Коэффициент интерполяции для плавного движения
+const PLAYER_ID = "mainPlayer3"; // Жестко закрепляем ID игрока
+=======
 const SMOOTH_FACTOR = 0.05; // Коэффициент интерполяции для плавного движения
 const PLAYER_ID = "mainPlayer1"; // Жестко закрепляем ID игрока
+>>>>>>> origin/main
 
 // Сохраняем последнюю известную позицию игрока
 let lastKnownPosition = new THREE.Vector3(0, 0, 0);

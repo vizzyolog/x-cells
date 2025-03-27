@@ -7,25 +7,6 @@ import (
 	pb "x-cells/backend/internal/physics/generated"
 )
 
-// PhysicsType определяет, где обрабатывается физика объекта
-type PhysicsType string
-
-const (
-	PhysicsTypeAmmo   PhysicsType = "ammo"   // Физика только на клиенте (ammo.js)
-	PhysicsTypeBullet PhysicsType = "bullet" // Физика только на сервере (Bullet Physics)
-	PhysicsTypeBoth   PhysicsType = "both"   // Физика и на клиенте, и на сервере
-)
-
-// WorldObject расширяет базовый Object дополнительными полями для игрового мира
-type WorldObject struct {
-	*Object
-	PhysicsType PhysicsType
-	Mass        float32
-	Color       string
-	MinHeight   float32
-	MaxHeight   float32
-}
-
 // Factory интерфейс для создания объектов
 type Factory struct {
 	manager       *Manager
@@ -167,8 +148,9 @@ func NewSphere(id string, position Vector3, radius, mass float32, color string) 
 				},
 			},
 		},
-		Mass:  mass,
-		Color: color,
+		PhysicsType: PhysicsTypeBullet,
+		Mass:        mass,
+		Color:       color,
 	}
 }
 
@@ -190,8 +172,9 @@ func NewBox(id string, position Vector3, width, height, depth, mass float32, col
 				},
 			},
 		},
-		Mass:  mass,
-		Color: color,
+		PhysicsType: PhysicsTypeBullet,
+		Mass:        mass,
+		Color:       color,
 	}
 }
 
@@ -216,7 +199,8 @@ func NewTerrain(id string, position Vector3, heightData []float32, width, depth 
 				},
 			},
 		},
-		MinHeight: minHeight,
-		MaxHeight: maxHeight,
+		PhysicsType: PhysicsTypeBullet,
+		MinHeight:   minHeight,
+		MaxHeight:   maxHeight,
 	}
 }

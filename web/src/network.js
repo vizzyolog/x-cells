@@ -1,29 +1,190 @@
 // network.js
 import { objects, createMeshAndBodyForObject } from './objects';
-import { applyImpulseToSphere, receiveObjectUpdate } from './physics';
+import { applyImpulseToSphere, receiveObjectUpdate, localPhysicsWorld } from './physics';
 
 let ws = null;
+let physicsStarted = false;
+let pendingObjects = [];
+
+// Добавляем переменные для работы с временными метками
+let serverTimeOffset = 0;       // Разница между серверным и клиентским временем
+let serverTimeOffsetSamples = []; // Хранение образцов для вычисления среднего значения
+const MAX_OFFSET_SAMPLES = 10;  // Максимальное количество образцов
+let pingHistory = [];           // История пингов для анализа
+const MAX_PING_SAMPLES = 10;    // Максимальное количество образцов пинга
+
+// Вычисляем текущее серверное время на основе смещения
+function estimateServerTime() {
+    return Date.now() + serverTimeOffset;
+}
+
+// Обновление смещения времени сервера
+function updateServerTimeOffset(serverTime) {
+    const now = Date.now();
+    const currentOffset = serverTime - now;
+    
+    // Добавляем новый образец
+    serverTimeOffsetSamples.push(currentOffset);
+    
+    // Ограничиваем количество образцов
+    if (serverTimeOffsetSamples.length > MAX_OFFSET_SAMPLES) {
+        serverTimeOffsetSamples.shift();
+    }
+    
+    // Используем медиану вместо среднего для устойчивости к выбросам
+    const sortedOffsets = [...serverTimeOffsetSamples].sort((a, b) => a - b);
+    const medianOffset = sortedOffsets[Math.floor(sortedOffsets.length / 2)];
+    
+    serverTimeOffset = medianOffset;
+    
+    // Обновляем отображение времени
+    updateTimeDisplay();
+    
+    console.log(`[Time] Синхронизация времени: смещение = ${medianOffset} мс`);
+}
+
+// Добавляем функцию для обновления отображения пинга на экране
+function updatePingDisplay(pingValue) {
+    const pingDisplay = document.getElementById('ping-display');
+    if (pingDisplay) {
+        pingDisplay.textContent = `Пинг: ${pingValue.toFixed(0)} мс`;
+        
+        // Меняем цвет в зависимости от качества соединения
+        if (pingValue < 50) {
+            pingDisplay.style.backgroundColor = 'rgba(0, 128, 0, 0.5)'; // Зеленый - хороший пинг
+        } else if (pingValue < 100) {
+            pingDisplay.style.backgroundColor = 'rgba(255, 165, 0, 0.5)'; // Оранжевый - средний пинг
+        } else {
+            pingDisplay.style.backgroundColor = 'rgba(255, 0, 0, 0.5)'; // Красный - плохой пинг
+        }
+    }
+}
+
+// Функция для обновления серверного времени на экране
+function updateTimeDisplay() {
+    const serverTimeElem = document.getElementById('server-time');
+    const timeOffsetElem = document.getElementById('time-offset');
+    
+    if (serverTimeElem && timeOffsetElem) {
+        const estServerTime = estimateServerTime();
+        const serverDate = new Date(estServerTime);
+        serverTimeElem.textContent = `Время сервера: ${serverDate.toLocaleTimeString()}`;
+        timeOffsetElem.textContent = `Смещение: ${serverTimeOffset.toFixed(0)} мс`;
+    }
+}
+
+// Создаем интервал для периодического обновления времени
+let timeDisplayInterval;
 
 function handleMessage(data) {      
     try {
+        // Если сообщение содержит временную метку сервера, обновляем смещение
+        if (data.server_time) {
+            updateServerTimeOffset(data.server_time);
+        }
+        
+        // Обрабатываем pong-сообщения для синхронизации времени
+        if (data.type === "pong") {
+            const now = Date.now();
+            const roundTripTime = now - data.client_time;
+            
+            // Добавляем измерение пинга в историю
+            pingHistory.push(roundTripTime);
+            if (pingHistory.length > MAX_PING_SAMPLES) {
+                pingHistory.shift();
+            }
+            
+            // Вычисляем средний пинг
+            const avgPing = pingHistory.reduce((sum, ping) => sum + ping, 0) / pingHistory.length;
+            
+            // Обновляем отображение пинга на экране
+            updatePingDisplay(avgPing);
+            
+            console.log(`[WS] Получен pong, RTT: ${roundTripTime}ms, Средний RTT: ${avgPing.toFixed(2)}ms`);
+            
+            // Обновляем смещение серверного времени с учетом RTT/2 (предполагаем симметричную задержку)
+            updateServerTimeOffset(data.server_time + roundTripTime / 2);
+            
+            return; // Прекращаем обработку этого сообщения
+        }
+        
         if (data.type === "create" && data.id) {
-            console.log("[WS] Обработка create сообщения для id:", data.id);
+            console.log("[WS] Получено сообщение о создании объекта:", data.id, "в координатах:", 
+                { x: data.x || 0, y: data.y || 0, z: data.z || 0 },
+                "время сервера:", data.server_time);
             
             // Создаем объект и добавляем его в список объектов
             const obj = createMeshAndBodyForObject(data);
-            obj.physicsBy = data.physics_by || "both"; // Убедитесь, что свойство устанавливается
-            objects[data.id] = obj;
-
-            console.log(`[WS] Объект ${data.id} создан с physicsBy: ${obj.physicsBy}`); // Логирование установленного свойства
-        } 
-        else if (data.type === "update" && data.id && objects[data.id]) {
-            console.log("[WS] Обработка update сообщения для id:", data.id);
-            const obj = objects[data.id];
+            obj.physicsBy = data.physics_by || "both";
             obj.serverPos = {
                 x: data.x || 0,
                 y: data.y || 0,
                 z: data.z || 0
             };
+            // Добавляем временную метку сервера
+            obj.serverCreationTime = data.server_time;
+            obj.clientCreationTime = Date.now();
+            
+            objects[data.id] = obj;
+            
+            // Запоминаем точное время создания объекта для дальнейшей синхронизации
+            obj.createdAt = Date.now();
+            
+            console.log(`[WS] Объект ${data.id} создан с physicsBy: ${obj.physicsBy}`);
+            
+            // Если физический мир активен, активируем тело
+            if (obj.body && localPhysicsWorld) {
+                if (!physicsStarted) {
+                    // Добавляем в список ожидающих, если физика еще не запущена
+                    pendingObjects.push(data.id);
+                    console.log(`[WS] Объект ${data.id} добавлен в список ожидания - физика еще не активна`);
+                } else {
+                    // Активируем тело сразу
+                    obj.body.activate(true);
+                    // Устанавливаем начальную позицию точно по серверным координатам
+                    if (obj.serverPos) {
+                        const transform = new Ammo.btTransform();
+                        obj.body.getMotionState().getWorldTransform(transform);
+                        transform.setOrigin(new Ammo.btVector3(
+                            obj.serverPos.x, 
+                            obj.serverPos.y, 
+                            obj.serverPos.z
+                        ));
+                        obj.body.getMotionState().setWorldTransform(transform);
+                        obj.mesh.position.set(obj.serverPos.x, obj.serverPos.y, obj.serverPos.z);
+                        
+                        console.log(`[WS] Объект ${data.id} телепортирован в исходные координаты:`, 
+                            { x: obj.serverPos.x, y: obj.serverPos.y, z: obj.serverPos.z });
+                    }
+                }
+            }
+        } 
+        else if (data.type === "update" && data.id && objects[data.id]) {
+            // Обработка обновлений делегирована в receiveObjectUpdate, передаем также временную метку
+            receiveObjectUpdate(data);
+        }
+        else if (data.type === "cmd_ack") {
+            // Обрабатываем подтверждение команды с временной меткой
+            if (data.client_time && data.server_time) {
+                const roundTripTime = Date.now() - data.client_time;
+                
+                // Добавляем измерение пинга в историю
+                pingHistory.push(roundTripTime);
+                if (pingHistory.length > MAX_PING_SAMPLES) {
+                    pingHistory.shift();
+                }
+                
+                // Вычисляем средний пинг
+                const avgPing = pingHistory.reduce((sum, ping) => sum + ping, 0) / pingHistory.length;
+                
+                // Обновляем отображение пинга на экране
+                updatePingDisplay(avgPing);
+                
+                console.log(`[WS] Подтверждение команды: ${data.cmd}, RTT: ${roundTripTime}ms, Средний RTT: ${avgPing.toFixed(2)}ms`);
+                
+                // Обновляем смещение серверного времени с учетом RTT/2 (предполагаем симметричную задержку)
+                updateServerTimeOffset(data.server_time + roundTripTime / 2);
+            }
         }
     } catch (error) {
         console.error("[WS] Ошибка при обработке сообщения:", error);
@@ -35,40 +196,53 @@ function handleKeyDown(e) {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
     let cmd = "";
+    let forceX = 0, forceY = 0, forceZ = 0;
+    
     switch (e.key) {
-        case "ArrowLeft": cmd = "LEFT"; break;
-        case "ArrowRight": cmd = "RIGHT"; break;
-        case "ArrowUp": cmd = "UP"; break;
-        case "ArrowDown": cmd = "DOWN"; break;
-        case " ": cmd = "SPACE"; break;
+        case "ArrowLeft": 
+            cmd = "LEFT"; 
+            forceX = -5;
+            break;
+        case "ArrowRight": 
+            cmd = "RIGHT"; 
+            forceX = 5;
+            break;
+        case "ArrowUp": 
+            cmd = "UP"; 
+            forceZ = -5;
+            break;
+        case "ArrowDown": 
+            cmd = "DOWN"; 
+            forceZ = 5;
+            break;
+        case " ": 
+            cmd = "SPACE"; 
+            forceY = 10;
+            break;
         default: return;
     }
 
     try {
-        console.log(`[WS] Отправка команды: ${cmd}`);
-        ws.send(JSON.stringify({ type: "cmd", cmd }));
+        // Добавляем временную метку клиента к команде
+        const clientTime = Date.now();
+        const commandObj = { 
+            type: "cmd", 
+            cmd,
+            client_time: clientTime // Добавляем временную метку клиента
+        };
         
-        // Применяем импульс локально для всех объектов, включая serverPlayer
+        console.log(`[WS] Отправка команды: ${cmd}, время клиента: ${clientTime}`);
+        ws.send(JSON.stringify(commandObj));
+        
+        // Применяем импульс локально ко всем объектам сфер
         for (let id in objects) {
             const obj = objects[id];
             if (obj && obj.body && obj.mesh && obj.mesh.geometry && 
                 obj.mesh.geometry.type === "SphereGeometry") {
                 console.log(`[WS] Применяем импульс к сфере ${id} с physicsBy=${obj.physicsBy}`);
                 
-                // Создаем импульс
-                const impulse = new window.Ammo.btVector3(0, 0, 0);
-                if (cmd === "LEFT") impulse.setValue(-5, 0, 0);
-                if (cmd === "RIGHT") impulse.setValue(5, 0, 0);
-                if (cmd === "UP") impulse.setValue(0, 0, -5);
-                if (cmd === "DOWN") impulse.setValue(0, 0, 5);
-                if (cmd === "SPACE") impulse.setValue(0, 10, 0);
-                
-                // Активируем тело и применяем импульс
-                obj.body.activate(true);
-                obj.body.applyCentralImpulse(impulse);
-                
-                // Очищаем память
-                window.Ammo.destroy(impulse);
+                // Вызываем функцию применения импульса с обновленными параметрами
+                applyImpulseToSphere(cmd, forceX, forceY, forceZ, objects, clientTime);
             }
         }
     } catch (error) {
@@ -83,13 +257,15 @@ export function initNetwork() {
         
         ws.onopen = () => {
             console.log("[WS] connected");
-            // Отправим тестовое сообщение
-            try {
-                ws.send(JSON.stringify({ type: "ping" }));
-                console.log("[WS] Отправлено тестовое сообщение");
-            } catch (e) {
-                console.error("[WS] Ошибка отправки тестового сообщения:", e);
-            }
+            // Инициализируем индикатор пинга
+            updatePingDisplay(0);
+            // Обновляем информацию о времени
+            updateTimeDisplay();
+            // Запускаем интервал обновления времени
+            if (timeDisplayInterval) clearInterval(timeDisplayInterval);
+            timeDisplayInterval = setInterval(updateTimeDisplay, 1000);
+            // Отправим тестовое сообщение для синхронизации времени
+            sendPing();
         };
 
         ws.onmessage = (evt) => {
@@ -110,15 +286,18 @@ export function initNetwork() {
                 }
                 // Обрабатываем update сообщения через нашу новую функцию
                 else if (data.type === "update" && data.id) {
-                    console.log(`[WS] Получено обновление для ${data.id}:`, {
-                        x: data.x,
-                        y: data.y,
-                        z: data.z
-                    });
                     receiveObjectUpdate(data);
                 } 
                 else if (data.type === "create" && data.id) {
                     // Оставляем существующую логику создания объектов
+                    handleMessage(data);
+                }
+                else if (data.type === "pong") {
+                    // Обрабатываем pong сообщения для синхронизации времени
+                    handleMessage(data);
+                }
+                else {
+                    // Обрабатываем другие типы сообщений, например "cmd_ack"
                     handleMessage(data);
                 }
             } catch (error) {
@@ -141,11 +320,75 @@ export function initNetwork() {
                 reason: event.reason,
                 wasClean: event.wasClean
             });
+            
+            // Останавливаем обновление времени при закрытии соединения
+            if (timeDisplayInterval) {
+                clearInterval(timeDisplayInterval);
+                timeDisplayInterval = null;
+            }
         };
 
         document.addEventListener("keydown", handleKeyDown);
+        
+        // Запускаем периодическую синхронизацию времени
+        setInterval(sendPing, 10000); // Каждые 10 секунд
     } catch (error) {
         console.error("[WS] Ошибка при создании WebSocket:", error);
         console.error("[WS] Стек вызовов:", error.stack);
     }
 }
+
+// Функция для отправки ping-сообщения с временной меткой клиента
+function sendPing() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    
+    const clientTime = Date.now();
+    const pingObj = { 
+        type: "ping", 
+        client_time: clientTime 
+    };
+    
+    try {
+        ws.send(JSON.stringify(pingObj));
+        console.log(`[WS] Отправлен ping для синхронизации времени, время клиента: ${clientTime}`);
+    } catch (error) {
+        console.error("[WS] Ошибка отправки ping:", error);
+    }
+}
+
+// Новая функция для запуска физики с задержкой
+export function startPhysicsSimulation() {
+    physicsStarted = true;
+    
+    // Активируем все ожидающие объекты
+    for (const id of pendingObjects) {
+        const obj = objects[id];
+        if (obj && obj.body) {
+            // Активируем тело
+            obj.body.activate(true);
+            
+            // Телепортируем к последним известным серверным координатам
+            if (obj.serverPos) {
+                const transform = new Ammo.btTransform();
+                obj.body.getMotionState().getWorldTransform(transform);
+                transform.setOrigin(new Ammo.btVector3(
+                    obj.serverPos.x, 
+                    obj.serverPos.y, 
+                    obj.serverPos.z
+                ));
+                obj.body.getMotionState().setWorldTransform(transform);
+                obj.mesh.position.set(obj.serverPos.x, obj.serverPos.y, obj.serverPos.z);
+                
+                console.log(`[Physics] Объект ${id} активирован и телепортирован в координаты:`, 
+                    { x: obj.serverPos.x, y: obj.serverPos.y, z: obj.serverPos.z });
+            }
+        }
+    }
+    
+    // Очищаем список ожидающих
+    pendingObjects = [];
+    console.log("[Physics] Физика активирована, все ожидающие объекты обработаны");
+}
+
+// Экспортируем функции для доступа из других модулей
+export { estimateServerTime };

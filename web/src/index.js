@@ -1,13 +1,15 @@
 // index.js
-import { initScene, scene, camera, renderer, updateShadowCamera } from './scene';
+import { initScene, scene, renderer, updateShadowCamera } from './scene';
 import { initAmmo, stepPhysics, updatePhysicsObjects, applyImpulseToSphere, receiveObjectUpdate, createDiagnosticScene } from './physics';
 import { initNetwork } from './network';
 import { objects } from './objects';
+import { initCamera, camera, updateCamera, logCameraStatus } from './camera';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 // Добавляем флаг для диагностического режима
 let diagnosticMode = false;
+// Счетчик кадров для логирования камеры (каждые 100 кадров)
+let frameCounter = 0;
 
 function animate() {
     requestAnimationFrame(animate);
@@ -16,31 +18,18 @@ function animate() {
     stepPhysics(1 / 60);
     updatePhysicsObjects(objects);
 
-    // Пример обновления камеры: следим за первым найденным шаром
-    let targetObject = null;
-    for (let id in objects) {
-        let obj = objects[id];
-        if (
-            obj &&
-            obj.mesh &&
-            obj.mesh.geometry &&
-            obj.mesh.geometry.type === "SphereGeometry"
-        ) {
-            targetObject = obj;
-            break;
-        }
-    }
-    if (targetObject) {
-        const targetPos = targetObject.mesh.position;
-        const offset = new THREE.Vector3(0, 50, 100);
-        const cameraTarget = targetPos.clone().add(offset);
-
-        camera.position.lerp(cameraTarget, 0.1);
-        camera.lookAt(targetPos);
-    }
+    // Обновляем камеру из нового модуля
+    updateCamera();
     
     // Обновляем положение источника света относительно камеры, как солнце
-    updateShadowCamera();
+    updateShadowCamera(camera);
+
+    // Периодически выводим информацию о камере для отладки
+    frameCounter++;
+    if (frameCounter % 100 === 0) {
+        logCameraStatus();
+        frameCounter = 0;
+    }
 
     renderer.render(scene, camera);
 }
@@ -48,6 +37,10 @@ function animate() {
 async function start() {
     console.log("Start");
     initScene();
+    
+    // Инициализируем камеру из нового модуля
+    initCamera();
+    
     try {
         // Добавляем небольшую задержку перед инициализацией
         await new Promise(resolve => setTimeout(resolve, 500));

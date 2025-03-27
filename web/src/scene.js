@@ -1,22 +1,13 @@
 // scene.js
 import * as THREE from 'three';
 
-export let scene, camera, renderer;
+export let scene, renderer;
 export let directionalLight; // Экспортируем свет для доступности в других модулях
 
 export function initScene() {
     console.log("try to initScene")
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x88ccff); 
-
-    camera = new THREE.PerspectiveCamera(
-        60,
-        window.innerWidth / window.innerHeight,
-        0.2,
-        2000
-    );
-    camera.position.set(0, 50, 100);
-    camera.lookAt(0, 0, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -59,13 +50,13 @@ export function initScene() {
 }
 
 function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
+    // Обработка изменения размера окна только для рендерера
+    // (камера обрабатывается в camera.js)
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 // Добавляем функцию для обновления положения источника света относительно камеры, как солнце
-export function updateShadowCamera() {
+export function updateShadowCamera(camera) {
     if (!directionalLight || !camera) return;
     
     // Получаем направление взгляда камеры

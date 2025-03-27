@@ -40,6 +40,10 @@ private:
     std::thread* simulationThread;
     std::atomic<bool> isRunning;
     const float timeStep = 1.0f/60.0f; // 60 Hz
+    
+    // Переменные для регулярного вывода позиции
+    std::chrono::time_point<std::chrono::steady_clock> lastPositionLogTime;
+    const std::chrono::milliseconds positionLogInterval{1000}; // Интервал 1 секунда
 
     btCollisionShape* createTerrainShape(const physics::TerrainData& terrainData) {
         int width = terrainData.width();
@@ -233,8 +237,57 @@ private:
         return true;
     }
 
+    // Функция для вывода позиции объекта mainPlayer1
+    void logMainPlayerPosition() {
+        auto now = std::chrono::steady_clock::now();
+        
+        // Проверяем, прошел ли заданный интервал времени
+        if (now - lastPositionLogTime < positionLogInterval) {
+            return;
+        }
+        
+        // Обновляем время последнего вывода
+        lastPositionLogTime = now;
+        
+        // Проверяем наличие объекта mainPlayer1
+        auto it = objects.find("mainPlayer1");
+        if (it == objects.end()) {
+            return;
+        }
+        
+        btRigidBody* body = it->second;
+        btTransform transform;
+        
+        // Получаем текущую трансформацию
+        if (body && body->getMotionState()) {
+            body->getMotionState()->getWorldTransform(transform);
+        } else {
+            transform = body->getWorldTransform();
+        }
+        
+        // Получаем позицию
+        const btVector3& position = transform.getOrigin();
+        
+        // Получаем линейную скорость
+        const btVector3& velocity = body->getLinearVelocity();
+        
+        // Выводим позицию и скорость
+        std::cout << "[C++] Позиция mainPlayer1 в мире Bullet: "
+                  << "X: " << position.x() << ", "
+                  << "Y: " << position.y() << ", "
+                  << "Z: " << position.z() << std::endl;
+                  
+        std::cout << "[C++] Скорость mainPlayer1 в мире Bullet: "
+                  << "VX: " << velocity.x() << ", "
+                  << "VY: " << velocity.y() << ", "
+                  << "VZ: " << velocity.z() << std::endl;
+    }
+
     void simulationLoop() {
         auto lastTime = std::chrono::high_resolution_clock::now();
+        
+        // Инициализируем время последнего вывода позиции
+        lastPositionLogTime = std::chrono::steady_clock::now();
         
         while (isRunning) {
             auto currentTime = std::chrono::high_resolution_clock::now();
@@ -242,6 +295,9 @@ private:
             
             // Обновляем физику
             dynamicsWorld->stepSimulation(deltaTime, 10);
+            
+            // Выводим позицию mainPlayer1
+            logMainPlayerPosition();
             
             // Ждем, чтобы поддерживать стабильные 60 FPS
             auto frameTime = std::chrono::high_resolution_clock::now() - currentTime;

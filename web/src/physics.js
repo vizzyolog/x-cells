@@ -2,57 +2,151 @@
 
 import { objects } from './objects';
 import * as THREE from 'three';
+import { startPhysicsSimulation } from './network';
 
 export let localPhysicsWorld = null;
 let ammoPromise = null;
 
 // Настройки для коррекции позиции
-const DEAD_ZONE = 0.5; // Увеличиваем мертвую зону для уменьшения телепортаций
-const CORRECTION_STRENGTH = 6.0; // Уменьшаем силу корректировки для более плавного движения
-const TELEPORT_THRESHOLD = 2.0; // Увеличиваем порог телепортации
+const DEAD_ZONE = 0.1; // Мертвая зона, в пределах которой не применяется коррекция
+const CORRECTION_STRENGTH = 10.0; // Уменьшаем силу корректировки для более плавного движения
+const TELEPORT_THRESHOLD = 3.0; // Порог для начала плавной коррекции
+
+// Добавляем настройки для client-side prediction
+const PREDICTION_SMOOTH_FACTOR = 0.2; // Базовый коэффициент сглаживания
+const PREDICTION_MAX_ERROR = 10.0; // Порог для жесткой телепортации
+const DISTANCE_BASED_SMOOTH_FACTOR = true; // Использовать динамический коэффициент сглаживания
+const NEW_OBJECT_TIMEOUT = 2000; // 2 секунды для "новых" объектов
+
+// История команд для предсказания
+let inputHistory = []; 
+let lastSequenceNumber = 0; // Счетчик последовательности для команд
+let lastServerUpdateTime = 0; // Время последнего серверного обновления
+
+// Система логирования с ограничением частоты
+const LOG_INTERVAL = 5000; // 1 секунда между логами
+const logTimers = {};
+
+// Добавляем маркер времени создания объектов
+const objectCreationTimes = new Map();
+
+// Централизованная функция логирования с ограничением частоты
+function throttledLog(category, message, data = null) {
+    const now = Date.now();
+    
+    // Проверяем, прошло ли достаточно времени с последнего лога для этой категории
+    if (!logTimers[category] || now - logTimers[category] >= LOG_INTERVAL) {
+        // Обновляем таймер для этой категории
+        logTimers[category] = now;
+        
+        // Форматируем и выводим сообщение
+        if (data) {
+            console.log(`[${category}] ${message}`, data);
+        } else {
+            console.log(`[${category}] ${message}`);
+        }
+        
+        return true; // Лог был выведен
+    }
+    
+    return false; // Лог был пропущен из-за ограничения частоты
+}
+
+// Функция для логирования данных о главном игроке
+function logMainPlayerInfo() {
+    const mainPlayer = objects["mainPlayer1"];
+    if (!mainPlayer || !mainPlayer.mesh) {
+        return;
+    }
+    
+    const pos = mainPlayer.mesh.position;
+    
+    // Получаем скорость, если доступна физика
+    let vel = { x: 0, y: 0, z: 0 };
+    if (mainPlayer.body) {
+        const velocity = mainPlayer.body.getLinearVelocity();
+        vel = { 
+            x: velocity.x(),
+            y: velocity.y(),
+            z: velocity.z()
+        };
+        window.Ammo.destroy(velocity);
+    }
+    
+    // Выводим в формате, напоминающем C++ вывод
+    throttledLog("MainPlayer", 
+        `Position: (${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}), ` +
+        `Velocity: (${vel.x.toFixed(2)}, ${vel.y.toFixed(2)}, ${vel.z.toFixed(2)})`
+    );
+}
+
+// Функция для настройки физического мира
+function setupPhysicsWorld() {
+    if (!window.Ammo) {
+        console.error("[Physics] Ammo.js не инициализирован");
+        return;
+    }
+    
+    // Создаем физический мир
+    const collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
+    const dispatcher = new Ammo.btCollisionDispatcher(collisionConfiguration);
+    const broadphase = new Ammo.btDbvtBroadphase();
+    const solver = new Ammo.btSequentialImpulseConstraintSolver();
+    
+    localPhysicsWorld = new Ammo.btDiscreteDynamicsWorld(
+        dispatcher,
+        broadphase,
+        solver,
+        collisionConfiguration
+    );
+    
+    // Устанавливаем гравитацию
+    localPhysicsWorld.setGravity(new Ammo.btVector3(0, -9.81, 0));
+    
+    console.log("[Physics] Физический мир успешно создан");
+}
 
 export async function initAmmo() {
-    if (ammoPromise) {
-        return ammoPromise;
-    }
+    return new Promise((resolve, reject) => {
+        if (typeof Ammo !== 'undefined') {
+            console.log('Ammo.js уже инициализирован');
+            setupPhysicsWorld();
+            resolve();
+            return;
+        }
 
-    ammoPromise = new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = '/ammo/ammo.wasm.js'; // путь от корня веб-сервера
-        script.async = true;
-        
-        script.onload = () => {
-            console.log("[Ammo] Скрипт загружен, инициализация...");
-            Ammo().then((AmmoLib) => {
-                window.Ammo = AmmoLib;
+        console.log('Инициализация Ammo.js...');
+        const ammoScript = document.createElement('script');
+        ammoScript.src = '/ammo/ammo.wasm.js';
+        ammoScript.async = true;
+        ammoScript.onload = () => {
+            console.log('Скрипт Ammo.js загружен, инициализация...');
+            
+            window.Ammo().then((Ammo) => {
+                window.Ammo = Ammo;
+                console.log('Ammo.js инициализирован успешно');
+                setupPhysicsWorld();
                 
-                // Инициализируем физический мир после загрузки Ammo
-                const collisionConfiguration = new AmmoLib.btDefaultCollisionConfiguration();
-                const dispatcher = new AmmoLib.btCollisionDispatcher(collisionConfiguration);
-                const broadphase = new AmmoLib.btDbvtBroadphase();
-                const solver = new AmmoLib.btSequentialImpulseConstraintSolver();
-                localPhysicsWorld = new AmmoLib.btDiscreteDynamicsWorld(
-                    dispatcher,
-                    broadphase,
-                    solver,
-                    collisionConfiguration
-                );
-                localPhysicsWorld.setGravity(new AmmoLib.btVector3(0, -9.81, 0));
-                           
-                console.log("[Ammo] Инициализация успешна");
-                resolve(AmmoLib);
-            }).catch(reject);
+                // Запускаем физическую симуляцию с задержкой в 1 секунду,
+                // чтобы гарантировать получение координат от сервера
+                console.log("[Physics] Задерживаем запуск физики на 1 секунду для получения серверных координат...");
+                setTimeout(() => {
+                    startPhysicsSimulation();
+                }, 1000);
+                
+                resolve();
+            }).catch(err => {
+                console.error('Ошибка инициализации Ammo.js:', err);
+                reject(err);
+            });
+        };
+        ammoScript.onerror = (err) => {
+            console.error('Ошибка загрузки Ammo.js:', err);
+            reject(err);
         };
         
-        script.onerror = (error) => {
-            console.error("[Ammo] Ошибка загрузки скрипта:", error);
-            reject(error);
-        };
-
-        document.body.appendChild(script);
+        document.body.appendChild(ammoScript);
     });
-
-    return ammoPromise;
 }
 
 export function stepPhysics(deltaTime) {
@@ -69,26 +163,13 @@ export function stepPhysics(deltaTime) {
     const fixedStep = 1/120; // 120 Гц внутренние шаги
     const maxSubSteps = Math.ceil(effectiveStep / fixedStep);
     
-    // Визуализируем расхождения между двигателями физики
-    visualizeDivergence(objects);
-    
     // Выполняем шаг симуляции с заданными параметрами
     localPhysicsWorld.stepSimulation(effectiveStep, maxSubSteps, fixedStep);
     
-    // Низкочастотный лог для отладки
-    const now = Date.now();
-    if (!window.lastPhysicsStepLog || now - window.lastPhysicsStepLog > 5000) {
-        console.log(`[Physics] Шаг симуляции:`, {
-            deltaTime: deltaTime.toFixed(5),
-            effectiveStep: effectiveStep.toFixed(5),
-            fixedStep: fixedStep,
-            maxSubSteps,
-            realSubSteps: Math.ceil(effectiveStep / fixedStep)
-        });
-        window.lastPhysicsStepLog = now;
-    }
+    // Выводим информацию о главном игроке
+    logMainPlayerInfo();
     
-    // Обновляем физические объекты
+    // Обновляем физические объекты (без лишних логов)
     updatePhysicsObjects(objects);
 }
 
@@ -102,6 +183,13 @@ export function updatePhysicsObjects(objects) {
     for (let id in objects) {
         const obj = objects[id];
         if (!obj.mesh) continue;
+        
+        // Проверяем, новый ли это объект
+        const isNewObject = objectCreationTimes.has(id) && 
+                          (Date.now() - objectCreationTimes.get(id) < NEW_OBJECT_TIMEOUT);
+        
+        // Пропускаем обработку террейна (он статичен)
+        if (obj.object_type === "terrain") continue;
         
         switch (obj.physicsBy) {
             case "ammo":
@@ -189,20 +277,35 @@ export function updatePhysicsObjects(objects) {
                     
                     // Логируем только при значительных расхождениях
                     if (distance > DEAD_ZONE || isMovingFast) {
-                        console.log(`[Physics] Объект ${id}:`, {
-                            расстояние: distance.toFixed(3),
-                            скорость: Math.sqrt(speedSq).toFixed(3),
-                            быстро: isMovingFast,
-                            клиент: {x: currentX.toFixed(2), y: currentY.toFixed(2), z: currentZ.toFixed(2)},
-                            сервер: {x: obj.serverPos.x.toFixed(2), y: obj.serverPos.y.toFixed(2), z: obj.serverPos.z.toFixed(2)}
-                        });
+                        throttledLog("Physics", 
+                            `Объект ${id}: Расстояние: ${distance.toFixed(3)}, Скорость: ${Math.sqrt(speedSq).toFixed(3)}, Быстро: ${isMovingFast}, Клиент: {x: ${currentX.toFixed(2)}, y: ${currentY.toFixed(2)}, z: ${currentZ.toFixed(2)}}, Сервер: {x: ${obj.serverPos.x.toFixed(2)}, y: ${obj.serverPos.y.toFixed(2)}, z: ${obj.serverPos.z.toFixed(2)}}`
+                        );
                     }
                     
-                    // Применяем гибридный подход
+                    // Применяем client-side prediction
                     if (distance > DEAD_ZONE) {
-                        if (distance > TELEPORT_THRESHOLD || (isMovingFast && distance > TELEPORT_THRESHOLD * 0.5)) {
-                            // Телепортация для больших расхождений или при быстром движении
-                            console.log(`[Physics] Телепортация объекта ${id}, расстояние: ${distance.toFixed(2)}`);
+                        // Определяем коэффициент сглаживания на основе состояния объекта
+                        let smoothFactor = PREDICTION_SMOOTH_FACTOR;
+                        
+                        // Для новых объектов используем более жесткую коррекцию
+                        if (isNewObject) {
+                            smoothFactor = 0.8; // 80% серверной позиции
+                            throttledLog("Physics", 
+                                `Новый объект ${id}, применяем жесткую коррекцию (${smoothFactor})`
+                            );
+                        } else if (DISTANCE_BASED_SMOOTH_FACTOR) {
+                            // Чем больше расхождение, тем больше коэффициент
+                            smoothFactor = Math.min(distance / 20.0, 0.5); // Максимум 0.5
+                        }
+                        
+                        // Для больших расхождений или новых объектов применяем телепортацию
+                        if (distance > PREDICTION_MAX_ERROR || isNewObject && distance > 5.0) {
+                            // При экстремальных расхождениях - телепортация
+                            throttledLog("Physics", 
+                                `Экстремальное расхождение объекта ${id}, расстояние: ${distance.toFixed(2)}, новый: ${isNewObject}`
+                            );
+                            
+                            // Телепортируем объект
                             transform.setOrigin(new window.Ammo.btVector3(
                                 obj.serverPos.x,
                                 obj.serverPos.y,
@@ -211,13 +314,23 @@ export function updatePhysicsObjects(objects) {
                             obj.body.getMotionState().setWorldTransform(transform);
                             
                             // Сбрасываем скорость только при существенных расхождениях
-                            if (distance > TELEPORT_THRESHOLD * 1.5) {
+                            if (distance > PREDICTION_MAX_ERROR * 1.5) {
+                                // При очень больших расхождениях полностью сбрасываем скорость
                                 const zero = new window.Ammo.btVector3(0, 0, 0);
                                 obj.body.setLinearVelocity(zero);
                                 obj.body.setAngularVelocity(zero);
                                 window.Ammo.destroy(zero);
+                            } else if (obj.serverVelocity) {
+                                // Если есть рассчитанная серверная скорость, применяем её
+                                const serverVel = new window.Ammo.btVector3(
+                                    obj.serverVelocity.x,
+                                    obj.serverVelocity.y,
+                                    obj.serverVelocity.z
+                                );
+                                obj.body.setLinearVelocity(serverVel);
+                                window.Ammo.destroy(serverVel);
                             } else {
-                                // Иначе уменьшаем скорость, но не обнуляем полностью
+                                // Иначе уменьшаем текущую скорость
                                 const dampedVelocity = new window.Ammo.btVector3(
                                     velocity.x() * 0.5,
                                     velocity.y() * 0.5,
@@ -235,8 +348,31 @@ export function updatePhysicsObjects(objects) {
                             const pz = updatedTransform.getOrigin().z();
                             obj.mesh.position.set(px, py, pz);
                             window.Ammo.destroy(updatedTransform);
+                        } else if (distance > TELEPORT_THRESHOLD) {
+                            // Мягкая коррекция для средних расхождений
+                            // Смешиваем текущую позицию с серверной
+                            const correctionX = obj.serverPos.x * smoothFactor + currentX * (1 - smoothFactor);
+                            const correctionY = obj.serverPos.y * smoothFactor + currentY * (1 - smoothFactor);
+                            const correctionZ = obj.serverPos.z * smoothFactor + currentZ * (1 - smoothFactor);
+                            
+                            transform.setOrigin(new window.Ammo.btVector3(correctionX, correctionY, correctionZ));
+                            obj.body.getMotionState().setWorldTransform(transform);
+                            
+                            // Если мы перемещаем объект, обновляем mesh непосредственно для большей плавности
+                            obj.mesh.position.set(correctionX, correctionY, correctionZ);
+                            
+                            // Обновляем скорость, чтобы она учитывала направление серверного движения
+                            if (obj.serverVelocity) {
+                                const blendedVelocity = new window.Ammo.btVector3(
+                                    velocity.x() * (1 - smoothFactor) + obj.serverVelocity.x * smoothFactor,
+                                    velocity.y() * (1 - smoothFactor) + obj.serverVelocity.y * smoothFactor,
+                                    velocity.z() * (1 - smoothFactor) + obj.serverVelocity.z * smoothFactor
+                                );
+                                obj.body.setLinearVelocity(blendedVelocity);
+                                window.Ammo.destroy(blendedVelocity);
+                            }
                         } else {
-                            // Корректирующая сила для средних расхождений
+                            // Для небольших расхождений - корректирующая сила
                             // Более плавная коррекция для медленно движущихся объектов
                             const adaptiveStrength = isMovingFast ? CORRECTION_STRENGTH : CORRECTION_STRENGTH * 0.7;
                             const magnitude = distance * adaptiveStrength;
@@ -259,18 +395,6 @@ export function updatePhysicsObjects(objects) {
                             obj.body.applyCentralForce(force);
                             
                             window.Ammo.destroy(force);
-                            
-                            // Для очень медленной коррекции также немного двигаем меш напрямую
-                            if (!isMovingFast && distance < TELEPORT_THRESHOLD * 0.3) {
-                                obj.mesh.position.lerp(
-                                    new THREE.Vector3(
-                                        obj.serverPos.x, 
-                                        correctY ? obj.serverPos.y : obj.mesh.position.y, 
-                                        obj.serverPos.z
-                                    ), 
-                                    0.1
-                                );
-                            }
                         }
                     }
                     
@@ -280,7 +404,7 @@ export function updatePhysicsObjects(objects) {
                 break;
                 
             default:
-                console.warn(`[Physics] Неизвестный тип physicsBy для объекта ${id}: ${obj.physicsBy}`);
+                throttledLog("Error", `Неизвестный тип physicsBy для объекта ${id}: ${obj.physicsBy}`);
                 break;
         }
     }
@@ -308,7 +432,7 @@ export function updatePhysicsObjects(objects) {
         
         // Выводим статистику только примерно раз в секунду (чтобы не спамить консоль)
         if (Math.random() < 0.016) { // примерно при 60 FPS будет выводить раз в секунду
-            console.log("[Physics] Диагностика расхождений:", {
+            throttledLog("Physics", "Диагностика расхождений:", {
                 "Основная сфера -> Ammo-тень": mainToAmmoDistance.toFixed(3),
                 "Основная сфера -> Bullet-тень": mainToBulletDistance.toFixed(3),
                 "Серверная позиция -> Основная сфера": serverToMainDistance.toFixed(3)
@@ -355,25 +479,25 @@ function visualizeDivergence(objects) {
     
     // Ограничим вывод лога, чтобы не спамить консоль (примерно раз в секунду)
     if (!window.lastDivergenceLog || Date.now() - window.lastDivergenceLog > 1000) {
-        console.log("[Physics] Расхождения между движками:");
-        console.log(`  Основной шар (${mainSphere.physicsBy}): x=${mainPos.x.toFixed(2)}, y=${mainPos.y.toFixed(2)}, z=${mainPos.z.toFixed(2)}`);
-        console.log(`  Тень Ammo: x=${ammoPos.x.toFixed(2)}, y=${ammoPos.y.toFixed(2)}, z=${ammoPos.z.toFixed(2)}`);
-        console.log(`  Тень Bullet: x=${bulletPos.x.toFixed(2)}, y=${bulletPos.y.toFixed(2)}, z=${bulletPos.z.toFixed(2)}`);
-        console.log(`  Расстояние Основной-Ammo: ${distMainToAmmo.toFixed(3)}`);
-        console.log(`  Расстояние Основной-Bullet: ${distMainToBullet.toFixed(3)}`);
-        console.log(`  Расстояние Ammo-Bullet: ${distAmmoBullet.toFixed(3)}`);
+        throttledLog("Physics", "Расхождения между движками:");
+        throttledLog("Physics", `  Основной шар (${mainSphere.physicsBy}): x=${mainPos.x.toFixed(2)}, y=${mainPos.y.toFixed(2)}, z=${mainPos.z.toFixed(2)}`);
+        throttledLog("Physics", `  Тень Ammo: x=${ammoPos.x.toFixed(2)}, y=${ammoPos.y.toFixed(2)}, z=${ammoPos.z.toFixed(2)}`);
+        throttledLog("Physics", `  Тень Bullet: x=${bulletPos.x.toFixed(2)}, y=${bulletPos.y.toFixed(2)}, z=${bulletPos.z.toFixed(2)}`);
+        throttledLog("Physics", `  Расстояние Основной-Ammo: ${distMainToAmmo.toFixed(3)}`);
+        throttledLog("Physics", `  Расстояние Основной-Bullet: ${distMainToBullet.toFixed(3)}`);
+        throttledLog("Physics", `  Расстояние Ammo-Bullet: ${distAmmoBullet.toFixed(3)}`);
         
         // Визуальное отображение расхождений
         if (distMainToAmmo > DEAD_ZONE) {
-            console.warn(`  [!] Основной шар расходится с Ammo на ${distMainToAmmo.toFixed(3)} (> ${DEAD_ZONE})`);
+            throttledLog("Warning", `  [!] Основной шар расходится с Ammo на ${distMainToAmmo.toFixed(3)} (> ${DEAD_ZONE})`);
         }
         
         if (distMainToBullet > DEAD_ZONE) {
-            console.warn(`  [!] Основной шар расходится с Bullet на ${distMainToBullet.toFixed(3)} (> ${DEAD_ZONE})`);
+            throttledLog("Warning", `  [!] Основной шар расходится с Bullet на ${distMainToBullet.toFixed(3)} (> ${DEAD_ZONE})`);
         }
         
         if (distAmmoBullet > DEAD_ZONE) {
-            console.warn(`  [!] Ammo расходится с Bullet на ${distAmmoBullet.toFixed(3)} (> ${DEAD_ZONE})`);
+            throttledLog("Warning", `  [!] Ammo расходится с Bullet на ${distAmmoBullet.toFixed(3)} (> ${DEAD_ZONE})`);
         }
         
         // Обновляем время последнего лога
@@ -463,95 +587,98 @@ function updateLine(geometry, startPos, endPos) {
     geometry.attributes.position.needsUpdate = true;
 }
 
-export function applyImpulseToSphere(cmd, objects) {
-    console.log("[Debug] Переданные объекты в applyImpulseToSphere:", objects);
+// Функция для применения импульса с сохранением в истории
+export function applyImpulseToSphere(cmd, forceX, forceY, forceZ, objectsList, clientTime) {
+    console.log("[Debug] Переданные объекты в applyImpulseToSphere:", objectsList);
     // Проверяем, что objects передан и является объектом
-    if (!objects || typeof objects !== 'object') {
-        console.warn("[Physics] Некорректные объекты переданы в applyImpulseToSphere");
+    if (!objectsList || typeof objectsList !== 'object') {
+        console.error("[Physics] Ошибка в applyImpulseToSphere: objects не определены или некорректны");
         return;
     }
 
-    // Базовые значения импульсов
-    const baseImpulseHorizontal = 5.0;
-    const baseImpulseVertical = 10.0;
-
-    // Проходим по всем объектам и применяем импульс только к шарам с physicsBy: "ammo"
-    for (let id in objects) {
-        const obj = objects[id];
-        if (
-            obj &&
-            obj.mesh &&
-            obj.mesh.geometry &&
-            obj.mesh.geometry.type === "SphereGeometry" &&
-            obj.body &&
-            obj.physicsBy === "ammo"  // Только для локально управляемых объектов
-        ) {
-            obj.body.activate(true);
-
-            // Получаем текущую скорость
-            const velocity = obj.body.getLinearVelocity();
-            const speedSq = velocity.x() * velocity.x() + velocity.y() * velocity.y() + velocity.z() * velocity.z();
-            const currentSpeed = Math.sqrt(speedSq);
-            
-            // Адаптивное значение импульса в зависимости от текущей скорости
-            // Чем выше скорость, тем меньше дополнительный импульс
-            const speedFactor = Math.max(0.5, 1.0 - currentSpeed / 20.0);
-            
-            // Проверка, находится ли объект на земле для прыжка
-            const transform = new window.Ammo.btTransform();
-            obj.body.getMotionState().getWorldTransform(transform);
-            const pos = transform.getOrigin();
-            const isGrounded = Math.abs(velocity.y()) < 0.2 && pos.y() < 5; // Примерное определение "на земле"
-            
-            // Создаем импульс с учетом адаптивности и состояния
-            const impulse = new window.Ammo.btVector3(0, 0, 0);
-            
-            if (cmd === "LEFT") impulse.setValue(-baseImpulseHorizontal * speedFactor, 0, 0);
-            if (cmd === "RIGHT") impulse.setValue(baseImpulseHorizontal * speedFactor, 0, 0);
-            if (cmd === "UP") impulse.setValue(0, 0, -baseImpulseHorizontal * speedFactor);
-            if (cmd === "DOWN") impulse.setValue(0, 0, baseImpulseHorizontal * speedFactor);
-            
-            // Для прыжка проверяем, находится ли объект на земле
-            if (cmd === "SPACE" && isGrounded) {
-                impulse.setValue(0, baseImpulseVertical, 0);
-            } else if (cmd === "SPACE") {
-                // Если в воздухе, даем меньший импульс для контроля
-                impulse.setValue(0, baseImpulseVertical * 0.3, 0);
-            }
-            
-            // Применяем импульс
-            obj.body.applyCentralImpulse(impulse);
-            
-            // Добавляем диагностику для каждого шара
-            console.log("[Physics] Применен импульс к шару:", {
-                id: id,
-                команда: cmd,
-                скорость: currentSpeed.toFixed(2),
-                множитель: speedFactor.toFixed(2),
-                наЗемле: isGrounded,
-                позиция: {
-                    x: pos.x().toFixed(2),
-                    y: pos.y().toFixed(2),
-                    z: pos.z().toFixed(2)
-                },
-                импульс: {
-                    x: impulse.x().toFixed(2),
-                    y: impulse.y().toFixed(2),
-                    z: impulse.z().toFixed(2)
-                }
-            });
-            
-            // Очистка памяти
-            window.Ammo.destroy(impulse);
-            window.Ammo.destroy(velocity);
-            window.Ammo.destroy(transform);
+    for (let id in objectsList) {
+        const obj = objectsList[id];
+        
+        // Пропускаем объекты, которые не являются сферами или не имеют физики
+        if (!obj || !obj.body || !obj.mesh || !obj.mesh.geometry || 
+            obj.mesh.geometry.type !== "SphereGeometry") {
+            continue;
         }
+        
+        // Активируем тело
+        obj.body.activate(true);
+        
+        // Применяем импульс в зависимости от команды и текущей скорости
+        // Получаем текущую скорость для сглаживания усилия
+        const velocity = obj.body.getLinearVelocity();
+        const vx = velocity.x();
+        const vy = velocity.y();
+        const vz = velocity.z();
+        const currentSpeed = Math.sqrt(vx*vx + vy*vy + vz*vz);
+        
+        // Вычисляем множитель скорости - чем быстрее движется объект,
+        // тем меньше дополнительный импульс, чтобы избежать чрезмерных скоростей
+        const speedFactor = Math.max(0.5, 1.0 - currentSpeed * 0.05);
+        
+        // Проверяем, находится ли объект на земле (простая проверка по Y-скорости)
+        const isGrounded = Math.abs(vy) < 0.1;
+        
+        // Базовые значения импульсов
+        const baseImpulseHorizontal = 5.0;
+        const baseImpulseVertical = 10.0;
+        
+        // Создаем импульс на основе переданных значений
+        const impulse = new window.Ammo.btVector3(
+            forceX * speedFactor, 
+            forceY * (isGrounded ? 1.0 : 0.3) * speedFactor, 
+            forceZ * speedFactor
+        );
+        
+        // Активируем тело и применяем импульс
+        obj.body.activate(true);
+        obj.body.applyCentralImpulse(impulse);
+        
+        // Очищаем память
+        window.Ammo.destroy(impulse);
+        window.Ammo.destroy(velocity);
+        
+        console.log("[Physics] Применен импульс к шару:", {
+            id: id,
+            команда: cmd,
+            скорость: currentSpeed.toFixed(2),
+            множитель: speedFactor.toFixed(2),
+            импульс: { x: forceX, y: forceY, z: forceZ },
+            время_клиента: clientTime
+        });
+        
+        // Сохраняем информацию о последней примененной команде
+        obj.lastImpulse = {
+            cmd: cmd,
+            force: { x: forceX, y: forceY, z: forceZ },
+            clientTime: clientTime
+        };
     }
     
-    // Синхронизируем диагностические сферы если команда нажата (только при наличии команды)
-    if (cmd && objects["mainPlayer1"] && objects["ammo_shadow"]) {
-        syncDiagnosticSpheres(objects);
+    // Синхронизируем диагностические сферы если команда нажата
+    if (cmd && objectsList["mainPlayer1"] && objectsList["ammo_shadow"]) {
+        syncDiagnosticSpheres(objectsList);
     }
+    
+    // Добавляем команду в историю для client-side prediction
+    const sequenceNumber = ++lastSequenceNumber;
+    const timestamp = Date.now();
+    
+    inputHistory.push({
+        sequenceNumber,
+        timestamp,
+        clientTime,
+        cmd,
+        impulse: { x: forceX, y: forceY, z: forceZ }
+    });
+    
+    // Очищаем историю старше 2 секунд
+    const twoSecondsAgo = timestamp - 2000;
+    inputHistory = inputHistory.filter(entry => entry.timestamp > twoSecondsAgo);
 }
 
 // Синхронизация диагностических сфер с основной сферой
@@ -605,27 +732,119 @@ function syncDiagnosticSpheres(objects) {
 }
 
 export function receiveObjectUpdate(data) {
-    // Извлекаем id из данных обновления
     const id = data.id;
     
-    // Проверяем, существует ли объект
     const obj = objects[id];
     if (!obj) {
-        console.warn(`[Physics] Получено обновление для несуществующего объекта: ${id}`);
+        throttledLog("Error", `Получено обновление для несуществующего объекта: ${id}`);
         return;
     }
     
-    console.log(`[Physics] Обработка обновления для объекта ${id}, тип: ${obj.physicsBy}`);
+    // Проверяем, является ли объект новым
+    if (!objectCreationTimes.has(id)) {
+        objectCreationTimes.set(id, Date.now());
+        console.log(`[Physics] Установлен таймер для нового объекта ${id}`);
+    }
+    
+    // Получаем временную метку сервера
+    const serverTime = data.server_time;
+    if (!serverTime) {
+        throttledLog("Warning", `Получено обновление без временной метки сервера для ${id}`);
+    }
+    
+    // Обновляем время последнего обновления
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastServerUpdateTime;
+    lastServerUpdateTime = now;
     
     // Обновляем серверную позицию
+    const oldServerPos = obj.serverPos ? { ...obj.serverPos } : null;
     obj.serverPos = {
-        x: data.x !== undefined ? data.x : obj.mesh.position.x,
-        y: data.y !== undefined ? data.y : obj.mesh.position.y,
-        z: data.z !== undefined ? data.z : obj.mesh.position.z
+        x: data.x || 0,
+        y: data.y || 0,
+        z: data.z || 0
     };
     
-    // На этом этапе только сохраняем позицию, не применяем коррекцию
-    // Коррекция будет применяться в updatePhysicsObjects
+    // Сохраняем временную метку сервера для этого обновления
+    obj.lastServerUpdate = {
+        time: serverTime,
+        clientTime: now,
+        position: { ...obj.serverPos }
+    };
+    
+    // Если это первое обновление, просто принимаем серверную позицию
+    if (!oldServerPos) {
+        return;
+    }
+    
+    // Рассчитываем скорость сервера, учитывая временные метки
+    if (obj.previousServerUpdate && serverTime && obj.previousServerUpdate.time) {
+        const timeDelta = (serverTime - obj.previousServerUpdate.time) / 1000; // в секундах
+        
+        if (timeDelta > 0) {
+            obj.serverVelocity = {
+                x: (obj.serverPos.x - obj.previousServerUpdate.position.x) / timeDelta,
+                y: (obj.serverPos.y - obj.previousServerUpdate.position.y) / timeDelta,
+                z: (obj.serverPos.z - obj.previousServerUpdate.position.z) / timeDelta
+            };
+            
+            // Логируем информацию о скорости только для главного игрока
+            if (id === "mainPlayer1") {
+                throttledLog("Physics", 
+                    `Вычислена скорость сервера для ${id}: ` +
+                    `vx=${obj.serverVelocity.x.toFixed(2)}, ` +
+                    `vy=${obj.serverVelocity.y.toFixed(2)}, ` +
+                    `vz=${obj.serverVelocity.z.toFixed(2)}, ` +
+                    `delta=${timeDelta.toFixed(3)}с`
+                );
+            }
+        }
+    }
+    
+    // Сохраняем текущее обновление как предыдущее для следующего расчета
+    obj.previousServerUpdate = {
+        time: serverTime,
+        clientTime: now,
+        position: { ...obj.serverPos }
+    };
+    
+    // Анализируем расхождение между прогнозируемым и фактическим состоянием
+    if (obj.lastImpulse && serverTime) {
+        // Вычисляем, сколько времени прошло с момента применения последнего импульса
+        const timeSinceLastImpulse = now - obj.lastImpulse.clientTime;
+        
+        // Проверяем, учтен ли наш последний импульс в обновлении с сервера
+        // (обычно требуется RTT для получения реакции сервера)
+        if (timeSinceLastImpulse > 50) { // Предполагаем минимальную задержку сети
+            // Теперь мы можем сравнить наше предсказанное положение с фактическим
+            // и скорректировать нашу модель предсказания
+            
+            // Текущее состояние объекта в клиентской физике
+            const transform = new window.Ammo.btTransform();
+            if (obj.body) {
+                obj.body.getMotionState().getWorldTransform(transform);
+                const currentX = transform.getOrigin().x();
+                const currentY = transform.getOrigin().y();
+                const currentZ = transform.getOrigin().z();
+                
+                // Вычисляем расхождение между нашим предсказанием и обновлением сервера
+                const dx = obj.serverPos.x - currentX;
+                const dy = obj.serverPos.y - currentY;
+                const dz = obj.serverPos.z - currentZ;
+                const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                
+                if (id === "mainPlayer1" && distance > 1.0) {
+                    throttledLog("Physics", 
+                        `Анализ расхождения для ${id}: расстояние=${distance.toFixed(2)}, ` +
+                        `время с последнего импульса=${timeSinceLastImpulse}мс, ` +
+                        `команда=${obj.lastImpulse.cmd}`
+                    );
+                }
+                
+                window.Ammo.destroy(transform);
+            }
+        }
+    }
 }
 
 // Новая функция для создания диагностических сфер

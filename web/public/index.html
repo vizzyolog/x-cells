@@ -24,10 +24,49 @@
             width: 100%;
             height: 100%;
         }
+        
+        /* Стили для индикатора пинга */
+        #ping-display {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 1000;
+        }
+        
+        /* Стили для контейнера с информацией о сети */
+        #network-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
     </style>
     <!-- Используем WASM версию -->
     <script src="https://cdn.jsdelivr.net/npm/ammo.js@latest/builds/ammo.wasm.js"></script>
 </head>
 <body>
+    <!-- Индикатор пинга -->
+    <div id="ping-display">Пинг: -- мс</div>
+    
+    <!-- Расширенная информация о сети -->
+    <div id="network-info">
+        <div id="server-time">Время сервера: --</div>
+        <div id="time-offset">Смещение: -- мс</div>
+    </div>
 </body>
 </html>

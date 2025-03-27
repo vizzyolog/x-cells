@@ -128,25 +128,8 @@ func (f *Factory) CreateObjectInBullet(obj *WorldObject) error {
 	return nil
 }
 
-// CreateObjectBoth создает объект как в игровом мире, так и в Bullet Physics
-func (f *Factory) CreateObjectBoth(obj *WorldObject) error {
-	// Устанавливаем тип физики
-	obj.PhysicsType = PhysicsTypeBoth
-
-	// Создаем объект в игровом мире
-	f.CreateObjectInGameWorld(obj)
-
-	// Создаем объект в Bullet
-	err := f.CreateObjectInBullet(obj)
-
-	return err
-}
-
 // CreateObjectInAmmo создает объект только в игровом мире (физика на клиенте)
 func (f *Factory) CreateObjectInAmmo(obj *WorldObject) error {
-	// Устанавливаем тип физики
-	obj.PhysicsType = PhysicsTypeAmmo
-
 	// Создаем объект только в игровом мире, без создания в Bullet
 	f.CreateObjectInGameWorld(obj)
 
@@ -155,11 +138,8 @@ func (f *Factory) CreateObjectInAmmo(obj *WorldObject) error {
 	return nil
 }
 
-// CreateObjectOnlyBullet создает объект в игровом мире и в Bullet (физика на сервере)
-func (f *Factory) CreateObjectOnlyBullet(obj *WorldObject) error {
-	// Устанавливаем тип физики
-	obj.PhysicsType = PhysicsTypeBullet
-
+// CreateObjectBullet создает объект в игровом мире и в Bullet (физика на сервере)
+func (f *Factory) CreateObjectBullet(obj *WorldObject) error {
 	// Создаем объект в игровом мире
 	f.CreateObjectInGameWorld(obj)
 

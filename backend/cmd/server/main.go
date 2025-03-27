@@ -169,39 +169,117 @@ func wsHandler(w http.ResponseWriter, r *http.Request,
 				continue
 			}
 
-			// Выбираем ID объекта, к которому применяем импульс
+			// Получаем ID объекта, к которому применяем импульс
 			objectId := input.PlayerId
 			if objectId == "" {
 				// Если ID не указан, используем объект по умолчанию
-				objectId = "sphere_both_1"
+				objectId = "mainPlayer1"
 			}
 
-			// Применяем импульс к указанному объекту
-			_, err := physicsClient.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
-				Id:      objectId,
-				Impulse: &impulse,
-			})
+			// Проверяем, нужно ли применить импульс ко всем объектам
+			if objectId == "ALL" {
+				// Получаем все объекты из менеджера мира
+				worldObjects := worldManager.GetAllWorldObjects()
 
-			if err != nil {
-				log.Printf("[Go] Ошибка применения импульса к %s: %v", objectId, err)
-				continue
-			}
+				// Счетчик успешно обработанных объектов
+				successCount := 0
 
-			log.Printf("[Go] Применен импульс к %s: (%f, %f, %f)",
-				objectId, impulse.X, impulse.Y, impulse.Z)
+				// Применяем импульс ко всем объектам, кроме типа ammo
+				for _, obj := range worldObjects {
+					// Пропускаем объекты, которые обрабатываются только на клиенте
+					if obj.PhysicsType == world.PhysicsTypeAmmo {
+						continue
+					}
 
-			// Отправляем подтверждение обработки команды с временными метками
-			serverTime := time.Now().UnixNano() / int64(time.Millisecond)
-			ackMsg := map[string]interface{}{
-				"type":        "cmd_ack",
-				"cmd":         input.Cmd,
-				"client_time": input.ClientTime,
-				"server_time": serverTime,
-				"player_id":   objectId,
-			}
+					// Применяем импульс к объекту через Bullet Physics
+					_, err := physicsClient.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
+						Id:      obj.ID,
+						Impulse: &impulse,
+					})
 
-			if err := wsWriter.WriteJSON(ackMsg); err != nil {
-				log.Printf("[Go] Ошибка отправки подтверждения команды: %v", err)
+					if err != nil {
+						log.Printf("[Go] Ошибка применения импульса к %s: %v", obj.ID, err)
+						continue
+					}
+
+					successCount++
+					log.Printf("[Go] Применен импульс к %s: (%f, %f, %f)",
+						obj.ID, impulse.X, impulse.Y, impulse.Z)
+				}
+
+				log.Printf("[Go] Применен импульс к %d объектам с типами физики bullet и both", successCount)
+
+				// Отправляем подтверждение обработки команды с временными метками
+				serverTime := time.Now().UnixNano() / int64(time.Millisecond)
+				ackMsg := map[string]interface{}{
+					"type":        "cmd_ack",
+					"cmd":         input.Cmd,
+					"client_time": input.ClientTime,
+					"server_time": serverTime,
+					"player_id":   "ALL",
+					"count":       successCount,
+				}
+
+				if err := wsWriter.WriteJSON(ackMsg); err != nil {
+					log.Printf("[Go] Ошибка отправки подтверждения команды: %v", err)
+				}
+			} else {
+				// Проверяем тип физики указанного объекта
+				worldObj, exists := worldManager.GetWorldObject(objectId)
+				if !exists {
+					log.Printf("[Go] Объект %s не найден", objectId)
+					continue
+				}
+
+				// Если объект имеет тип ammo, пропускаем его
+				if worldObj.PhysicsType == world.PhysicsTypeAmmo {
+					log.Printf("[Go] Объект %s имеет тип физики ammo, импульсы на сервере не применяются", objectId)
+
+					// Отправляем подтверждение о пропуске
+					serverTime := time.Now().UnixNano() / int64(time.Millisecond)
+					skipMsg := map[string]interface{}{
+						"type":        "cmd_skipped",
+						"cmd":         input.Cmd,
+						"client_time": input.ClientTime,
+						"server_time": serverTime,
+						"player_id":   objectId,
+						"reason":      "ammo_physics",
+					}
+
+					if err := wsWriter.WriteJSON(skipMsg); err != nil {
+						log.Printf("[Go] Ошибка отправки подтверждения пропуска команды: %v", err)
+					}
+
+					continue
+				}
+
+				// Применяем импульс к указанному объекту
+				_, err := physicsClient.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
+					Id:      objectId,
+					Impulse: &impulse,
+				})
+
+				if err != nil {
+					log.Printf("[Go] Ошибка применения импульса к %s: %v", objectId, err)
+					continue
+				}
+
+				log.Printf("[Go] Применен импульс к %s: (%f, %f, %f)",
+					objectId, impulse.X, impulse.Y, impulse.Z)
+
+				// Отправляем подтверждение обработки команды с временными метками
+				serverTime := time.Now().UnixNano() / int64(time.Millisecond)
+				ackMsg := map[string]interface{}{
+					"type":        "cmd_ack",
+					"cmd":         input.Cmd,
+					"client_time": input.ClientTime,
+					"server_time": serverTime,
+					"player_id":   objectId,
+				}
+
+				if err := wsWriter.WriteJSON(ackMsg); err != nil {
+					log.Printf("[Go] Ошибка отправки подтверждения команды: %v", err)
+				}
 			}
 
 		default:

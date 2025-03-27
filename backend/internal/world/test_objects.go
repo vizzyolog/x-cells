@@ -57,14 +57,16 @@ func (t *TestObjectsCreator) CreateTerrain() {
 		float32(terrainMaxHeight),
 	)
 
-	// Устанавливаем тип физики для террейна (только на сервере)
-	terrain.PhysicsType = PhysicsTypeBullet
+	// Явно устанавливаем тип физики для террейна (и на клиенте, и на сервере)
+	terrain.PhysicsType = PhysicsTypeBoth
 
-	// Создаем террейн только в игровом мире
-	t.factory.CreateObjectInGameWorld(terrain)
+	// Создаем объект в клиентской физике (Ammo)
+	if err := t.factory.CreateObjectInAmmo(terrain); err != nil {
+		log.Printf("[World] Ошибка при создании террейна в Ammo: %v", err)
+	}
 
-	// Создаем физическое представление в Bullet
-	if err := t.factory.CreateObjectInBullet(terrain); err != nil {
+	// Создаем объект в серверной физике (Bullet)
+	if err := t.factory.CreateObjectBullet(terrain); err != nil {
 		log.Printf("[World] Ошибка при создании террейна в Bullet: %v", err)
 	}
 }
@@ -72,6 +74,7 @@ func (t *TestObjectsCreator) CreateTerrain() {
 // CreateTestSpheres создает тестовые сферы с разными типами физики
 func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 	// Создаем сферу-игрока с ID mainPlayer1, которая будет основной для камеры
+	// Этот объект будет иметь тип физики both
 	mainPlayer := NewSphere(
 		"mainPlayer1",
 		Vector3{X: 0, Y: terrainMaxHeight + 50, Z: 0},
@@ -79,20 +82,17 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 		1.0,
 		"#ff00ff", // Пурпурный цвет для игрока
 	)
-	if err := t.factory.CreateObjectBoth(mainPlayer); err != nil {
-		log.Printf("[World] Ошибка при создании игрока mainPlayer1: %v", err)
+	// Явно устанавливаем тип физики both
+	mainPlayer.PhysicsType = PhysicsTypeBoth
+
+	// Создаем объект в клиентской физике (Ammo)
+	if err := t.factory.CreateObjectInAmmo(mainPlayer); err != nil {
+		log.Printf("[World] Ошибка при создании игрока mainPlayer1 в Ammo: %v", err)
 	}
 
-	// Создаем тестовый шар с физикой both (обрабатывается и клиентом, и сервером)
-	sphereBoth := NewSphere(
-		"sphere_both_1",
-		Vector3{X: 10, Y: terrainMaxHeight + 50, Z: 10},
-		1.0,
-		1.0,
-		"#ff0000",
-	)
-	if err := t.factory.CreateObjectBoth(sphereBoth); err != nil {
-		log.Printf("[World] Ошибка при создании тестового шара both: %v", err)
+	// Создаем объект в серверной физике (Bullet)
+	if err := t.factory.CreateObjectBullet(mainPlayer); err != nil {
+		log.Printf("[World] Ошибка при создании игрока mainPlayer1 в Bullet: %v", err)
 	}
 
 	// Создаем тестовый шар с физикой ammo (обрабатывается только клиентом)
@@ -103,6 +103,9 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 		1.0,
 		"#00ff00",
 	)
+	// Явно устанавливаем тип физики ammo
+	sphereAmmo.PhysicsType = PhysicsTypeAmmo
+
 	if err := t.factory.CreateObjectInAmmo(sphereAmmo); err != nil {
 		log.Printf("[World] Ошибка при создании тестового шара ammo: %v", err)
 	}
@@ -115,16 +118,49 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 		1.0,
 		"#0000ff",
 	)
-	if err := t.factory.CreateObjectOnlyBullet(sphereBullet); err != nil {
+	// Явно устанавливаем тип физики bullet
+	sphereBullet.PhysicsType = PhysicsTypeBullet
+
+	if err := t.factory.CreateObjectBullet(sphereBullet); err != nil {
 		log.Printf("[World] Ошибка при создании тестового шара bullet: %v", err)
+	}
+
+	// Создаем дополнительный шар красного цвета с физикой ammo
+	sphereRedAmmo := NewSphere(
+		"sphere_red_ammo",
+		Vector3{X: 10, Y: terrainMaxHeight + 50, Z: 10},
+		1.0,
+		1.0,
+		"#ff0000",
+	)
+	// Явно устанавливаем тип физики ammo
+	sphereRedAmmo.PhysicsType = PhysicsTypeAmmo
+
+	if err := t.factory.CreateObjectInAmmo(sphereRedAmmo); err != nil {
+		log.Printf("[World] Ошибка при создании тестового шара ammo красного цвета: %v", err)
+	}
+
+	// Создаем дополнительный шар красного цвета с физикой bullet
+	sphereRedBullet := NewSphere(
+		"sphere_red_bullet",
+		Vector3{X: -10, Y: terrainMaxHeight + 50, Z: -10},
+		1.0,
+		1.0,
+		"#ff0000",
+	)
+	// Явно устанавливаем тип физики bullet
+	sphereRedBullet.PhysicsType = PhysicsTypeBullet
+
+	if err := t.factory.CreateObjectBullet(sphereRedBullet); err != nil {
+		log.Printf("[World] Ошибка при создании тестового шара bullet красного цвета: %v", err)
 	}
 }
 
 // CreateTestBox создает тестовый ящик
 func (t *TestObjectsCreator) CreateTestBox(terrainMaxHeight float32) {
-	// Создаем тестовый куб
-	boxBoth := NewBox(
-		"box_both_1",
+	// Создаем тестовый куб с физикой bullet (только на сервере)
+	boxBullet := NewBox(
+		"box_bullet_1",
 		Vector3{X: 10, Y: terrainMaxHeight + 50, Z: 10},
 		2.0,
 		2.0,
@@ -132,8 +168,30 @@ func (t *TestObjectsCreator) CreateTestBox(terrainMaxHeight float32) {
 		5.0,
 		"#ffff00",
 	)
-	if err := t.factory.CreateObjectBoth(boxBoth); err != nil {
-		log.Printf("[World] Ошибка при создании тестового куба: %v", err)
+	// Явно устанавливаем тип физики bullet
+	boxBullet.PhysicsType = PhysicsTypeBullet
+
+	// Создаем объект в серверной физике
+	if err := t.factory.CreateObjectBullet(boxBullet); err != nil {
+		log.Printf("[World] Ошибка при создании тестового куба в Bullet: %v", err)
+	}
+
+	// Создаем тестовый куб с физикой ammo (только на клиенте)
+	boxAmmo := NewBox(
+		"box_ammo_1",
+		Vector3{X: -10, Y: terrainMaxHeight + 50, Z: -10},
+		2.0,
+		2.0,
+		2.0,
+		5.0,
+		"#ffff00",
+	)
+	// Явно устанавливаем тип физики ammo
+	boxAmmo.PhysicsType = PhysicsTypeAmmo
+
+	// Создаем объект в клиентской физике
+	if err := t.factory.CreateObjectInAmmo(boxAmmo); err != nil {
+		log.Printf("[World] Ошибка при создании тестового куба в Ammo: %v", err)
 	}
 }
 

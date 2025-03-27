@@ -250,7 +250,7 @@ private:
         lastPositionLogTime = now;
         
         // Проверяем наличие объекта mainPlayer1
-        auto it = objects.find("mainPlayer1");
+        auto it = objects.find("mainPlayer3");
         if (it == objects.end()) {
             return;
         }
@@ -272,12 +272,12 @@ private:
         const btVector3& velocity = body->getLinearVelocity();
         
         // Выводим позицию и скорость
-        std::cout << "[C++] Позиция mainPlayer1 в мире Bullet: "
+        std::cout << "[C++] Позиция mainPlayer3 в мире Bullet: "
                   << "X: " << position.x() << ", "
                   << "Y: " << position.y() << ", "
                   << "Z: " << position.z() << std::endl;
                   
-        std::cout << "[C++] Скорость mainPlayer1 в мире Bullet: "
+        std::cout << "[C++] Скорость mainPlayer3 в мире Bullet: "
                   << "VX: " << velocity.x() << ", "
                   << "VY: " << velocity.y() << ", "
                   << "VZ: " << velocity.z() << std::endl;
@@ -443,7 +443,7 @@ void RunServer() {
     std::string server_address("0.0.0.0:50051");
     PhysicsServiceImpl service;
 
-    std::cout << "Bullet Physics Server v1.0.18" << std::endl;
+    std::cout << "Bullet Physics Server v1.0.19" << std::endl;
     std::cout << "==========================" << std::endl;
     std::cout << "Сервер запущен на " << server_address << std::endl;
 

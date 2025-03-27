@@ -97,7 +97,7 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 
 	// Создаем тестовый шар с физикой ammo (обрабатывается только клиентом)
 	sphereAmmo := NewSphere(
-		"sphere_ammo_1",
+		"mainPlayer2",
 		Vector3{X: -20, Y: terrainMaxHeight + 50, Z: 0},
 		1.0,
 		1.0,
@@ -112,7 +112,7 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 
 	// Создаем тестовый шар с физикой bullet (обрабатывается только сервером)
 	sphereBullet := NewSphere(
-		"sphere_bullet_1",
+		"mainPlayer3",
 		Vector3{X: 20, Y: terrainMaxHeight + 50, Z: 0},
 		1.0,
 		1.0,
@@ -125,35 +125,6 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 		log.Printf("[World] Ошибка при создании тестового шара bullet: %v", err)
 	}
 
-	// Создаем дополнительный шар красного цвета с физикой ammo
-	sphereRedAmmo := NewSphere(
-		"sphere_red_ammo",
-		Vector3{X: 10, Y: terrainMaxHeight + 50, Z: 10},
-		1.0,
-		1.0,
-		"#ff0000",
-	)
-	// Явно устанавливаем тип физики ammo
-	sphereRedAmmo.PhysicsType = PhysicsTypeAmmo
-
-	if err := t.factory.CreateObjectInAmmo(sphereRedAmmo); err != nil {
-		log.Printf("[World] Ошибка при создании тестового шара ammo красного цвета: %v", err)
-	}
-
-	// Создаем дополнительный шар красного цвета с физикой bullet
-	sphereRedBullet := NewSphere(
-		"sphere_red_bullet",
-		Vector3{X: -10, Y: terrainMaxHeight + 50, Z: -10},
-		1.0,
-		1.0,
-		"#ff0000",
-	)
-	// Явно устанавливаем тип физики bullet
-	sphereRedBullet.PhysicsType = PhysicsTypeBullet
-
-	if err := t.factory.CreateObjectBullet(sphereRedBullet); err != nil {
-		log.Printf("[World] Ошибка при создании тестового шара bullet красного цвета: %v", err)
-	}
 }
 
 // CreateTestBox создает тестовый ящик

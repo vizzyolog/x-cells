@@ -218,21 +218,48 @@ export function updatePhysicsObjects(objects) {
                 break;
                 
             case "bullet":
-                // Обновление по серверным данным с простой интерполяцией
+                // Обновление по серверным данным без интерполяции
                 if (obj.serverPos && obj.object_type !== "terrain") {
-                    // Простая линейная интерполяция
-                    const interpolationFactor = 0.2; // Можно настроить под ваши нужды
+                    // Устанавливаем точную позицию меша из серверных данных
+                    obj.mesh.position.set(
+                        obj.serverPos.x,
+                        obj.serverPos.y,
+                        obj.serverPos.z
+                    );
                     
-                    obj.mesh.position.x += (obj.serverPos.x - obj.mesh.position.x) * interpolationFactor;
-                    obj.mesh.position.y += (obj.serverPos.y - obj.mesh.position.y) * interpolationFactor;
-                    obj.mesh.position.z += (obj.serverPos.z - obj.mesh.position.z) * interpolationFactor;
+                    // Обновляем физическое тело
+                    if (obj.body) {
+                        const transform = new window.Ammo.btTransform();
+                        transform.setIdentity();
+                        transform.setOrigin(new window.Ammo.btVector3(
+                            obj.serverPos.x,
+                            obj.serverPos.y,
+                            obj.serverPos.z
+                        ));
+                        
+                        // Применяем трансформацию к физическому телу
+                        obj.body.getMotionState().setWorldTransform(transform);
+                        
+                        // Если есть серверная скорость, применяем её
+                        if (obj.serverVelocity) {
+                            const velocity = new window.Ammo.btVector3(
+                                obj.serverVelocity.x,
+                                obj.serverVelocity.y,
+                                obj.serverVelocity.z
+                            );
+                            obj.body.setLinearVelocity(velocity);
+                            window.Ammo.destroy(velocity);
+                        }
+                        
+                        window.Ammo.destroy(transform);
+                    }
                     
                     // Сохраняем для диагностики
                     if (id === "bullet_shadow") {
                         bulletShadowPos = {
-                            x: obj.mesh.position.x,
-                            y: obj.mesh.position.y,
-                            z: obj.mesh.position.z
+                            x: obj.serverPos.x,
+                            y: obj.serverPos.y,
+                            z: obj.serverPos.z
                         };
                     }
                 }
@@ -605,6 +632,18 @@ export function applyImpulseToSphere(cmd, forceX, forceY, forceZ, objectsList, c
             continue;
         }
         
+        // Пропускаем объекты с типом bullet, так как они управляются только сервером
+        if (obj.physicsBy === "bullet") {
+            console.log(`[Physics] Пропускаем объект ${id} с типом физики bullet (управляется только сервером)`);
+            continue;
+        }
+        
+        // Применяем локальные импульсы только к объектам с типами ammo или both
+        if (obj.physicsBy !== "ammo" && obj.physicsBy !== "both") {
+            console.log(`[Physics] Пропускаем объект ${id} с неизвестным типом физики ${obj.physicsBy}`);
+            continue;
+        }
+        
         // Активируем тело
         obj.body.activate(true);
         
@@ -642,8 +681,9 @@ export function applyImpulseToSphere(cmd, forceX, forceY, forceZ, objectsList, c
         window.Ammo.destroy(impulse);
         window.Ammo.destroy(velocity);
         
-        console.log("[Physics] Применен импульс к шару:", {
+        console.log("[Physics] Применен локальный импульс к шару:", {
             id: id,
+            тип_физики: obj.physicsBy,
             команда: cmd,
             скорость: currentSpeed.toFixed(2),
             множитель: speedFactor.toFixed(2),
@@ -660,7 +700,7 @@ export function applyImpulseToSphere(cmd, forceX, forceY, forceZ, objectsList, c
     }
     
     // Синхронизируем диагностические сферы если команда нажата
-    if (cmd && objectsList["mainPlayer1"] && objectsList["ammo_shadow"]) {
+    if (cmd && objectsList["mainPlayer3"] && objectsList["ammo_shadow"]) {
         syncDiagnosticSpheres(objectsList);
     }
     
@@ -740,6 +780,13 @@ export function receiveObjectUpdate(data) {
         return;
     }
     
+    // Логируем информацию о полученном обновлении
+    throttledLog("Physics", 
+        `Получено обновление для объекта ${id} (${obj.physicsBy}): ` +
+        `x=${data.x?.toFixed(2)}, y=${data.y?.toFixed(2)}, z=${data.z?.toFixed(2)}, ` +
+        `server_time=${data.server_time}`
+    );
+    
     // Проверяем, является ли объект новым
     if (!objectCreationTimes.has(id)) {
         objectCreationTimes.set(id, Date.now());
@@ -774,6 +821,7 @@ export function receiveObjectUpdate(data) {
     
     // Если это первое обновление, просто принимаем серверную позицию
     if (!oldServerPos) {
+        throttledLog("Physics", `Первое обновление для объекта ${id}, принимаем серверную позицию`);
         return;
     }
     
@@ -788,10 +836,10 @@ export function receiveObjectUpdate(data) {
                 z: (obj.serverPos.z - obj.previousServerUpdate.position.z) / timeDelta
             };
             
-            // Логируем информацию о скорости только для главного игрока
-            if (id === "mainPlayer1") {
+            // Логируем информацию о скорости для всех объектов с bullet-физикой
+            if (obj.physicsBy === "bullet" || obj.physicsBy === "both") {
                 throttledLog("Physics", 
-                    `Вычислена скорость сервера для ${id}: ` +
+                    `Вычислена скорость сервера для ${id} (${obj.physicsBy}): ` +
                     `vx=${obj.serverVelocity.x.toFixed(2)}, ` +
                     `vy=${obj.serverVelocity.y.toFixed(2)}, ` +
                     `vz=${obj.serverVelocity.z.toFixed(2)}, ` +
@@ -845,6 +893,45 @@ export function receiveObjectUpdate(data) {
             }
         }
     }
+
+    // Применяем импульс от сервера к объектам с типами физики bullet или both
+    if ((obj.physicsBy === "bullet" || obj.physicsBy === "both") && obj.serverVelocity) {
+        // Создаем импульс на основе серверной скорости
+        const impulse = new window.Ammo.btVector3(
+            obj.serverVelocity.x,
+            obj.serverVelocity.y,
+            obj.serverVelocity.z
+        );
+        
+        // Применяем импульс к физическому телу
+        if (obj.body) {
+            obj.body.activate(true);
+            obj.body.applyCentralImpulse(impulse);
+            
+            throttledLog("Physics", 
+                `Применен серверный импульс к ${id} (${obj.physicsBy}): ` +
+                `vx=${obj.serverVelocity.x.toFixed(2)}, ` +
+                `vy=${obj.serverVelocity.y.toFixed(2)}, ` +
+                `vz=${obj.serverVelocity.z.toFixed(2)}`
+            );
+        } else {
+            // Если нет физического тела, просто обновляем позицию меша
+            obj.mesh.position.set(
+                obj.serverPos.x,
+                obj.serverPos.y,
+                obj.serverPos.z
+            );
+            
+            throttledLog("Physics", 
+                `Обновлена позиция меша для ${id} (${obj.physicsBy}): ` +
+                `x=${obj.serverPos.x.toFixed(2)}, ` +
+                `y=${obj.serverPos.y.toFixed(2)}, ` +
+                `z=${obj.serverPos.z.toFixed(2)}`
+            );
+        }
+        
+        window.Ammo.destroy(impulse);
+    }
 }
 
 // Новая функция для создания диагностических сфер
@@ -888,7 +975,7 @@ function createDiagnosticSphere(scene, id, x, y, z, color, physicsBy) {
     // Создаем физическое тело
     let body = null;
     
-    if (physicsBy === "ammo" && localPhysicsWorld) {
+    if ((physicsBy === "ammo" || physicsBy === "bullet") && localPhysicsWorld) {
         // Создаем физическое тело для Ammo-физики
         const shape = new window.Ammo.btSphereShape(radius);
         const mass = 1;

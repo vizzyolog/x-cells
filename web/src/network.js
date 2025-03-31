@@ -1,6 +1,8 @@
 // network.js
-import { objects, createMeshAndBodyForObject } from './objects';
+import { objects, terrainMesh, playerMesh, terrainCreated, playerCreated, createMeshAndBodyForObject } from './objects';
 import { applyImpulseToSphere, receiveObjectUpdate, localPhysicsWorld } from './physics';
+import { initGamepad } from './gamepad';
+import { camera } from './camera';
 
 let ws = null;
 let physicsStarted = false;
@@ -75,12 +77,30 @@ function updateTimeDisplay() {
 
 // Создаем интервал для периодического обновления времени
 let timeDisplayInterval;
+let serverDelay = 0;
+
+function updateServerDelayDisplay(delay) {
+    const delayDisplay = document.getElementById('server-delay-display');
+    if (delayDisplay) {
+        delayDisplay.textContent = `Задержка сервера: ${delay.toFixed(0)} мс`;
+    }
+}
 
 function handleMessage(data) {      
     try {
         // Если сообщение содержит временную метку сервера, обновляем смещение
         if (data.server_time) {
+            console.log("data.server_time: ", data.server_time)
             updateServerTimeOffset(data.server_time);
+        }
+
+        if (data.type === "create" && data.object_type === "sphere" && data.object_id === "mainPlayer1") {
+            const mesh = createSphereMesh(data);
+            if (mesh) {
+                playerCreated.emit('created', mesh);
+            } else {
+                console.error("[WS] Не удалось создать playerMesh");
+            }
         }
         
         // Обрабатываем pong-сообщения для синхронизации времени
@@ -106,6 +126,18 @@ function handleMessage(data) {
             updateServerTimeOffset(data.server_time + roundTripTime / 2);
             
             return; // Прекращаем обработку этого сообщения
+        }
+
+        if (data.type === "update") {
+            // Вычисляем задержку
+            if (data.server_send_time) {
+                const now = Date.now();
+                serverDelay = now - data.server_send_time;
+                console.log("serverDelay: ", serverDelay);
+                updateServerDelayDisplay(serverDelay);
+            }
+
+            receiveObjectUpdate(data);
         }
         
         if (data.type === "create" && data.id) {
@@ -159,10 +191,6 @@ function handleMessage(data) {
                 }
             }
         } 
-        else if (data.type === "update" && data.id && objects[data.id]) {
-            // Обработка обновлений делегирована в receiveObjectUpdate, передаем также временную метку
-            receiveObjectUpdate(data);
-        }
         else if (data.type === "cmd_ack") {
             // Обрабатываем подтверждение команды с временной меткой
             if (data.client_time && data.server_time) {
@@ -266,6 +294,27 @@ export function initNetwork() {
             timeDisplayInterval = setInterval(updateTimeDisplay, 1000);
             // Отправим тестовое сообщение для синхронизации времени
             sendPing();
+
+            // Подписываемся на событие terrainCreated
+            terrainCreated.on('created', (terrainMesh) => {
+                // Проверяем, создан ли playerMesh
+                if (playerMesh) {
+                    initGamepad(camera, terrainMesh, playerMesh, ws);
+                } else {
+                    // Если playerMesh еще не создан, ждем события playerCreated
+                    playerCreated.on('created', (playerMesh) => {
+                        initGamepad(camera, terrainMesh, playerMesh, ws);
+                    });
+                }
+            });
+
+            // Подписываемся на событие playerCreated (если playerMesh создан первым)
+            playerCreated.on('created', (playerMesh) => {
+                // Проверяем, создан ли terrainMesh
+                if (terrainMesh) {
+                    initGamepad(camera, terrainMesh, playerMesh, ws);
+                }
+            });
         };
 
         ws.onmessage = (evt) => {

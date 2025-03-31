@@ -19,7 +19,7 @@ export function initScene() {
     window.addEventListener('resize', onWindowResize);
 
     // Настраиваем освещение
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambient);
 
     // Основной направленный свет с тенями
@@ -29,18 +29,18 @@ export function initScene() {
     
     // Настраиваем параметры теней для охвата большой области
     directionalLight.shadow.camera.near = 0.1;
-    directionalLight.shadow.camera.far = 2000; // Увеличиваем максимальную дальность теней
-    directionalLight.shadow.camera.left = -1000; // Значительно увеличиваем размер области теней
-    directionalLight.shadow.camera.right = 1000;
-    directionalLight.shadow.camera.top = 1000;
-    directionalLight.shadow.camera.bottom = -1000;
-    directionalLight.shadow.mapSize.width = 2048; // Большее разрешение для лучшего качества
-    directionalLight.shadow.mapSize.height = 2048;
-    directionalLight.shadow.bias = -0.0001; // Уменьшаем артефакты тени
+    directionalLight.shadow.camera.far = 500; 
+    directionalLight.shadow.camera.left = -100; 
+    directionalLight.shadow.camera.right = 100;
+    directionalLight.shadow.camera.top = 100;
+    directionalLight.shadow.camera.bottom = -100;
+    directionalLight.shadow.mapSize.width = 512; // Большее разрешение для лучшего качества
+    directionalLight.shadow.mapSize.height = 512;
+    // directionalLight.shadow.bias = -0.0001; // Уменьшаем артефакты тени
     scene.add(directionalLight);
 
     // Добавляем вспомогательный свет для подсветки теней
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 1);
     fillLight.position.set(-50, 50, -50);
     scene.add(fillLight);
     

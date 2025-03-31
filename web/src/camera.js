@@ -1,7 +1,6 @@
 // camera.js
 import * as THREE from 'three';
 import { objects } from './objects';
-import { scene } from './scene';
 
 // Объявляем камеру
 export let camera;
@@ -10,7 +9,7 @@ export let camera;
 const CAMERA_HEIGHT = 50; // Высота камеры над объектом
 const CAMERA_DISTANCE = 100; // Расстояние камеры от объекта
 
-const SMOOTH_FACTOR = 0.9; // Коэффициент интерполяции для плавного движения
+const SMOOTH_FACTOR = 0.5; // Коэффициент интерполяции для плавного движения
 const PLAYER_ID = "mainPlayer1"; // Жестко закрепляем ID игрока
 
 // Сохраняем последнюю известную позицию игрока

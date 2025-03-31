@@ -44,9 +44,10 @@ type ObjectMessage struct {
 
 // CommandMessage представляет команду от клиента
 type CommandMessage struct {
-	Type       string `json:"type"`
-	Cmd        string `json:"cmd,omitempty"`
-	ClientTime int64  `json:"client_time,omitempty"`
+	Type       string      `json:"type"`
+	Cmd        string      `json:"cmd,omitempty"`
+	ClientTime int64       `json:"client_time,omitempty"`
+	Data       interface{} `json:"data"`
 }
 
 // AckMessage представляет подтверждение команды сервером

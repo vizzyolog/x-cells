@@ -12,6 +12,10 @@ var (
 	ErrUnsupportedMessage = errors.New("unsupported message type")
 )
 
+const (
+	MessageTypeMove = "MOVE"
+)
+
 // GetCurrentServerTime возвращает текущее серверное время в миллисекундах
 func GetCurrentServerTime() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
@@ -123,6 +127,13 @@ func ParseMessage(data []byte) (interface{}, error) {
 
 	case MessageTypeInfo:
 		var msg InfoMessage
+		if err := json.Unmarshal(data, &msg); err != nil {
+			return nil, err
+		}
+		return &msg, nil
+
+	case MessageTypeMove:
+		var msg CommandMessage
 		if err := json.Unmarshal(data, &msg); err != nil {
 			return nil, err
 		}

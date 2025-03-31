@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { scene } from './scene';
 import { localPhysicsWorld } from './physics';
+import { gameStateManager } from './gamestatemanager';
 import { EventEmitter } from 'events';
 
 export const terrainCreated = new EventEmitter();
@@ -169,7 +170,8 @@ function createTerrainMesh(data) {
     
     // Включаем тени для террейна
     terrainMesh.receiveShadow = true;
-    terrainCreated.emit('created', terrainMesh);
+
+    gameStateManager.setTerrainMesh(terrainMesh);
     return terrainMesh;
 }
 
@@ -187,10 +189,12 @@ export function createSphereMesh(data) {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     
-    if (data.object_id === "mainPlayer1") {
-        playerMesh = mesh; // Присваиваем mesh переменной playerMesh
-        playerCreated.emit('created', playerMesh); // Генерируем событие playerCreated
+
+    if (data.id === "mainPlayer1") {
+        playerMesh = mesh
+        gameStateManager.setPlayerMesh(playerMesh);
     }
+
 
     return mesh;
 }

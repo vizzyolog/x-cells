@@ -4,12 +4,8 @@ import { initAmmo, stepPhysics, updatePhysicsObjects } from './physics';
 import { initNetwork } from './network';
 import { objects } from './objects';
 import { initCamera, camera, updateCamera, logCameraStatus } from './camera';
-
-// Добавляем флаг для диагностического режима
-let diagnosticMode = false;
-// Счетчик кадров для логирования камеры (каждые 100 кадров)
-let frameCounter = 0;
-let previousTime = performance.now();
+import { initGamepad } from './gamepad';
+import { initGameStateManager, gameStateManager } from './gamestatemanager';
 
 function animate() {
     requestAnimationFrame(animate);
@@ -22,13 +18,6 @@ function animate() {
     
     // Обновляем положение источника света относительно камеры, как солнце
     updateShadowCamera(camera);
-
-    // Периодически выводим информацию о камере для отладки
-    frameCounter++;
-    if (frameCounter % 100 === 0) {
-        logCameraStatus();
-        frameCounter = 0;
-    }
 
     renderer.render(scene, camera);
 }
@@ -46,9 +35,15 @@ async function start() {
         await initAmmo();
         
         // Инициализируем сетевое соединение
-        initNetwork();
+        const ws = await initNetwork()
             
-        animate();
+        initGameStateManager(ws);
+
+        gameStateManager.on('gameInitialized', () => {
+            console.warn('game initialized')
+            animate();
+        }); 
+               
     } catch (error) {
         console.error("Ошибка при инициализации Ammo.js:", error);
     }

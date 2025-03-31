@@ -1,28 +1,28 @@
 // gamepad.js
 import * as THREE from 'three';
 
+let lastDirection = new THREE.Vector3(); // Последнее отправленное направление
+
 // Функция для инициализации модуля
 function initGamepad(camera, terrainMesh, playerMesh, socket) {
-    let lastDirection = new THREE.Vector3(); // Последнее отправленное направление
+    console.warn("playerMesh in gamepad.js", playerMesh);
 
     // Функция для обработки события mousemove
     function onMouseMove(event) {
-
-        console.warn("event.clientX",event.clientX)
         const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
         const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-    
+
         const mouseVector = new THREE.Vector3(mouseX, mouseY, 0.5);
         mouseVector.unproject(camera);
-     
-        const raycaster = new THREE.Raycaster(); // Создаем raycaster без параметров.
-        raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera); // Устанавливаем параметры raycaster из позиции курсора и камеры.
-        
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+
         const intersects = raycaster.intersectObject(terrainMesh);
-        console.log("intersects:", intersects);
 
         if (intersects.length > 0) {
             const intersectPoint = intersects[0].point;
+            console.warn("playerMesh.position", playerMesh.position)
             const direction = new THREE.Vector3().subVectors(intersectPoint, playerMesh.position).normalize();
 
             // Проверяем, изменилось ли направление
@@ -31,22 +31,22 @@ function initGamepad(camera, terrainMesh, playerMesh, socket) {
 
                 // Отправляем направление на сервер
                 sendDirectionToServer(direction, socket);
-                console.warn("direction", direction)
             }
         }
-        window.addEventListener('mousemove', onMouseMove.bind({ camera, terrainMesh, playerMesh, socket }));
     }
 
     // Функция для отправки направления на сервер
     function sendDirectionToServer(direction, socket) {
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({
-                type: 'move',
-                direction: {
+                type: 'cmd', 
+                cmd: 'MOVE',
+                data: {
                     x: direction.x,
                     y: direction.y,
                     z: direction.z
-                }
+                },
+                client_time: Date.now() // Добавляем временную метку клиента
             }));
         } else {
             console.error('WebSocket не подключен');

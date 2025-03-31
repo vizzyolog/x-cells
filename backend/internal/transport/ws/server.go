@@ -2,6 +2,7 @@ package ws
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -109,6 +110,8 @@ func (s *WSServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go s.startClientStreaming(safeConn)
+
+	s.handlers[MessageTypeMove] = s.handleCmd
 	// Основной цикл обработки сообщений
 	for {
 		_, data, err := conn.ReadMessage()
@@ -159,6 +162,12 @@ func (s *WSServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	log.Printf("WebSocket connection closed: %s", conn.RemoteAddr())
 }
 
+type Direction struct {
+	X float32 `json:"x"`
+	Y float32 `json:"y"`
+	Z float32 `json:"z"`
+}
+
 // handleCmd обрабатывает команды управления
 func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 	cmdMsg, ok := message.(*CommandMessage)
@@ -178,6 +187,24 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 		impulse.Z = 5
 	case "SPACE":
 		impulse.Y = 10
+	case "MOVE":
+		var direction Direction
+		data, err := json.Marshal(cmdMsg.Data)
+		if err != nil {
+			log.Printf("[Go] Ошибка маршалинга данных: %v", err)
+			return nil
+		}
+		err = json.Unmarshal(data, &direction)
+		if err != nil {
+			log.Printf("[Go] Ошибка размаршалирования данных: %v", err)
+			return nil
+		}
+
+		impulse.X = direction.X
+		impulse.Y = direction.Y
+		impulse.Z = direction.Z
+
+		log.Printf("[Go] Получен вектор направления: (%f, %f, %f)", impulse.X, impulse.Y, impulse.Z)
 	default:
 		log.Printf("[Go] Неизвестная команда: %s", cmdMsg.Cmd)
 		return nil

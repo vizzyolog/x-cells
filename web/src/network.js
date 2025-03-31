@@ -1,8 +1,6 @@
 // network.js
-import { objects, terrainMesh, playerMesh, terrainCreated, playerCreated, createMeshAndBodyForObject } from './objects';
+import { objects, createMeshAndBodyForObject } from './objects';
 import { applyImpulseToSphere, receiveObjectUpdate, localPhysicsWorld } from './physics';
-import { initGamepad } from './gamepad';
-import { camera } from './camera';
 
 let ws = null;
 let physicsStarted = false;
@@ -94,15 +92,6 @@ function handleMessage(data) {
             updateServerTimeOffset(data.server_time);
         }
 
-        if (data.type === "create" && data.object_type === "sphere" && data.object_id === "mainPlayer1") {
-            const mesh = createSphereMesh(data);
-            if (mesh) {
-                playerCreated.emit('created', mesh);
-            } else {
-                console.error("[WS] Не удалось создать playerMesh");
-            }
-        }
-        
         // Обрабатываем pong-сообщения для синхронизации времени
         if (data.type === "pong") {
             const now = Date.now();
@@ -278,7 +267,7 @@ function handleKeyDown(e) {
     }
 }
 
-export function initNetwork() {
+export async function initNetwork() {
     try {
         console.log("[WS] Начало инициализации WebSocket");
         ws = new WebSocket("ws://localhost:8080/ws");
@@ -294,27 +283,6 @@ export function initNetwork() {
             timeDisplayInterval = setInterval(updateTimeDisplay, 1000);
             // Отправим тестовое сообщение для синхронизации времени
             sendPing();
-
-            // Подписываемся на событие terrainCreated
-            terrainCreated.on('created', (terrainMesh) => {
-                // Проверяем, создан ли playerMesh
-                if (playerMesh) {
-                    initGamepad(camera, terrainMesh, playerMesh, ws);
-                } else {
-                    // Если playerMesh еще не создан, ждем события playerCreated
-                    playerCreated.on('created', (playerMesh) => {
-                        initGamepad(camera, terrainMesh, playerMesh, ws);
-                    });
-                }
-            });
-
-            // Подписываемся на событие playerCreated (если playerMesh создан первым)
-            playerCreated.on('created', (playerMesh) => {
-                // Проверяем, создан ли terrainMesh
-                if (terrainMesh) {
-                    initGamepad(camera, terrainMesh, playerMesh, ws);
-                }
-            });
         };
 
         ws.onmessage = (evt) => {
@@ -381,10 +349,14 @@ export function initNetwork() {
         
         // Запускаем периодическую синхронизацию времени
         setInterval(sendPing, 10000); // Каждые 10 секунд
+
+        return ws;
     } catch (error) {
         console.error("[WS] Ошибка при создании WebSocket:", error);
         console.error("[WS] Стек вызовов:", error.stack);
     }
+
+    
 }
 
 // Функция для отправки ping-сообщения с временной меткой клиента

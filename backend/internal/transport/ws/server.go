@@ -13,6 +13,11 @@ import (
 	"x-cells/backend/internal/world"
 )
 
+const (
+	DefaultUpdateInterval = 50 * time.Millisecond // Интервал отправки обновлений
+	DefaultPingInterval   = 10 * time.Second      // Интервал отправки пингов
+)
+
 // ObjectManager описывает интерфейс для работы с объектами
 type ObjectManager interface {
 	GetAllWorldObjects() []*world.WorldObject // Методы, необходимые для работы с объектами
@@ -244,7 +249,7 @@ func (s *WSServer) startPing(conn *SafeWriter) {
 }
 
 func (s *WSServer) startClientStreaming(wsWriter *SafeWriter) {
-	ticker := time.NewTicker(50 * time.Millisecond)
+	ticker := time.NewTicker(DefaultUpdateInterval)
 	defer ticker.Stop()
 
 	for range ticker.C {

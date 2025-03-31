@@ -1,7 +1,5 @@
 package ws
 
-import "time"
-
 // Константы для WebSocket сообщений
 const (
 	// Типы сообщений
@@ -12,10 +10,6 @@ const (
 	MessageTypeCommand = "cmd"     // Команда от клиента
 	MessageTypeAck     = "cmd_ack" // Подтверждение команды
 	MessageTypeInfo    = "info"    // Информационное сообщение
-
-	// Значения по умолчанию
-	DefaultUpdateInterval = 50 * time.Millisecond // Интервал отправки обновлений
-	DefaultPingInterval   = 10 * time.Second      // Интервал отправки пингов
 )
 
 // ObjectMessage представляет сообщение о создании или обновлении объекта

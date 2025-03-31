@@ -29,8 +29,8 @@ func (t *TestObjectsCreator) CreateTerrain() {
 	// Константы для террейна
 	const (
 		// Физические размеры террейна в мире
-		terrainPhysicalWidth = 1500.0
-		terrainPhysicalDepth = 1500.0
+		terrainPhysicalWidth = 500.0
+		terrainPhysicalDepth = 500.0
 
 		// Размеры сетки террейна
 		terrainGridSize = 128

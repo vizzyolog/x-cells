@@ -2,8 +2,14 @@
 import * as THREE from 'three';
 import { scene } from './scene';
 import { localPhysicsWorld } from './physics';
+import { EventEmitter } from 'events';
+
+export const terrainCreated = new EventEmitter();
+export const playerCreated = new EventEmitter();
 
 export let objects = {}; // Словарь объектов: id -> { mesh, body, serverPos, ... }
+export let terrainMesh; // Экспортируем terrainMesh
+export let playerMesh; // Экспортируем playerMesh
 
 export function createMeshAndBodyForObject(data) {
     if (!data || !data.object_type) {
@@ -26,9 +32,13 @@ export function createMeshAndBodyForObject(data) {
         case "tree":
             mesh = createTreeMesh(data);
             break;
+        case "box":
+            mesh = createBoxMesh(data);
+            body = createPhysicsBodyForBox(data);
+            break;
         default:
             console.warn(`Unknown object type: ${type}`);
-            mesh = createDefaultMesh(data);
+           
             break;
     }
 
@@ -148,19 +158,19 @@ function createTerrainMesh(data) {
         geo.computeVertexNormals();
     }
 
-    const mesh = new THREE.Mesh(
+    terrainMesh = new THREE.Mesh( // Присваиваем mesh переменной terrainMesh
         geo,
         new THREE.MeshPhongMaterial({
-            color: parseColor(data.color || "#888888"),
+            color: parseColor(data.color || "#0000ff"),
             wireframe: false,
             flatShading: true
         })
     );
     
     // Включаем тени для террейна
-    mesh.receiveShadow = true;
-    
-    return mesh;
+    terrainMesh.receiveShadow = true;
+    terrainCreated.emit('created', terrainMesh);
+    return terrainMesh;
 }
 
 export function createSphereMesh(data) {
@@ -177,68 +187,15 @@ export function createSphereMesh(data) {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     
+    if (data.object_id === "mainPlayer1") {
+        playerMesh = mesh; // Присваиваем mesh переменной playerMesh
+        playerCreated.emit('created', playerMesh); // Генерируем событие playerCreated
+    }
+
     return mesh;
 }
 
-function createTreeMesh(data) {
-    const group = new THREE.Group();
-
-    if (data.branches && Array.isArray(data.branches)) {
-        data.branches.forEach((branch, index) => {
-            if (
-                branch.startX === undefined ||
-                branch.startY === undefined ||
-                branch.startZ === undefined ||
-                branch.endX === undefined ||
-                branch.endY === undefined ||
-                branch.endZ === undefined
-            ) {
-                console.warn(
-                    `Branch coordinates are missing or invalid at index ${index}:`,
-                    branch
-                );
-                return;
-            }
-
-            const branchGeo = new THREE.CylinderGeometry(
-                branch.radiusTop || branch.radius || 0.1,    // верхний радиус
-                branch.radiusBottom || branch.radius || 0.2, // нижний радиус
-                1,
-                8
-            );
-            const branchMat = new THREE.MeshPhongMaterial({
-                color: parseColor(branch.color || "#654321"),
-                shininess: 10
-            });
-            const branchMesh = new THREE.Mesh(branchGeo, branchMat);
-            
-            // Включаем тени для веток
-            branchMesh.castShadow = true;
-            branchMesh.receiveShadow = true;
-
-            const midX = (branch.startX + branch.endX) / 2;
-            const midY = (branch.startY + branch.endY) / 2;
-            const midZ = (branch.startZ + branch.endZ) / 2;
-
-            branchMesh.position.set(midX, midY, midZ);
-            branchMesh.lookAt(new THREE.Vector3(branch.endX, branch.endY, branch.endZ));
-
-            const length = new THREE.Vector3(
-                branch.endX - branch.startX,
-                branch.endY - branch.startY,
-                branch.endZ - branch.startZ
-            ).length();
-
-            branchMesh.scale.set(1, length, 1);
-
-            group.add(branchMesh);
-        });
-    }
-
-    return group;
-}
-
-function createDefaultMesh(data) {
+function createBoxMesh(data) {
     const geo = new THREE.BoxGeometry(1, 1, 1);
     return new THREE.Mesh(
         geo,
@@ -279,16 +236,94 @@ function createPhysicsBodyForSphere(data) {
         );
         const body = new window.Ammo.btRigidBody(rbInfo);
         
-        // Настраиваем физические свойства
-        body.setFriction(0.5);
-        body.setRollingFriction(0.1);
-        body.setRestitution(0.2); // Немного уменьшаем упругость для стабильности
-        body.setDamping(0.01, 0.01); // Небольшое линейное и угловое затухание
+        // // Настраиваем физические свойства
+        // body.setFriction(0.5);
+        // body.setRollingFriction(0.1);
+        // body.setRestitution(0.2); // Немного уменьшаем упругость для стабильности
+        // body.setDamping(0.01, 0.01); // Небольшое линейное и угловое затухание
         
         // Включаем CCD для предотвращения проваливания сквозь террейн
         // Для меньшего масштаба (100 вместо 15000) эти значения более оптимальны
-        body.setCcdMotionThreshold(radius * 0.8); // Увеличиваем порог для активации CCD
-        body.setCcdSweptSphereRadius(radius * 0.7); // Радиус сферы для CCD
+        // body.setCcdMotionThreshold(radius * 0.8); // Увеличиваем порог для активации CCD
+        // body.setCcdSweptSphereRadius(radius * 0.7); // Радиус сферы для CCD
+        
+        // Отключаем деактивацию
+        body.setActivationState(4); // DISABLE_DEACTIVATION
+
+        // Добавляем тело в физический мир
+        const SPHERE_GROUP = 2;
+        localPhysicsWorld.addRigidBody(body, SPHERE_GROUP, -1); // Сферы сталкиваются со всеми
+        
+        console.log("[Sphere] Физическое тело создано:", {
+            radius,
+            mass,
+            position: {
+                x: data.x || 0,
+                y: data.y || 0,
+                z: data.z || 0
+            },
+            ccd: {
+                motionThreshold: radius * 0.8,
+                sweptSphereRadius: radius * 0.7
+            },
+            friction: 0.5,
+            restitution: 0.2
+        });
+
+        // Очистка памяти
+        window.Ammo.destroy(rbInfo);
+        window.Ammo.destroy(localInertia);
+
+        return body;
+    } catch (error) {
+        console.error('Ошибка при создании физического тела:', error);
+        return null;
+    }
+}
+
+function createPhysicsBodyForBox(data) {
+    try {
+        if (typeof Ammo === 'undefined') {
+            console.error('Ammo.js не инициализирован');
+            return null;
+        }
+
+        if (!localPhysicsWorld) {
+            console.error('Физический мир не инициализирован');
+            return null;
+        }
+
+        const radius = data.radius || 1;
+        const mass = data.mass || 1;
+
+        // Создаем все Ammo объекты через window.Ammo
+        const shape = new window.Ammo.btSphereShape(radius);
+        const transform = new window.Ammo.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(new window.Ammo.btVector3(data.x || 0, data.y || 0, data.z || 0));
+
+        const localInertia = new window.Ammo.btVector3(0, 0, 0);
+        shape.calculateLocalInertia(mass, localInertia);
+
+        const motionState = new window.Ammo.btDefaultMotionState(transform);
+        const rbInfo = new window.Ammo.btRigidBodyConstructionInfo(
+            mass,
+            motionState,
+            shape,
+            localInertia
+        );
+        const body = new window.Ammo.btRigidBody(rbInfo);
+        
+        // // Настраиваем физические свойства
+        // body.setFriction(0.5);
+        // body.setRollingFriction(0.1);
+        // body.setRestitution(0.2); // Немного уменьшаем упругость для стабильности
+        // body.setDamping(0.01, 0.01); // Небольшое линейное и угловое затухание
+        
+        // Включаем CCD для предотвращения проваливания сквозь террейн
+        // Для меньшего масштаба (100 вместо 15000) эти значения более оптимальны
+        // body.setCcdMotionThreshold(radius * 0.8); // Увеличиваем порог для активации CCD
+        // body.setCcdSweptSphereRadius(radius * 0.7); // Радиус сферы для CCD
         
         // Отключаем деактивацию
         body.setActivationState(4); // DISABLE_DEACTIVATION

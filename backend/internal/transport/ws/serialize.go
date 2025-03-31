@@ -1,10 +1,9 @@
-package serialize
+package ws
 
 import (
 	"log"
 	"time"
 
-	"x-cells/backend/internal/transport/ws"
 	"x-cells/backend/internal/world"
 )
 
@@ -21,7 +20,7 @@ func NewWorldSerializer(worldManager *world.Manager) *WorldSerializer {
 }
 
 // SendCreateForAllObjects отправляет информацию о всех объектах клиенту
-func (s *WorldSerializer) SendCreateForAllObjects(wsWriter *ws.SafeWriter) error {
+func (s *WorldSerializer) SendCreateForAllObjects(wsWriter *SafeWriter) error {
 	worldObjects := s.worldManager.GetAllWorldObjects()
 
 	for _, obj := range worldObjects {
@@ -77,7 +76,7 @@ func (s *WorldSerializer) SendCreateForAllObjects(wsWriter *ws.SafeWriter) error
 }
 
 // SendUpdateForObject отправляет обновление состояния объекта клиенту
-func (s *WorldSerializer) SendUpdateForObject(wsWriter *ws.SafeWriter, objectID string, position world.Vector3, rotation world.Quaternion) error {
+func (s *WorldSerializer) SendUpdateForObject(wsWriter *SafeWriter, objectID string, position world.Vector3, rotation world.Quaternion) error {
 	// Получаем текущее время в миллисекундах для временной метки
 	serverTime := time.Now().UnixNano() / int64(time.Millisecond)
 

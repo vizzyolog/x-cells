@@ -202,5 +202,6 @@ func NewTerrain(id string, position Vector3, heightData []float32, width, depth 
 		PhysicsType: PhysicsTypeBullet,
 		MinHeight:   minHeight,
 		MaxHeight:   maxHeight,
+		Color:       "#007700",
 	}
 }

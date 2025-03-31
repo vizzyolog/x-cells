@@ -1,20 +1,20 @@
 // physics.js
 
 import { objects } from './objects';
-import * as THREE from 'three';
 import { startPhysicsSimulation } from './network';
+import { throttledLog, logMainPlayerInfo} from './throttledlog';
 
 export let localPhysicsWorld = null;
 let ammoPromise = null;
 
 // Настройки для коррекции позиции
-const DEAD_ZONE = 0.1; // Мертвая зона, в пределах которой не применяется коррекция
-const CORRECTION_STRENGTH = 10.0; // Уменьшаем силу корректировки для более плавного движения
-const TELEPORT_THRESHOLD = 3.0; // Порог для начала плавной коррекции
+const DEAD_ZONE = 10; 
+const CORRECTION_STRENGTH = 50.0; 
+const TELEPORT_THRESHOLD = 5.0; 
 
 // Добавляем настройки для client-side prediction
-const PREDICTION_SMOOTH_FACTOR = 0.2; // Базовый коэффициент сглаживания
-const PREDICTION_MAX_ERROR = 10.0; // Порог для жесткой телепортации
+const PREDICTION_SMOOTH_FACTOR = 5; 
+const PREDICTION_MAX_ERROR = 5.0; 
 const DISTANCE_BASED_SMOOTH_FACTOR = true; // Использовать динамический коэффициент сглаживания
 const NEW_OBJECT_TIMEOUT = 2000; // 2 секунды для "новых" объектов
 
@@ -23,62 +23,10 @@ let inputHistory = [];
 let lastSequenceNumber = 0; // Счетчик последовательности для команд
 let lastServerUpdateTime = 0; // Время последнего серверного обновления
 
-// Система логирования с ограничением частоты
-const LOG_INTERVAL = 5000; // 1 секунда между логами
-const logTimers = {};
+
 
 // Добавляем маркер времени создания объектов
 const objectCreationTimes = new Map();
-
-// Централизованная функция логирования с ограничением частоты
-function throttledLog(category, message, data = null) {
-    const now = Date.now();
-    
-    // Проверяем, прошло ли достаточно времени с последнего лога для этой категории
-    if (!logTimers[category] || now - logTimers[category] >= LOG_INTERVAL) {
-        // Обновляем таймер для этой категории
-        logTimers[category] = now;
-        
-        // Форматируем и выводим сообщение
-        if (data) {
-            console.log(`[${category}] ${message}`, data);
-        } else {
-            console.log(`[${category}] ${message}`);
-        }
-        
-        return true; // Лог был выведен
-    }
-    
-    return false; // Лог был пропущен из-за ограничения частоты
-}
-
-// Функция для логирования данных о главном игроке
-function logMainPlayerInfo() {
-    const mainPlayer = objects["mainPlayer1"];
-    if (!mainPlayer || !mainPlayer.mesh) {
-        return;
-    }
-    
-    const pos = mainPlayer.mesh.position;
-    
-    // Получаем скорость, если доступна физика
-    let vel = { x: 0, y: 0, z: 0 };
-    if (mainPlayer.body) {
-        const velocity = mainPlayer.body.getLinearVelocity();
-        vel = { 
-            x: velocity.x(),
-            y: velocity.y(),
-            z: velocity.z()
-        };
-        window.Ammo.destroy(velocity);
-    }
-    
-    // Выводим в формате, напоминающем C++ вывод
-    throttledLog("MainPlayer", 
-        `Position: (${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}), ` +
-        `Velocity: (${vel.x.toFixed(2)}, ${vel.y.toFixed(2)}, ${vel.z.toFixed(2)})`
-    );
-}
 
 // Функция для настройки физического мира
 function setupPhysicsWorld() {
@@ -156,7 +104,7 @@ export function stepPhysics(deltaTime) {
     }
     
     // Ограничиваем максимальный шаг для стабильности
-    const maxStep = 1/30; // Не больше 30мс для одного шага
+    const maxStep = 1/60; // Не больше 30мс для одного шага
     const effectiveStep = Math.min(deltaTime, maxStep);
     
     // Используем фиксированный шаг и переменное количество подшагов для точности
@@ -164,16 +112,16 @@ export function stepPhysics(deltaTime) {
     const maxSubSteps = Math.ceil(effectiveStep / fixedStep);
     
     // Выполняем шаг симуляции с заданными параметрами
-    localPhysicsWorld.stepSimulation(effectiveStep, maxSubSteps, fixedStep);
+    localPhysicsWorld.stepSimulation(1/60, 1, 1/60);
     
     // Выводим информацию о главном игроке
-    logMainPlayerInfo();
+   // logMainPlayerInfo();
     
     // Обновляем физические объекты (без лишних логов)
-    updatePhysicsObjects(objects);
+    updatePhysicsObjects(objects, deltaTime);
 }
 
-export function updatePhysicsObjects(objects) {
+export function updatePhysicsObjects(objects, deltaTime) {
     // Переменные для диагностики
     let mainSpherePos = null;
     let ammoShadowPos = null;
@@ -302,11 +250,33 @@ export function updatePhysicsObjects(objects) {
                     // Вычисляем расстояние
                     const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
                     
+                      // Экстраполяция
+                    if (obj.serverVelocity) {
+                        // Вычисляем прогнозируемую позицию на основе серверной скорости
+                        const predictedX = obj.serverPos.x + obj.serverVelocity.x * deltaTime;
+                        const predictedY = obj.serverPos.y + obj.serverVelocity.y * deltaTime;
+                        const predictedZ = obj.serverPos.z + obj.serverVelocity.z * deltaTime;
+
+                        // Вычисляем разницу между прогнозируемой и текущей позициями
+                        const dxPredicted = predictedX - currentX;
+                        const dyPredicted = predictedY - currentY;
+                        const dzPredicted = predictedZ - currentZ;
+
+                        // Вычисляем расстояние
+                        const distancePredicted = Math.sqrt(dxPredicted*dxPredicted + dyPredicted*dyPredicted + dzPredicted*dzPredicted);
+
+                        // Используем прогнозируемую позицию, если она ближе к текущей
+                        if (distancePredicted < distance) {
+                            obj.serverPos.x = predictedX;
+                            obj.serverPos.y = predictedY;
+                            obj.serverPos.z = predictedZ;
+                        }
+                    }
                     // Логируем только при значительных расхождениях
                     if (distance > DEAD_ZONE || isMovingFast) {
-                        throttledLog("Physics", 
-                            `Объект ${id}: Расстояние: ${distance.toFixed(3)}, Скорость: ${Math.sqrt(speedSq).toFixed(3)}, Быстро: ${isMovingFast}, Клиент: {x: ${currentX.toFixed(2)}, y: ${currentY.toFixed(2)}, z: ${currentZ.toFixed(2)}}, Сервер: {x: ${obj.serverPos.x.toFixed(2)}, y: ${obj.serverPos.y.toFixed(2)}, z: ${obj.serverPos.z.toFixed(2)}}`
-                        );
+                        // throttledLog("Physics", 
+                        //     `Объект ${id}: Расстояние: ${distance.toFixed(3)}, Скорость: ${Math.sqrt(speedSq).toFixed(3)}, Быстро: ${isMovingFast}, Клиент: {x: ${currentX.toFixed(2)}, y: ${currentY.toFixed(2)}, z: ${currentZ.toFixed(2)}}, Сервер: {x: ${obj.serverPos.x.toFixed(2)}, y: ${obj.serverPos.y.toFixed(2)}, z: ${obj.serverPos.z.toFixed(2)}}`
+                        // );
                     }
                     
                     // Применяем client-side prediction
@@ -317,9 +287,9 @@ export function updatePhysicsObjects(objects) {
                         // Для новых объектов используем более жесткую коррекцию
                         if (isNewObject) {
                             smoothFactor = 0.8; // 80% серверной позиции
-                            throttledLog("Physics", 
-                                `Новый объект ${id}, применяем жесткую коррекцию (${smoothFactor})`
-                            );
+                            // throttledLog("Physics", 
+                            //     `Новый объект ${id}, применяем жесткую коррекцию (${smoothFactor})`
+                            // );
                         } else if (DISTANCE_BASED_SMOOTH_FACTOR) {
                             // Чем больше расхождение, тем больше коэффициент
                             smoothFactor = Math.min(distance / 20.0, 0.5); // Максимум 0.5
@@ -328,9 +298,9 @@ export function updatePhysicsObjects(objects) {
                         // Для больших расхождений или новых объектов применяем телепортацию
                         if (distance > PREDICTION_MAX_ERROR || isNewObject && distance > 5.0) {
                             // При экстремальных расхождениях - телепортация
-                            throttledLog("Physics", 
-                                `Экстремальное расхождение объекта ${id}, расстояние: ${distance.toFixed(2)}, новый: ${isNewObject}`
-                            );
+                            // throttledLog("Physics", 
+                            //     `Экстремальное расхождение объекта ${id}, расстояние: ${distance.toFixed(2)}, новый: ${isNewObject}`
+                            // );
                             
                             // Телепортируем объект
                             transform.setOrigin(new window.Ammo.btVector3(
@@ -431,7 +401,7 @@ export function updatePhysicsObjects(objects) {
                 break;
                 
             default:
-                throttledLog("Error", `Неизвестный тип physicsBy для объекта ${id}: ${obj.physicsBy}`);
+                //throttledLog("Error", `Неизвестный тип physicsBy для объекта ${id}: ${obj.physicsBy}`);
                 break;
         }
     }
@@ -467,152 +437,8 @@ export function updatePhysicsObjects(objects) {
         }
     }
     
-    // Добавляем расчет и визуализацию расхождений между движками
-    visualizeDivergence(objects);
-}
+ }
 
-// Функция для визуализации расхождений между движками
-function visualizeDivergence(objects) {
-    // Проверяем наличие всех необходимых объектов
-    const mainSphere = objects["mainPlayer1"];
-    const ammoShadow = objects["ammo_shadow"];
-    const bulletShadow = objects["bullet_shadow"];
-    
-    if (!mainSphere || !ammoShadow || !bulletShadow) return;
-    
-    // Получаем позиции
-    const mainPos = mainSphere.mesh.position;
-    const ammoPos = ammoShadow.mesh.position;
-    const bulletPos = bulletShadow.mesh.position;
-    
-    // Расчет расстояний
-    const distMainToAmmo = Math.sqrt(
-        Math.pow(mainPos.x - ammoPos.x, 2) +
-        Math.pow(mainPos.y - ammoPos.y, 2) +
-        Math.pow(mainPos.z - ammoPos.z, 2)
-    );
-    
-    const distMainToBullet = Math.sqrt(
-        Math.pow(mainPos.x - bulletPos.x, 2) +
-        Math.pow(mainPos.y - bulletPos.y, 2) +
-        Math.pow(mainPos.z - bulletPos.z, 2)
-    );
-    
-    const distAmmoBullet = Math.sqrt(
-        Math.pow(ammoPos.x - bulletPos.x, 2) +
-        Math.pow(ammoPos.y - ammoPos.y, 2) +
-        Math.pow(ammoPos.z - bulletPos.z, 2)
-    );
-    
-    // Ограничим вывод лога, чтобы не спамить консоль (примерно раз в секунду)
-    if (!window.lastDivergenceLog || Date.now() - window.lastDivergenceLog > 1000) {
-        throttledLog("Physics", "Расхождения между движками:");
-        throttledLog("Physics", `  Основной шар (${mainSphere.physicsBy}): x=${mainPos.x.toFixed(2)}, y=${mainPos.y.toFixed(2)}, z=${mainPos.z.toFixed(2)}`);
-        throttledLog("Physics", `  Тень Ammo: x=${ammoPos.x.toFixed(2)}, y=${ammoPos.y.toFixed(2)}, z=${ammoPos.z.toFixed(2)}`);
-        throttledLog("Physics", `  Тень Bullet: x=${bulletPos.x.toFixed(2)}, y=${bulletPos.y.toFixed(2)}, z=${bulletPos.z.toFixed(2)}`);
-        throttledLog("Physics", `  Расстояние Основной-Ammo: ${distMainToAmmo.toFixed(3)}`);
-        throttledLog("Physics", `  Расстояние Основной-Bullet: ${distMainToBullet.toFixed(3)}`);
-        throttledLog("Physics", `  Расстояние Ammo-Bullet: ${distAmmoBullet.toFixed(3)}`);
-        
-        // Визуальное отображение расхождений
-        if (distMainToAmmo > DEAD_ZONE) {
-            throttledLog("Warning", `  [!] Основной шар расходится с Ammo на ${distMainToAmmo.toFixed(3)} (> ${DEAD_ZONE})`);
-        }
-        
-        if (distMainToBullet > DEAD_ZONE) {
-            throttledLog("Warning", `  [!] Основной шар расходится с Bullet на ${distMainToBullet.toFixed(3)} (> ${DEAD_ZONE})`);
-        }
-        
-        if (distAmmoBullet > DEAD_ZONE) {
-            throttledLog("Warning", `  [!] Ammo расходится с Bullet на ${distAmmoBullet.toFixed(3)} (> ${DEAD_ZONE})`);
-        }
-        
-        // Обновляем время последнего лога
-        window.lastDivergenceLog = Date.now();
-    }
-    
-    // Рисуем линии между объектами для визуализации расхождений
-    visualizeDivergenceLines(objects, mainPos, ammoPos, bulletPos);
-}
-
-// Функция для рисования линий, показывающих расхождения
-function visualizeDivergenceLines(objects, mainPos, ammoPos, bulletPos) {
-    // Проверяем наличие линий в объектах
-    if (!objects.divergenceLines) {
-        // Создаем материалы для линий
-        const mainToAmmoMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); // красный
-        const mainToBulletMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 }); // зеленый
-        const ammoBulletMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff }); // синий
-        
-        // Создаем геометрии и линии
-        const mainToAmmoGeometry = new THREE.BufferGeometry();
-        const mainToBulletGeometry = new THREE.BufferGeometry();
-        const ammoBulletGeometry = new THREE.BufferGeometry();
-        
-        const mainToAmmoLine = new THREE.Line(mainToAmmoGeometry, mainToAmmoMaterial);
-        const mainToBulletLine = new THREE.Line(mainToBulletGeometry, mainToBulletMaterial);
-        const ammoBulletLine = new THREE.Line(ammoBulletGeometry, ammoBulletMaterial);
-        
-        // Добавляем линии на сцену
-        if (objects.mainPlayer1 && objects.mainPlayer1.mesh.parent) {
-            const scene = objects.mainPlayer1.mesh.parent;
-            scene.add(mainToAmmoLine);
-            scene.add(mainToBulletLine);
-            scene.add(ammoBulletLine);
-        }
-        
-        // Сохраняем линии в объекты
-        objects.divergenceLines = {
-            mainToAmmo: {
-                line: mainToAmmoLine,
-                geometry: mainToAmmoGeometry
-            },
-            mainToBullet: {
-                line: mainToBulletLine,
-                geometry: mainToBulletGeometry
-            },
-            ammoBullet: {
-                line: ammoBulletLine,
-                geometry: ammoBulletGeometry
-            }
-        };
-    }
-    
-    // Обновляем позиции линий
-    if (objects.divergenceLines) {
-        // Линия Основной-Ammo
-        updateLine(
-            objects.divergenceLines.mainToAmmo.geometry,
-            mainPos,
-            ammoPos
-        );
-        
-        // Линия Основной-Bullet
-        updateLine(
-            objects.divergenceLines.mainToBullet.geometry,
-            mainPos,
-            bulletPos
-        );
-        
-        // Линия Ammo-Bullet
-        updateLine(
-            objects.divergenceLines.ammoBullet.geometry,
-            ammoPos,
-            bulletPos
-        );
-    }
-}
-
-// Функция для обновления позиций линии
-function updateLine(geometry, startPos, endPos) {
-    const positions = new Float32Array([
-        startPos.x, startPos.y, startPos.z,
-        endPos.x, endPos.y, endPos.z
-    ]);
-    
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.attributes.position.needsUpdate = true;
-}
 
 // Функция для применения импульса с сохранением в истории
 export function applyImpulseToSphere(cmd, forceX, forceY, forceZ, objectsList, clientTime) {
@@ -721,71 +547,21 @@ export function applyImpulseToSphere(cmd, forceX, forceY, forceZ, objectsList, c
     inputHistory = inputHistory.filter(entry => entry.timestamp > twoSecondsAgo);
 }
 
-// Синхронизация диагностических сфер с основной сферой
-function syncDiagnosticSpheres(objects) {
-    // Получаем основную сферу
-    const mainSphere = objects["mainPlayer1"];
-    if (!mainSphere || !mainSphere.mesh) return;
-    
-    const mainPos = mainSphere.mesh.position;
-    
-    // Синхронизируем ammo-тень с основной сферой
-    if (objects["ammo_shadow"] && objects["ammo_shadow"].body) {
-        console.log("[Physics] Синхронизация ammo-тени с основной сферой");
-        
-        const ammoShadow = objects["ammo_shadow"];
-        
-        // Создаем трансформацию с позицией основной сферы
-        const transform = new window.Ammo.btTransform();
-        transform.setIdentity();
-        transform.setOrigin(new window.Ammo.btVector3(mainPos.x, mainPos.y, mainPos.z));
-        
-        // Устанавливаем трансформацию
-        ammoShadow.body.getMotionState().setWorldTransform(transform);
-        
-        // Также применяем такую же скорость
-        if (mainSphere.body) {
-            const mainVelocity = mainSphere.body.getLinearVelocity();
-            const mainAngularVelocity = mainSphere.body.getAngularVelocity();
-            
-            ammoShadow.body.setLinearVelocity(mainVelocity);
-            ammoShadow.body.setAngularVelocity(mainAngularVelocity);
-        }
-        
-        // Активируем тело
-        ammoShadow.body.activate(true);
-        
-        window.Ammo.destroy(transform);
-    }
-    
-    // Синхронизируем bullet-тень с основной сферой (просто устанавливаем serverPos)
-    if (objects["bullet_shadow"]) {
-        console.log("[Physics] Синхронизация bullet-тени с основной сферой");
-        
-        const bulletShadow = objects["bullet_shadow"];
-        bulletShadow.serverPos = {
-            x: mainPos.x,
-            y: mainPos.y,
-            z: mainPos.z
-        };
-    }
-}
-
 export function receiveObjectUpdate(data) {
     const id = data.id;
     
     const obj = objects[id];
     if (!obj) {
-        throttledLog("Error", `Получено обновление для несуществующего объекта: ${id}`);
+        // throttledLog("Error", `Получено обновление для несуществующего объекта: ${id}`);
         return;
     }
     
     // Логируем информацию о полученном обновлении
-    throttledLog("Physics", 
-        `Получено обновление для объекта ${id} (${obj.physicsBy}): ` +
-        `x=${data.x?.toFixed(2)}, y=${data.y?.toFixed(2)}, z=${data.z?.toFixed(2)}, ` +
-        `server_time=${data.server_time}`
-    );
+    // throttledLog("Physics", 
+    //     `Получено обновление для объекта ${id} (${obj.physicsBy}): ` +
+    //     `x=${data.x?.toFixed(2)}, y=${data.y?.toFixed(2)}, z=${data.z?.toFixed(2)}, ` +
+    //     `server_time=${data.server_time}`
+    // );
     
     // Проверяем, является ли объект новым
     if (!objectCreationTimes.has(id)) {
@@ -796,7 +572,7 @@ export function receiveObjectUpdate(data) {
     // Получаем временную метку сервера
     const serverTime = data.server_time;
     if (!serverTime) {
-        throttledLog("Warning", `Получено обновление без временной метки сервера для ${id}`);
+      //  throttledLog("Warning", `Получено обновление без временной метки сервера для ${id}`);
     }
     
     // Обновляем время последнего обновления
@@ -821,7 +597,7 @@ export function receiveObjectUpdate(data) {
     
     // Если это первое обновление, просто принимаем серверную позицию
     if (!oldServerPos) {
-        throttledLog("Physics", `Первое обновление для объекта ${id}, принимаем серверную позицию`);
+       // throttledLog("Physics", `Первое обновление для объекта ${id}, принимаем серверную позицию`);
         return;
     }
     
@@ -838,13 +614,13 @@ export function receiveObjectUpdate(data) {
             
             // Логируем информацию о скорости для всех объектов с bullet-физикой
             if (obj.physicsBy === "bullet" || obj.physicsBy === "both") {
-                throttledLog("Physics", 
-                    `Вычислена скорость сервера для ${id} (${obj.physicsBy}): ` +
-                    `vx=${obj.serverVelocity.x.toFixed(2)}, ` +
-                    `vy=${obj.serverVelocity.y.toFixed(2)}, ` +
-                    `vz=${obj.serverVelocity.z.toFixed(2)}, ` +
-                    `delta=${timeDelta.toFixed(3)}с`
-                );
+                // throttledLog("Physics", 
+                //     `Вычислена скорость сервера для ${id} (${obj.physicsBy}): ` +
+                //     `vx=${obj.serverVelocity.x.toFixed(2)}, ` +
+                //     `vy=${obj.serverVelocity.y.toFixed(2)}, ` +
+                //     `vz=${obj.serverVelocity.z.toFixed(2)}, ` +
+                //     `delta=${timeDelta.toFixed(3)}с`
+                // );
             }
         }
     }
@@ -882,11 +658,11 @@ export function receiveObjectUpdate(data) {
                 const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
                 
                 if (id === "mainPlayer1" && distance > 1.0) {
-                    throttledLog("Physics", 
-                        `Анализ расхождения для ${id}: расстояние=${distance.toFixed(2)}, ` +
-                        `время с последнего импульса=${timeSinceLastImpulse}мс, ` +
-                        `команда=${obj.lastImpulse.cmd}`
-                    );
+                    // throttledLog("Physics", 
+                    //     `Анализ расхождения для ${id}: расстояние=${distance.toFixed(2)}, ` +
+                    //     `время с последнего импульса=${timeSinceLastImpulse}мс, ` +
+                    //     `команда=${obj.lastImpulse.cmd}`
+                    // );
                 }
                 
                 window.Ammo.destroy(transform);
@@ -908,12 +684,12 @@ export function receiveObjectUpdate(data) {
             obj.body.activate(true);
             obj.body.applyCentralImpulse(impulse);
             
-            throttledLog("Physics", 
-                `Применен серверный импульс к ${id} (${obj.physicsBy}): ` +
-                `vx=${obj.serverVelocity.x.toFixed(2)}, ` +
-                `vy=${obj.serverVelocity.y.toFixed(2)}, ` +
-                `vz=${obj.serverVelocity.z.toFixed(2)}`
-            );
+            // throttledLog("Physics", 
+            //     `Применен серверный импульс к ${id} (${obj.physicsBy}): ` +
+            //     `vx=${obj.serverVelocity.x.toFixed(2)}, ` +
+            //     `vy=${obj.serverVelocity.y.toFixed(2)}, ` +
+            //     `vz=${obj.serverVelocity.z.toFixed(2)}`
+            // );
         } else {
             // Если нет физического тела, просто обновляем позицию меша
             obj.mesh.position.set(
@@ -922,110 +698,14 @@ export function receiveObjectUpdate(data) {
                 obj.serverPos.z
             );
             
-            throttledLog("Physics", 
-                `Обновлена позиция меша для ${id} (${obj.physicsBy}): ` +
-                `x=${obj.serverPos.x.toFixed(2)}, ` +
-                `y=${obj.serverPos.y.toFixed(2)}, ` +
-                `z=${obj.serverPos.z.toFixed(2)}`
-            );
+            // throttledLog("Physics", 
+            //     `Обновлена позиция меша для ${id} (${obj.physicsBy}): ` +
+            //     `x=${obj.serverPos.x.toFixed(2)}, ` +
+            //     `y=${obj.serverPos.y.toFixed(2)}, ` +
+            //     `z=${obj.serverPos.z.toFixed(2)}`
+            // );
         }
         
         window.Ammo.destroy(impulse);
     }
-}
-
-// Новая функция для создания диагностических сфер
-export function createDiagnosticScene(scene) {
-    console.log("[Physics] Создание диагностической сцены");
-
-    // Создаем теневую сферу только с Ammo-физикой для сравнения с сервером
-    createDiagnosticSphere(scene, "ammo_shadow", 0, 60, 0, 0x00ff00, "ammo");
-    
-    // Создаем теневую сферу с такими же начальными условиями как у серверной
-    // но с другим менеджментом физики
-    createDiagnosticSphere(scene, "bullet_shadow", 3, 60, 0, 0x0000ff, "bullet");
-    
-    console.log("[Physics] Диагностическая сцена создана");
-}
-
-// Вспомогательная функция для создания диагностической сферы
-function createDiagnosticSphere(scene, id, x, y, z, color, physicsBy) {
-    console.log(`[Physics] Создание диагностической сферы ${id}`);
-    
-    // Создаем сферу
-    const radius = 1;
-    const geometry = new THREE.SphereGeometry(radius, 32, 32);
-    const material = new THREE.MeshPhongMaterial({ 
-        color: color,
-        shininess: 30,
-        transparent: true,
-        opacity: 0.8 // Делаем полупрозрачной для лучшей видимости
-    });
-    
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(x, y, z);
-    
-    // Включаем тени
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    
-    scene.add(mesh);
-    console.log(`[Physics] Диагностическая сфера ${id} добавлена на сцену`);
-    
-    // Создаем физическое тело
-    let body = null;
-    
-    if ((physicsBy === "ammo" || physicsBy === "bullet") && localPhysicsWorld) {
-        // Создаем физическое тело для Ammo-физики
-        const shape = new window.Ammo.btSphereShape(radius);
-        const mass = 1;
-        
-        const transform = new window.Ammo.btTransform();
-        transform.setIdentity();
-        transform.setOrigin(new window.Ammo.btVector3(x, y, z));
-        
-        const localInertia = new window.Ammo.btVector3(0, 0, 0);
-        shape.calculateLocalInertia(mass, localInertia);
-        
-        const motionState = new window.Ammo.btDefaultMotionState(transform);
-        const rbInfo = new window.Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
-        body = new window.Ammo.btRigidBody(rbInfo);
-        
-        // Настраиваем физические свойства
-        body.setActivationState(4); // DISABLE_DEACTIVATION
-        body.setFriction(0.5);
-        body.setRollingFriction(0.1);
-        body.setRestitution(0.2); // Упругость (уменьшена для стабильности)
-        body.setDamping(0.01, 0.01); // Небольшое затухание
-        
-        // Включаем CCD для предотвращения проваливания на меньшем масштабе
-        body.setCcdMotionThreshold(radius * 0.8); 
-        body.setCcdSweptSphereRadius(radius * 0.7);
-        
-        // Добавляем тело в физический мир
-        localPhysicsWorld.addRigidBody(body);
-        
-        console.log(`[Physics] Физическое тело для диагностической сферы ${id} создано с CCD`);
-        
-        // Очистка памяти
-        window.Ammo.destroy(rbInfo);
-        window.Ammo.destroy(localInertia);
-    }
-    
-    // Сохраняем объект
-    const diagnosticObject = {
-        id,
-        mesh,
-        body,
-        object_type: "diagnostic_sphere",
-        physicsBy: physicsBy,
-        // Для сфер с bullet-физикой устанавливаем начальную серверную позицию
-        serverPos: physicsBy === "bullet" ? { x, y, z } : null
-    };
-    
-    // Добавляем в общий словарь объектов
-    objects[id] = diagnosticObject;
-    
-    console.log(`[Physics] Диагностическая сфера ${id} создана с типом ${physicsBy}`);
-    return diagnosticObject;
 }

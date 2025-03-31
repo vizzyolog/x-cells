@@ -1,18 +1,26 @@
 package ws
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
 
+	pb "x-cells/backend/internal/physics/generated"
 	"x-cells/backend/internal/transport"
+	"x-cells/backend/internal/world"
+)
+
+const (
+	DefaultUpdateInterval = 50 * time.Millisecond // Интервал отправки обновлений
+	DefaultPingInterval   = 10 * time.Second      // Интервал отправки пингов
 )
 
 // ObjectManager описывает интерфейс для работы с объектами
 type ObjectManager interface {
-	// Методы, необходимые для работы с объектами
+	GetAllWorldObjects() []*world.WorldObject // Методы, необходимые для работы с объектами
 }
 
 // MessageHandler - тип функции обработчика сообщений
@@ -26,10 +34,11 @@ type WSServer struct {
 	handlers           map[string]MessageHandler
 	connectionHandlers []func(conn *SafeWriter)
 	pingInterval       time.Duration
+	serializer         *WorldSerializer
 }
 
 // NewWSServer создает новый экземпляр WebSocket сервера
-func NewWSServer(objectManager ObjectManager, physics *transport.PhysicsClient) *WSServer {
+func NewWSServer(objectManager ObjectManager, physics *transport.PhysicsClient, serialaizer *WorldSerializer) *WSServer {
 	server := &WSServer{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
@@ -39,10 +48,12 @@ func NewWSServer(objectManager ObjectManager, physics *transport.PhysicsClient) 
 		handlers:           make(map[string]MessageHandler),
 		connectionHandlers: []func(conn *SafeWriter){},
 		pingInterval:       DefaultPingInterval,
+		serializer:         serialaizer,
 	}
 
 	// Регистрируем стандартные обработчики
 	server.RegisterHandler(MessageTypePing, server.handlePing)
+	server.RegisterHandler(MessageTypeCommand, server.handleCmd)
 
 	return server
 }
@@ -82,6 +93,11 @@ func (s *WSServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := s.serializer.SendCreateForAllObjects(safeConn); err != nil {
+		log.Printf("[Go] Ошибка при отправке существующих объектов: %v", err)
+		return
+	}
+
 	// Запускаем пинг для поддержания соединения
 	if s.pingInterval > 0 {
 		go s.startPing(safeConn)
@@ -92,6 +108,7 @@ func (s *WSServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 		handler(safeConn)
 	}
 
+	go s.startClientStreaming(safeConn)
 	// Основной цикл обработки сообщений
 	for {
 		_, data, err := conn.ReadMessage()
@@ -142,6 +159,66 @@ func (s *WSServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	log.Printf("WebSocket connection closed: %s", conn.RemoteAddr())
 }
 
+// handleCmd обрабатывает команды управления
+func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
+	cmdMsg, ok := message.(*CommandMessage)
+	if !ok {
+		return ErrInvalidMessage
+	}
+
+	var impulse pb.Vector3
+	switch cmdMsg.Cmd {
+	case "LEFT":
+		impulse.X = -5
+	case "RIGHT":
+		impulse.X = 5
+	case "UP":
+		impulse.Z = -5
+	case "DOWN":
+		impulse.Z = 5
+	case "SPACE":
+		impulse.Y = 10
+	default:
+		log.Printf("[Go] Неизвестная команда: %s", cmdMsg.Cmd)
+		return nil
+	}
+
+	// Получаем все объекты из менеджера мира
+	worldObjects := s.objectManager.GetAllWorldObjects()
+
+	// Счетчик успешно обработанных объектов
+	successCount := 0
+
+	// Применяем импульс ко всем объектам, кроме типа ammo
+	for _, obj := range worldObjects {
+		// Пропускаем объекты, которые обрабатываются только на клиенте
+		if obj.PhysicsType == world.PhysicsTypeAmmo {
+			continue
+		}
+
+		// Применяем импульс к объекту через Bullet Physics
+		_, err := s.physics.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
+			Id:      obj.ID,
+			Impulse: &impulse,
+		})
+
+		if err != nil {
+			log.Printf("[Go] Ошибка применения импульса к %s: %v", obj.ID, err)
+			continue
+		}
+
+		successCount++
+		log.Printf("[Go] Применен импульс к %s: (%f, %f, %f)",
+			obj.ID, impulse.X, impulse.Y, impulse.Z)
+	}
+
+	log.Printf("[Go] Применен импульс к %d объектам с типами физики bullet и both", successCount)
+
+	// Отправляем подтверждение обработки команды с временными метками
+	ackMsg := NewAckMessage(cmdMsg.Cmd, cmdMsg.ClientTime)
+	return conn.WriteJSON(ackMsg)
+}
+
 // Стандартный обработчик ping-сообщений
 func (s *WSServer) handlePing(conn *SafeWriter, message interface{}) error {
 	pingMsg, ok := message.(*PingMessage)
@@ -167,6 +244,58 @@ func (s *WSServer) startPing(conn *SafeWriter) {
 		if err := conn.WriteJSON(pingMsg); err != nil {
 			log.Printf("Error sending ping: %v", err)
 			return
+		}
+	}
+}
+
+func (s *WSServer) startClientStreaming(wsWriter *SafeWriter) {
+	ticker := time.NewTicker(DefaultUpdateInterval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		// Получаем список всех объектов из мира
+		worldObjects := s.objectManager.GetAllWorldObjects()
+
+		// Для каждого объекта с физикой bullet или both получаем состояние
+		for _, obj := range worldObjects {
+			// Пропускаем объекты, которые обрабатываются только на клиенте
+			if obj.PhysicsType == world.PhysicsTypeAmmo {
+				continue
+			}
+
+			// Запрашиваем состояние объекта из физического движка
+			resp, err := s.physics.GetObjectState(context.Background(), &pb.GetObjectStateRequest{
+				Id: obj.ID,
+			})
+
+			if err != nil {
+				log.Printf("[Go] Ошибка получения состояния для %s: %v", obj.ID, err)
+				continue
+			}
+
+			// Проверяем, что получен ответ с состоянием
+			if resp.Status != "OK" || resp.State == nil {
+				continue
+			}
+
+			// Создаем Vector3 и Quaternion из ответа сервера
+			position := world.Vector3{
+				X: resp.State.Position.X,
+				Y: resp.State.Position.Y,
+				Z: resp.State.Position.Z,
+			}
+
+			rotation := world.Quaternion{
+				X: resp.State.Rotation.X,
+				Y: resp.State.Rotation.Y,
+				Z: resp.State.Rotation.Z,
+				W: resp.State.Rotation.W,
+			}
+
+			// Отправляем обновление позиции и вращения клиенту
+			if err := s.serializer.SendUpdateForObject(wsWriter, obj.ID, position, rotation); err != nil {
+				log.Printf("[Go] Ошибка отправки обновления для %s: %v", obj.ID, err)
+			}
 		}
 	}
 }

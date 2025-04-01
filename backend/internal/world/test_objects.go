@@ -1,7 +1,6 @@
 package world
 
 import (
-	"fmt"
 	"log"
 	"math"
 	"math/rand/v2"
@@ -31,11 +30,11 @@ func (t *TestObjectsCreator) CreateTerrain() {
 	// Константы для террейна
 	const (
 		// Размеры сетки террейна
-		terrainGridSize = 128
+		terrainGridSize = 512
 
 		// Диапазон высот
-		terrainMinHeight = -20.0
-		terrainMaxHeight = 20.0
+		terrainMinHeight = -30.0
+		terrainMaxHeight = 30.0
 	)
 
 	// Генерируем данные о высоте для террейна
@@ -48,17 +47,15 @@ func (t *TestObjectsCreator) CreateTerrain() {
 		heightData,
 		terrainGridSize,
 		terrainGridSize,
-		1.0,
-		1.0,
-		1.0,
+		2.0,
+		2.0,
+		2.0,
 		float32(terrainMinHeight),
 		float32(terrainMaxHeight),
 	)
 
 	// Явно устанавливаем тип физики для террейна (и на клиенте, и на сервере)
 	terrain.PhysicsType = PhysicsTypeBoth
-
-	fmt.Printf("terrain data %+s", terrain)
 
 	// Создаем объект в клиентской физике (Ammo)
 	if err := t.factory.CreateObjectInAmmo(terrain); err != nil {
@@ -76,7 +73,7 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 	// Создаем сферу-игрока с ID mainPlayer1, которая будет основной для камеры
 	// Этот объект будет иметь тип физики both
 	mainPlayer := NewSphere(
-		"mainPlayer3",
+		"mainPlayer1",
 		Vector3{X: 0, Y: terrainMaxHeight + 50, Z: 0},
 		1.0,
 		1.0,
@@ -98,7 +95,7 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 	// Создаем тестовый шар с физикой ammo (обрабатывается только клиентом)
 	sphereAmmo := NewSphere(
 		"mainPlayer2",
-		Vector3{X: -20, Y: terrainMaxHeight + 50, Z: 0},
+		Vector3{X: -10, Y: terrainMaxHeight + 50, Z: 0},
 		1.0,
 		1.0,
 		"#00ff00",
@@ -112,8 +109,8 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 
 	// Создаем тестовый шар с физикой bullet (обрабатывается только сервером)
 	sphereBullet := NewSphere(
-		"mainPlayer1",
-		Vector3{X: 20, Y: terrainMaxHeight + 50, Z: 0},
+		"mainPlayer3",
+		Vector3{X: 10, Y: terrainMaxHeight + 50, Z: 0},
 		1.0,
 		1.0,
 		"#0000ff",
@@ -178,19 +175,14 @@ func generateTerrainData(w, h int, minHeight, maxHeight float64) []float32 {
 	heightRange := maxHeight - minHeight
 
 	// Добавляем кратеры и горы
-	centerX := float64(w) / 2.0
-	centerZ := float64(h) / 2.0
+	// centerX := float64(w) / 2.0
+	// centerZ := float64(h) / 2.0
 
-	maxRadius := math.Min(centerX, centerZ) * 0.8 // Радиус основного ландшафта
+	// maxRadius := math.Min(centerX, centerZ) * 0.8 // Радиус основного ландшафта
 
 	// Создаем несколько гор в случайных местах
-	numMountains := 5
+	numMountains := 100
 	mountains := make([]struct{ x, z, height, radius float64 }, numMountains)
-
-	// // "Случайные" координаты для гор (для воспроизводимости используем фиксированные значения)
-	// mountainPositions := []struct{ x, z float64 }{
-	// 	{0.2, 0.3}, {0.7, 0.8}, {0.4, 0.7}, {0.8, 0.2}, {0.1, 0.9},
-	// }
 
 	for i := 0; i < numMountains; i++ {
 		mountains[i].x = rand.Float64() * float64(w)
@@ -239,13 +231,13 @@ func generateTerrainData(w, h int, minHeight, maxHeight float64) []float32 {
 			}
 
 			// Создаем впадину по краям карты для естественного обрамления
-			distanceFromCenter := math.Sqrt(math.Pow(float64(i)-centerX, 2) + math.Pow(float64(j)-centerZ, 2))
-			if distanceFromCenter > maxRadius {
-				// За пределами основного радиуса создаем понижение
-				edgeFactor := (distanceFromCenter - maxRadius) / (math.Max(centerX, centerZ) - maxRadius)
-				edgeFactor = math.Min(1.0, edgeFactor) // Ограничиваем множитель до 1
-				elevation -= edgeFactor * 0.5          // Понижаем высоту к краям
-			}
+			// distanceFromCenter := math.Sqrt(math.Pow(float64(i)-centerX, 2) + math.Pow(float64(j)-centerZ, 2))
+			// if distanceFromCenter > maxRadius {
+			// 	// За пределами основного радиуса создаем понижение
+			// 	edgeFactor := (distanceFromCenter - maxRadius) / (math.Max(centerX, centerZ) - maxRadius)
+			// 	edgeFactor = math.Min(1.0, edgeFactor) // Ограничиваем множитель до 1
+			// 	elevation -= edgeFactor * 0.5          // Понижаем высоту к краям
+			// }
 
 			// Масштабируем в нужный диапазон высот
 			height := elevation*heightRange + minHeight

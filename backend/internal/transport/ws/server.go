@@ -238,7 +238,7 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 		}
 
 		// Умножаем нормализованный вектор на желаемую скорость
-		speed := float32(5) // Желаемая скорость движения
+		speed := float32(2) // Желаемая скорость движения
 		impulse.X = directionVector.X * speed
 		impulse.Y = directionVector.Y * speed
 		impulse.Z = directionVector.Z * speed

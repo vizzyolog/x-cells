@@ -1,8 +1,10 @@
 package world
 
 import (
+	"fmt"
 	"log"
 	"math"
+	"math/rand/v2"
 )
 
 // TestObjectsCreator создает тестовые объекты для демонстрации
@@ -28,10 +30,6 @@ func (t *TestObjectsCreator) CreateAll(terrainMaxHeight float32) {
 func (t *TestObjectsCreator) CreateTerrain() {
 	// Константы для террейна
 	const (
-		// Физические размеры террейна в мире
-		terrainPhysicalWidth = 500.0
-		terrainPhysicalDepth = 500.0
-
 		// Размеры сетки террейна
 		terrainGridSize = 128
 
@@ -50,15 +48,17 @@ func (t *TestObjectsCreator) CreateTerrain() {
 		heightData,
 		terrainGridSize,
 		terrainGridSize,
-		float32(terrainPhysicalWidth/float64(terrainGridSize-1)),
 		1.0,
-		float32(terrainPhysicalDepth/float64(terrainGridSize-1)),
+		1.0,
+		1.0,
 		float32(terrainMinHeight),
 		float32(terrainMaxHeight),
 	)
 
 	// Явно устанавливаем тип физики для террейна (и на клиенте, и на сервере)
 	terrain.PhysicsType = PhysicsTypeBoth
+
+	fmt.Printf("terrain data %+s", terrain)
 
 	// Создаем объект в клиентской физике (Ammo)
 	if err := t.factory.CreateObjectInAmmo(terrain); err != nil {
@@ -76,7 +76,7 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 	// Создаем сферу-игрока с ID mainPlayer1, которая будет основной для камеры
 	// Этот объект будет иметь тип физики both
 	mainPlayer := NewSphere(
-		"mainPlayer1",
+		"mainPlayer3",
 		Vector3{X: 0, Y: terrainMaxHeight + 50, Z: 0},
 		1.0,
 		1.0,
@@ -112,7 +112,7 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 
 	// Создаем тестовый шар с физикой bullet (обрабатывается только сервером)
 	sphereBullet := NewSphere(
-		"mainPlayer3",
+		"mainPlayer1",
 		Vector3{X: 20, Y: terrainMaxHeight + 50, Z: 0},
 		1.0,
 		1.0,
@@ -187,15 +187,15 @@ func generateTerrainData(w, h int, minHeight, maxHeight float64) []float32 {
 	numMountains := 5
 	mountains := make([]struct{ x, z, height, radius float64 }, numMountains)
 
-	// "Случайные" координаты для гор (для воспроизводимости используем фиксированные значения)
-	mountainPositions := []struct{ x, z float64 }{
-		{0.2, 0.3}, {0.7, 0.8}, {0.4, 0.7}, {0.8, 0.2}, {0.1, 0.9},
-	}
+	// // "Случайные" координаты для гор (для воспроизводимости используем фиксированные значения)
+	// mountainPositions := []struct{ x, z float64 }{
+	// 	{0.2, 0.3}, {0.7, 0.8}, {0.4, 0.7}, {0.8, 0.2}, {0.1, 0.9},
+	// }
 
 	for i := 0; i < numMountains; i++ {
-		mountains[i].x = mountainPositions[i].x * float64(w)
-		mountains[i].z = mountainPositions[i].z * float64(h)
-		mountains[i].height = 0.5 + 0.5*math.Abs(noise2D(float64(i)*0.1, 0.5))  // Высота от 0.5 до 1.0
+		mountains[i].x = rand.Float64() * float64(w)
+		mountains[i].z = rand.Float64() * float64(h)
+		mountains[i].height = 0.1 + 1*math.Abs(noise2D(float64(i)*0.1, 0.5))
 		mountains[i].radius = 5.0 + 15.0*math.Abs(noise2D(0.5, float64(i)*0.1)) // Радиус от 5 до 20
 	}
 

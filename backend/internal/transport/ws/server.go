@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"math"
 	"net/http"
 	"time"
 
@@ -19,9 +20,11 @@ const (
 	DefaultPingInterval   = 10 * time.Second      // Интервал отправки пингов
 )
 
-// ObjectManager описывает интерфейс для работы с объектами
 type ObjectManager interface {
-	GetAllWorldObjects() []*world.WorldObject // Методы, необходимые для работы с объектами
+	GetAllWorldObjects() []*world.WorldObject
+	GetObject(id string) (*world.WorldObject, bool)
+	UpdateObjectPosition(id string, position world.Vector3)
+	UpdateObjectRotation(id string, rotation world.Quaternion)
 }
 
 // MessageHandler - тип функции обработчика сообщений
@@ -168,6 +171,20 @@ type Direction struct {
 	Z float32 `json:"z"`
 }
 
+// VectorSub вычитает два вектора
+func VectorSub(v1, v2 *pb.Vector3) *pb.Vector3 {
+	return &pb.Vector3{
+		X: v1.X - v2.X,
+		Y: v1.Y - v2.Y,
+		Z: v1.Z - v2.Z,
+	}
+}
+
+// VectorLength вычисляет длину вектора
+func VectorLength(v *pb.Vector3) float32 {
+	return float32(math.Sqrt(float64(v.X*v.X + v.Y*v.Y + v.Z*v.Z)))
+}
+
 // handleCmd обрабатывает команды управления
 func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 	cmdMsg, ok := message.(*CommandMessage)
@@ -200,11 +217,34 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 			return nil
 		}
 
-		impulse.X = direction.X
-		impulse.Y = direction.Y
-		impulse.Z = direction.Z
+		// Получаем позицию объекта
+		obj, ok := s.objectManager.GetObject(cmdMsg.ObjectID)
+		if !ok {
+			log.Printf("[Go] Объект с ID %s не найден", cmdMsg.ObjectID)
+			return nil
+		}
 
-		log.Printf("[Go] Получен вектор направления: (%f, %f, %f)", impulse.X, impulse.Y, impulse.Z)
+		// Вычисляем вектор направления от объекта к точке
+		target := pb.Vector3{X: direction.X, Y: direction.Y, Z: direction.Z}
+		currentPos := pb.Vector3{X: obj.Position.X, Y: obj.Position.Y, Z: obj.Position.Z}
+		directionVector := VectorSub(&target, &currentPos) // Используем VectorSub
+
+		// Нормализуем вектор направления
+		directionVectorLength := VectorLength(directionVector) // Используем VectorLength
+		if directionVectorLength > 0 {
+			directionVector.X /= directionVectorLength
+			directionVector.Y /= directionVectorLength
+			directionVector.Z /= directionVectorLength
+		}
+
+		// Умножаем нормализованный вектор на желаемую скорость
+		speed := float32(5) // Желаемая скорость движения
+		impulse.X = directionVector.X * speed
+		impulse.Y = directionVector.Y * speed
+		impulse.Z = directionVector.Z * speed
+
+		log.Printf("[Go] Получен вектор направления: (%f, %f, %f), импульс: (%f, %f, %f)",
+			direction.X, direction.Y, direction.Z, impulse.X, impulse.Y, impulse.Z)
 	default:
 		log.Printf("[Go] Неизвестная команда: %s", cmdMsg.Cmd)
 		return nil

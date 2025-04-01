@@ -4,8 +4,8 @@ import { initAmmo, stepPhysics, updatePhysicsObjects } from './physics';
 import { initNetwork } from './network';
 import { objects } from './objects';
 import { initCamera, camera, updateCamera, logCameraStatus } from './camera';
-import { initGamepad } from './gamepad';
 import { initGameStateManager, gameStateManager } from './gamestatemanager';
+import { initGamepad, updateArrowHelper } from './gamepad'; 
 
 function animate() {
     requestAnimationFrame(animate);
@@ -18,6 +18,11 @@ function animate() {
     
     // Обновляем положение источника света относительно камеры, как солнце
     updateShadowCamera(camera);
+
+      // Обновляем ArrowHelper
+    if (gameStateManager.playerMesh) {
+        updateArrowHelper(gameStateManager.playerMesh);
+    }
 
     renderer.render(scene, camera);
 }
@@ -37,13 +42,13 @@ async function start() {
         // Инициализируем сетевое соединение
         const ws = await initNetwork()
             
-        initGameStateManager(ws);
+        initGameStateManager(ws, scene);
 
         gameStateManager.on('gameInitialized', () => {
             console.warn('game initialized')
             animate();
         }); 
-               
+
     } catch (error) {
         console.error("Ошибка при инициализации Ammo.js:", error);
     }

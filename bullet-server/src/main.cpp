@@ -99,8 +99,8 @@ private:
         );
 
         // Применяем масштаб
-        terrainShape->setLocalScaling(btVector3(scaleX, 1.0f, scaleZ));
-        terrainShape->setMargin(0.1f);
+        terrainShape->setLocalScaling(btVector3(scaleX, scaleY, scaleZ));
+        // terrainShape->setMargin(0.5f);
 
         return terrainShape;
     }

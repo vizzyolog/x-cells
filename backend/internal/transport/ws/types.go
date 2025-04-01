@@ -48,6 +48,7 @@ type CommandMessage struct {
 	Cmd        string      `json:"cmd,omitempty"`
 	ClientTime int64       `json:"client_time,omitempty"`
 	Data       interface{} `json:"data"`
+	ObjectID   string      `json:"object_id"`
 }
 
 // AckMessage представляет подтверждение команды сервером

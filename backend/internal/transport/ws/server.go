@@ -205,13 +205,17 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 	case "SPACE":
 		impulse.Y = 10
 	case "MOVE":
-		var direction Direction
+		// обработчик вектора на go сервере.
+
+		var target pb.Vector3
 		data, err := json.Marshal(cmdMsg.Data)
 		if err != nil {
 			log.Printf("[Go] Ошибка маршалинга данных: %v", err)
 			return nil
 		}
-		err = json.Unmarshal(data, &direction)
+
+		log.Printf("[Go] Получено сообщение от клиента: %s", data)
+		err = json.Unmarshal(data, &target)
 		if err != nil {
 			log.Printf("[Go] Ошибка размаршалирования данных: %v", err)
 			return nil
@@ -225,26 +229,25 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 		}
 
 		// Вычисляем вектор направления от объекта к точке
-		target := pb.Vector3{X: direction.X, Y: direction.Y, Z: direction.Z}
 		currentPos := pb.Vector3{X: obj.Position.X, Y: obj.Position.Y, Z: obj.Position.Z}
 		directionVector := VectorSub(&target, &currentPos) // Используем VectorSub
 
-		// Нормализуем вектор направления
+		// Вычисляем длину вектора направления
 		directionVectorLength := VectorLength(directionVector) // Используем VectorLength
-		if directionVectorLength > 0 {
-			directionVector.X /= directionVectorLength
-			directionVector.Y /= directionVectorLength
-			directionVector.Z /= directionVectorLength
+
+		// Вычисляем импульс на основе расстояния
+		maxSpeed := float32(0.0)             // Максимальная скорость
+		speed := directionVectorLength * 0.0 // Увеличиваем скорость с увеличением расстояния
+		if speed > maxSpeed {
+			speed = maxSpeed // Ограничиваем максимальную скорость
 		}
 
-		// Умножаем нормализованный вектор на желаемую скорость
-		speed := float32(2) // Желаемая скорость движения
 		impulse.X = directionVector.X * speed
 		impulse.Y = directionVector.Y * speed
 		impulse.Z = directionVector.Z * speed
 
-		log.Printf("[Go] Получен вектор направления: (%f, %f, %f), импульс: (%f, %f, %f)",
-			direction.X, direction.Y, direction.Z, impulse.X, impulse.Y, impulse.Z)
+		log.Printf("[Go] Получена целевая позиция: (%f, %f, %f), импульс: (%f, %f, %f)",
+			target.X, target.Y, target.Z, impulse.X, impulse.Y, impulse.Z)
 	default:
 		log.Printf("[Go] Неизвестная команда: %s", cmdMsg.Cmd)
 		return nil
@@ -260,6 +263,10 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 	for _, obj := range worldObjects {
 		// Пропускаем объекты, которые обрабатываются только на клиенте
 		if obj.PhysicsType == world.PhysicsTypeAmmo {
+			continue
+		}
+
+		if obj.ID == "terrain_1" {
 			continue
 		}
 

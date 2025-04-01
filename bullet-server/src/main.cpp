@@ -75,8 +75,8 @@ private:
             maxHeight += 1.0f;
         } else if (minHeight == 0 && maxHeight == 0) {
             // Если данных нет, используем разумные значения по умолчанию
-            minHeight = -10.0f;
-            maxHeight = 10.0f;
+            // minHeight = -10.0f;
+            // maxHeight = 10.0f;
         }
         
         std::cout << "Creating terrain shape with:" << std::endl;
@@ -100,7 +100,7 @@ private:
 
         // Применяем масштаб
         terrainShape->setLocalScaling(btVector3(scaleX, scaleY, scaleZ));
-        // terrainShape->setMargin(0.5f);
+        terrainShape->setMargin(0.5f);
 
         return terrainShape;
     }
@@ -250,7 +250,7 @@ private:
         lastPositionLogTime = now;
         
         // Проверяем наличие объекта mainPlayer1
-        auto it = objects.find("mainPlayer3");
+        auto it = objects.find("mainPlayer1");
         if (it == objects.end()) {
             return;
         }
@@ -272,12 +272,12 @@ private:
         const btVector3& velocity = body->getLinearVelocity();
         
         // Выводим позицию и скорость
-        std::cout << "[C++] Позиция mainPlayer3 в мире Bullet: "
+        std::cout << "[C++] Позиция mainPlayer1 в мире Bullet: "
                   << "X: " << position.x() << ", "
                   << "Y: " << position.y() << ", "
                   << "Z: " << position.z() << std::endl;
                   
-        std::cout << "[C++] Скорость mainPlayer3 в мире Bullet: "
+        std::cout << "[C++] Скорость mainPlayer1 в мире Bullet: "
                   << "VX: " << velocity.x() << ", "
                   << "VY: " << velocity.y() << ", "
                   << "VZ: " << velocity.z() << std::endl;

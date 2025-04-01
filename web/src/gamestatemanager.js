@@ -3,6 +3,7 @@
 import { EventEmitter } from 'events';
 import { initGamepad } from './gamepad';
 import { camera } from './camera';
+import {scene} from './scene';
 
 class GameStateManager extends EventEmitter {
     constructor(ws) {
@@ -12,6 +13,7 @@ class GameStateManager extends EventEmitter {
         this.terrainMesh = null;
         this.playerMesh = null;
         this.ws = ws;
+        this.scene = scene;
     }
 
     setTerrainMesh(mesh) {
@@ -28,7 +30,7 @@ class GameStateManager extends EventEmitter {
 
     checkGameState() {
         if (this.terrainMeshCreated && this.playerMeshCreated) {
-            initGamepad(camera, this.terrainMesh, this.playerMesh, this.ws);
+            initGamepad(camera, this.terrainMesh, this.playerMesh, this.ws, this.scene);
             this.emit('gameInitialized');
             console.warn("[Game State Manager] game initialized!!!")
         }
@@ -38,6 +40,6 @@ class GameStateManager extends EventEmitter {
 // Создаем экземпляр GameStateManager с ws
 export let gameStateManager;
 
-export function initGameStateManager(ws){
-    gameStateManager = new GameStateManager(ws);
+export function initGameStateManager(ws, scene){
+    gameStateManager = new GameStateManager(ws, scene);
 }

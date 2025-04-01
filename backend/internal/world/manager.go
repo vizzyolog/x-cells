@@ -35,13 +35,10 @@ func (m *Manager) AddWorldObject(obj *WorldObject) {
 }
 
 // GetObject возвращает базовый объект по ID
-func (m *Manager) GetObject(id string) (*Object, bool) {
+func (m *Manager) GetObject(id string) (*WorldObject, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	obj, exists := m.objects[id]
-	if !exists {
-		return nil, false
-	}
+	obj, exists := m.worldObjects[id]
 	return obj, exists
 }
 
@@ -89,4 +86,22 @@ func (m *Manager) Clear() {
 	defer m.mu.Unlock()
 	m.objects = make(map[string]*Object)
 	m.worldObjects = make(map[string]*WorldObject)
+}
+
+// UpdateObjectPosition обновляет позицию объекта
+func (m *Manager) UpdateObjectPosition(id string, position Vector3) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if obj, exists := m.worldObjects[id]; exists {
+		obj.Position = position
+	}
+}
+
+// UpdateObjectRotation обновляет вращение объекта
+func (m *Manager) UpdateObjectRotation(id string, rotation Quaternion) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if obj, exists := m.worldObjects[id]; exists {
+		obj.Rotation = rotation
+	}
 }

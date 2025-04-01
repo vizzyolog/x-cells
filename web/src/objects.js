@@ -102,13 +102,6 @@ function createPhysicsBodyForTerrain(data) {
     const transform = new Ammo.btTransform();
     transform.setIdentity();
     
-    // Важно! Смещаем террейн, так как Bullet центрирует его по ограничивающему боксу
-    transform.setOrigin(new Ammo.btVector3(
-        data.x || 0,
-        (data.min_height + data.max_height) / 2,
-        data.z || 0
-    ));
-
     const mass = 0; // Статическое тело
     const localInertia = new Ammo.btVector3(0, 0, 0);
     const motionState = new Ammo.btDefaultMotionState(transform);
@@ -125,7 +118,7 @@ function createPhysicsBodyForTerrain(data) {
 
     console.log("[Terrain] Физическое тело создано:", {
         размеры: { w, h },
-        масштаб: { x: scaleX, y: data.scale_y, z: scaleZ },
+        масштаб: { x: data.scaleX, y: data.scale_y, z: data.scaleZ },
         позиция: { 
             x: data.x || 0, 
             y: (data.min_height + data.max_height) / 2,
@@ -239,17 +232,6 @@ function createPhysicsBodyForSphere(data) {
             localInertia
         );
         const body = new window.Ammo.btRigidBody(rbInfo);
-        
-        // // Настраиваем физические свойства
-        // body.setFriction(0.5);
-        // body.setRollingFriction(0.1);
-        // body.setRestitution(0.2); // Немного уменьшаем упругость для стабильности
-        // body.setDamping(0.01, 0.01); // Небольшое линейное и угловое затухание
-        
-        // Включаем CCD для предотвращения проваливания сквозь террейн
-        // Для меньшего масштаба (100 вместо 15000) эти значения более оптимальны
-        // body.setCcdMotionThreshold(radius * 0.8); // Увеличиваем порог для активации CCD
-        // body.setCcdSweptSphereRadius(radius * 0.7); // Радиус сферы для CCD
         
         // Отключаем деактивацию
         body.setActivationState(4); // DISABLE_DEACTIVATION

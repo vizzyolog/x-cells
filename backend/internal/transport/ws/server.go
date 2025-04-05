@@ -204,47 +204,43 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 		impulse.Z = 5
 	case "SPACE":
 		impulse.Y = 10
-	case "MOVE":
-		var direction Direction
-		data, err := json.Marshal(cmdMsg.Data)
+	case "MOUSE_VECTOR":
+		// Получаем данные о направлении
+		var direction struct {
+			X        float32 `json:"x"`
+			Y        float32 `json:"y"`
+			Z        float32 `json:"z"`
+			Distance float32 `json:"distance"`
+		}
+
+		// Преобразуем interface{} в []byte для json.Unmarshal
+		dataBytes, err := json.Marshal(cmdMsg.Data)
 		if err != nil {
-			log.Printf("[Go] Ошибка маршалинга данных: %v", err)
-			return nil
-		}
-		err = json.Unmarshal(data, &direction)
-		if err != nil {
-			log.Printf("[Go] Ошибка размаршалирования данных: %v", err)
+			log.Printf("[Go] Ошибка преобразования данных MOUSE_VECTOR: %v", err)
 			return nil
 		}
 
-		// Получаем позицию объекта
-		obj, ok := s.objectManager.GetObject(cmdMsg.ObjectID)
-		if !ok {
-			log.Printf("[Go] Объект с ID %s не найден", cmdMsg.ObjectID)
+		if err := json.Unmarshal(dataBytes, &direction); err != nil {
+			log.Printf("[Go] Ошибка разбора данных MOUSE_VECTOR: %v", err)
 			return nil
 		}
 
-		// Вычисляем вектор направления от объекта к точке
-		target := pb.Vector3{X: direction.X, Y: direction.Y, Z: direction.Z}
-		currentPos := pb.Vector3{X: obj.Position.X, Y: obj.Position.Y, Z: obj.Position.Z}
-		directionVector := VectorSub(&target, &currentPos) // Используем VectorSub
+		log.Printf("[Go] Получен вектор направления: (%f, %f, %f), расстояние: %f",
+			direction.X, direction.Y, direction.Z, direction.Distance)
 
-		// Нормализуем вектор направления
-		directionVectorLength := VectorLength(directionVector) // Используем VectorLength
-		if directionVectorLength > 0 {
-			directionVector.X /= directionVectorLength
-			directionVector.Y /= directionVectorLength
-			directionVector.Z /= directionVectorLength
-		}
+		// Вычисляем силу импульса на основе расстояния от центра
+		// Минимальный импульс 12.0 (было 8.0)
+		impulseStrength := float32(12.0)
+		// Рассчитываем дополнительную силу в зависимости от расстояния до клика
+		// Множитель 0.2 (было 0.15) с максимальным добавлением 20 (было 15)
+		additionalStrength := float32(math.Min(20.0, float64(direction.Distance)*0.2))
+		impulseStrength += additionalStrength
 
-		// Умножаем нормализованный вектор на желаемую скорость
-		speed := float32(2) // Желаемая скорость движения
-		impulse.X = directionVector.X * speed
-		impulse.Y = directionVector.Y * speed
-		impulse.Z = directionVector.Z * speed
+		// Создаем импульс в направлении X, Y и Z с учетом полученного вектора
+		impulse.X = direction.X * impulseStrength
+		impulse.Y = direction.Y * impulseStrength // Теперь используем Y составляющую
+		impulse.Z = direction.Z * impulseStrength
 
-		log.Printf("[Go] Получен вектор направления: (%f, %f, %f), импульс: (%f, %f, %f)",
-			direction.X, direction.Y, direction.Z, impulse.X, impulse.Y, impulse.Z)
 	default:
 		log.Printf("[Go] Неизвестная команда: %s", cmdMsg.Cmd)
 		return nil
@@ -260,6 +256,10 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 	for _, obj := range worldObjects {
 		// Пропускаем объекты, которые обрабатываются только на клиенте
 		if obj.PhysicsType == world.PhysicsTypeAmmo {
+			continue
+		}
+
+		if obj.ID == "terrain_1" {
 			continue
 		}
 

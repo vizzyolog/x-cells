@@ -2,13 +2,21 @@
 import { initScene, scene, renderer, updateShadowCamera } from './scene';
 import { initAmmo, stepPhysics, updatePhysicsObjects } from './physics';
 import { initNetwork } from './network';
-import { objects } from './objects';
+import { objects, playerMesh} from './objects';
 import { initCamera, camera, updateCamera, logCameraStatus } from './camera';
 import { initGameStateManager, gameStateManager } from './gamestatemanager';
 import { initGamepad, updateArrowHelper } from './gamepad'; 
+import Stats from 'stats.js';
+
+
+const stats = new Stats();
+stats.showPanel(0); // 0: FPS, 1: ms, 2: memory
+document.body.appendChild(stats.dom);
+
 
 function animate() {
-    requestAnimationFrame(animate);
+    stats.begin(); 
+    
 
     stepPhysics(1 / 60);
     updatePhysicsObjects(objects);
@@ -21,10 +29,14 @@ function animate() {
 
       // Обновляем ArrowHelper
     if (gameStateManager.playerMesh) {
-        updateArrowHelper(gameStateManager.playerMesh);
+       updateArrowHelper(gameStateManager.playerMesh);
     }
 
     renderer.render(scene, camera);
+
+    stats.end(); // Завершаем замер
+    
+    requestAnimationFrame(animate);
 }
 
 async function start() {

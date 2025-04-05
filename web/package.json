@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "ammo.js": "^0.0.10",
+    "stats.js": "^0.17.0",
     "three": "^0.173.0"
   }
 }

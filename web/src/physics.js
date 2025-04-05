@@ -52,6 +52,9 @@ function setupPhysicsWorld() {
     localPhysicsWorld.setGravity(new Ammo.btVector3(0, -9.81, 0));
     
     console.log("[Physics] Физический мир успешно создан");
+    
+    // Добавляем эффект отскока после создания мира
+    addCollisionBounceEffect();
 }
 
 export async function initAmmo() {
@@ -97,28 +100,79 @@ export async function initAmmo() {
     });
 }
 
+// Обработка шага физики
 export function stepPhysics(deltaTime) {
-    // Проверяем корректность deltaTime
-    if (!deltaTime || isNaN(deltaTime) || deltaTime <= 0 || deltaTime > 1) {
-        deltaTime = 1/60; // Значение по умолчанию
+    if (!localPhysicsWorld) return;
+
+    try {
+        // Проверяем корректность deltaTime
+        if (!deltaTime || isNaN(deltaTime) || deltaTime <= 0 || deltaTime > 1) {
+            deltaTime = 1/60; // Значение по умолчанию
+        }
+        
+        // Ограничиваем максимальный шаг для стабильности
+        const maxStep = 1/60; // Не больше 30мс для одного шага
+        const effectiveStep = Math.min(deltaTime, maxStep);
+        
+        // Используем фиксированный шаг и переменное количество подшагов для точности
+        const fixedStep = 1/120; // 120 Гц внутренние шаги
+        const maxSubSteps = Math.ceil(effectiveStep / fixedStep);
+        
+        // Выполняем шаг симуляции с заданными параметрами
+        localPhysicsWorld.stepSimulation(effectiveStep, maxSubSteps, fixedStep);
+
+        // Применяем ограничения скорости
+        applySpeedLimits();
+
+        // Обновляем физические объекты
+        updatePhysicsObjects(objects, deltaTime);
+    } catch (error) {
+        console.error('Ошибка при обновлении физики:', error);
     }
-    
-    // Ограничиваем максимальный шаг для стабильности
-    const maxStep = 1/60; // Не больше 30мс для одного шага
-    const effectiveStep = Math.min(deltaTime, maxStep);
-    
-    // Используем фиксированный шаг и переменное количество подшагов для точности
-    const fixedStep = 1/120; // 120 Гц внутренние шаги
-    const maxSubSteps = Math.ceil(effectiveStep / fixedStep);
-    
-    // Выполняем шаг симуляции с заданными параметрами
-    localPhysicsWorld.stepSimulation(1/60, 1, 1/60);
-    
-    // Выводим информацию о главном игроке
-   // logMainPlayerInfo();
-    
-    // Обновляем физические объекты (без лишних логов)
-    updatePhysicsObjects(objects, deltaTime);
+}
+
+// Функция для ограничения скорости в Ammo.js
+export function applySpeedLimits() {
+    try {
+        if (!objects || !window.Ammo) return;
+        
+        // Максимальная скорость для объектов
+        const MAX_SPEED = 25.0; // Увеличено с 20.0 до 25.0
+        
+        for (let id in objects) {
+            const obj = objects[id];
+            if (!obj || !obj.body) continue;
+            
+            // Пропускаем статические объекты или террейн
+            if (obj.object_type === "terrain") continue;
+            
+            // Получаем текущую линейную скорость
+            const velocity = obj.body.getLinearVelocity();
+            const speed = velocity.length();
+            
+            // Если скорость превышает максимальную, уменьшаем её
+            if (speed > MAX_SPEED && speed > 0) {
+                velocity.op_mul(MAX_SPEED / speed);
+                obj.body.setLinearVelocity(velocity);
+                
+                // Добавляем небольшой случайный импульс при достижении максимальной скорости
+                // для более интересного поведения при столкновениях
+                if (Math.random() < 0.1) { // 10% шанс
+                    const randomImpulse = new window.Ammo.btVector3(
+                        (Math.random() - 0.5) * 5,
+                        Math.random() * 2,
+                        (Math.random() - 0.5) * 5
+                    );
+                    obj.body.applyCentralImpulse(randomImpulse);
+                    window.Ammo.destroy(randomImpulse);
+                }
+            }
+            
+            window.Ammo.destroy(velocity);
+        }
+    } catch (error) {
+        console.error('Ошибка при применении ограничений скорости:', error);
+    }
 }
 
 export function updatePhysicsObjects(objects, deltaTime) {
@@ -441,110 +495,40 @@ export function updatePhysicsObjects(objects, deltaTime) {
 
 
 // Функция для применения импульса с сохранением в истории
-export function applyImpulseToSphere(cmd, forceX, forceY, forceZ, objectsList, clientTime) {
-    console.log("[Debug] Переданные объекты в applyImpulseToSphere:", objectsList);
-    // Проверяем, что objects передан и является объектом
-    if (!objectsList || typeof objectsList !== 'object') {
-        console.error("[Physics] Ошибка в applyImpulseToSphere: objects не определены или некорректны");
-        return;
-    }
-
-    for (let id in objectsList) {
-        const obj = objectsList[id];
-        
-        // Пропускаем объекты, которые не являются сферами или не имеют физики
-        if (!obj || !obj.body || !obj.mesh || !obj.mesh.geometry || 
-            obj.mesh.geometry.type !== "SphereGeometry") {
-            continue;
+export function applyImpulseToSphere(id, direction, strength) {
+    const object = objects[id];
+    if (!object || !object.body) return;
+    
+    try {
+        if (typeof Ammo === 'undefined') {
+            console.error('Ammo.js не инициализирован');
+            return;
         }
         
-        // Пропускаем объекты с типом bullet, так как они управляются только сервером
-        if (obj.physicsBy === "bullet") {
-            console.log(`[Physics] Пропускаем объект ${id} с типом физики bullet (управляется только сервером)`);
-            continue;
-        }
+        // Увеличиваем базовый импульс для лучшего движения
+        const baseImpulse = 25.0; // Увеличиваем с 20.0 до 25.0
+        const impulseStrength = strength || baseImpulse;
         
-        // Применяем локальные импульсы только к объектам с типами ammo или both
-        if (obj.physicsBy !== "ammo" && obj.physicsBy !== "both") {
-            console.log(`[Physics] Пропускаем объект ${id} с неизвестным типом физики ${obj.physicsBy}`);
-            continue;
-        }
-        
-        // Активируем тело
-        obj.body.activate(true);
-        
-        // Применяем импульс в зависимости от команды и текущей скорости
-        // Получаем текущую скорость для сглаживания усилия
-        const velocity = obj.body.getLinearVelocity();
-        const vx = velocity.x();
-        const vy = velocity.y();
-        const vz = velocity.z();
-        const currentSpeed = Math.sqrt(vx*vx + vy*vy + vz*vz);
-        
-        // Вычисляем множитель скорости - чем быстрее движется объект,
-        // тем меньше дополнительный импульс, чтобы избежать чрезмерных скоростей
-        const speedFactor = Math.max(0.5, 1.0 - currentSpeed * 0.05);
-        
-        // Проверяем, находится ли объект на земле (простая проверка по Y-скорости)
-        const isGrounded = Math.abs(vy) < 0.1;
-        
-        // Базовые значения импульсов
-        const baseImpulseHorizontal = 5.0;
-        const baseImpulseVertical = 10.0;
-        
-        // Создаем импульс на основе переданных значений
-        const impulse = new window.Ammo.btVector3(
-            forceX * speedFactor, 
-            forceY * (isGrounded ? 1.0 : 0.3) * speedFactor, 
-            forceZ * speedFactor
+        // Нормализуем направление и применяем силу
+        const impulseVec = new Ammo.btVector3(
+            direction.x * impulseStrength,
+            direction.y * impulseStrength, 
+            direction.z * impulseStrength
         );
         
-        // Активируем тело и применяем импульс
-        obj.body.activate(true);
-        obj.body.applyCentralImpulse(impulse);
+        // Применяем импульс к телу
+        object.body.applyCentralImpulse(impulseVec);
         
-        // Очищаем память
-        window.Ammo.destroy(impulse);
-        window.Ammo.destroy(velocity);
+        // Выводим информацию о примененном импульсе
+        console.log(`Импульс применен к ${id}: 
+            Направление: (${direction.x.toFixed(2)}, ${direction.y.toFixed(2)}, ${direction.z.toFixed(2)})
+            Сила: ${impulseStrength.toFixed(2)}`);
         
-        console.log("[Physics] Применен локальный импульс к шару:", {
-            id: id,
-            тип_физики: obj.physicsBy,
-            команда: cmd,
-            скорость: currentSpeed.toFixed(2),
-            множитель: speedFactor.toFixed(2),
-            импульс: { x: forceX, y: forceY, z: forceZ },
-            время_клиента: clientTime
-        });
-        
-        // Сохраняем информацию о последней примененной команде
-        obj.lastImpulse = {
-            cmd: cmd,
-            force: { x: forceX, y: forceY, z: forceZ },
-            clientTime: clientTime
-        };
+        // Освобождаем память
+        Ammo.destroy(impulseVec);
+    } catch (error) {
+        console.error('Ошибка при применении импульса:', error);
     }
-    
-    // Синхронизируем диагностические сферы если команда нажата
-    if (cmd && objectsList["mainPlayer3"] && objectsList["ammo_shadow"]) {
-        syncDiagnosticSpheres(objectsList);
-    }
-    
-    // Добавляем команду в историю для client-side prediction
-    const sequenceNumber = ++lastSequenceNumber;
-    const timestamp = Date.now();
-    
-    inputHistory.push({
-        sequenceNumber,
-        timestamp,
-        clientTime,
-        cmd,
-        impulse: { x: forceX, y: forceY, z: forceZ }
-    });
-    
-    // Очищаем историю старше 2 секунд
-    const twoSecondsAgo = timestamp - 2000;
-    inputHistory = inputHistory.filter(entry => entry.timestamp > twoSecondsAgo);
 }
 
 export function receiveObjectUpdate(data) {
@@ -707,5 +691,43 @@ export function receiveObjectUpdate(data) {
         }
         
         window.Ammo.destroy(impulse);
+    }
+}
+
+// В файле physics.js добавляем функцию для создания случайной силы при столкновении
+export function addCollisionBounceEffect() {
+    try {
+        if (typeof Ammo === 'undefined') return;
+        
+        // Добавляем обработчик столкновений, который будет добавлять случайную силу
+        // Эта функция может быть вызвана в начале симуляции
+        window.addEventListener('collisions', (e) => {
+            const { body1, body2 } = e.detail;
+            
+            // Добавляем случайный импульс при столкновении
+            if (body1 && body1.getType() === Ammo.btRigidBody) {
+                const randomImpulse = new Ammo.btVector3(
+                    (Math.random() - 0.5) * 10,
+                    Math.random() * 5,
+                    (Math.random() - 0.5) * 10
+                );
+                body1.applyCentralImpulse(randomImpulse);
+                Ammo.destroy(randomImpulse);
+            }
+            
+            if (body2 && body2.getType() === Ammo.btRigidBody) {
+                const randomImpulse = new Ammo.btVector3(
+                    (Math.random() - 0.5) * 10,
+                    Math.random() * 5,
+                    (Math.random() - 0.5) * 10
+                );
+                body2.applyCentralImpulse(randomImpulse);
+                Ammo.destroy(randomImpulse);
+            }
+        });
+        
+        console.log("Добавлен эффект отскока при столкновениях");
+    } catch (error) {
+        console.error('Ошибка при добавлении эффекта отскока:', error);
     }
 }

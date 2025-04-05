@@ -30,7 +30,7 @@ func (t *TestObjectsCreator) CreateTerrain() {
 	// Константы для террейна
 	const (
 		// Размеры сетки террейна
-		terrainGridSize = 512
+		terrainGridSize = 256
 
 		// Диапазон высот
 		terrainMinHeight = -30.0
@@ -47,9 +47,9 @@ func (t *TestObjectsCreator) CreateTerrain() {
 		heightData,
 		terrainGridSize,
 		terrainGridSize,
-		2.0,
-		2.0,
-		2.0,
+		3.0,
+		3.0,
+		3.0,
 		float32(terrainMinHeight),
 		float32(terrainMaxHeight),
 	)
@@ -75,8 +75,8 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 	mainPlayer := NewSphere(
 		"mainPlayer1",
 		Vector3{X: 0, Y: terrainMaxHeight + 50, Z: 0},
-		1.0,
-		1.0,
+		1.0,       // Радиус
+		3.0,       // Масса - увеличили до 3.0 для лучшего баланса (было 1.0)
 		"#ff00ff", // Пурпурный цвет для игрока
 	)
 	// Явно устанавливаем тип физики both
@@ -97,7 +97,7 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 		"mainPlayer2",
 		Vector3{X: -10, Y: terrainMaxHeight + 50, Z: 0},
 		1.0,
-		1.0,
+		5.0,
 		"#00ff00",
 	)
 	// Явно устанавливаем тип физики ammo
@@ -112,7 +112,7 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 		"mainPlayer3",
 		Vector3{X: 10, Y: terrainMaxHeight + 50, Z: 0},
 		1.0,
-		1.0,
+		5.0,
 		"#0000ff",
 	)
 	// Явно устанавливаем тип физики bullet
@@ -181,7 +181,7 @@ func generateTerrainData(w, h int, minHeight, maxHeight float64) []float32 {
 	// maxRadius := math.Min(centerX, centerZ) * 0.8 // Радиус основного ландшафта
 
 	// Создаем несколько гор в случайных местах
-	numMountains := 100
+	numMountains := 20
 	mountains := make([]struct{ x, z, height, radius float64 }, numMountains)
 
 	for i := 0; i < numMountains; i++ {

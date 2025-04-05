@@ -136,48 +136,67 @@ function handleMessage(data) {
             
             // Создаем объект и добавляем его в список объектов
             const obj = createMeshAndBodyForObject(data);
-            obj.physicsBy = data.physics_by || "both";
-            obj.serverPos = {
-                x: data.x || 0,
-                y: data.y || 0,
-                z: data.z || 0
-            };
-            // Добавляем временную метку сервера
-            obj.serverCreationTime = data.server_time;
-            obj.clientCreationTime = Date.now();
             
-            objects[data.id] = obj;
-            
-            // Запоминаем точное время создания объекта для дальнейшей синхронизации
-            obj.createdAt = Date.now();
-            
-            console.log(`[WS] Объект ${data.id} создан с physicsBy: ${obj.physicsBy}`);
-            
-            // Если физический мир активен, активируем тело
-            if (obj.body && localPhysicsWorld) {
-                if (!physicsStarted) {
-                    // Добавляем в список ожидающих, если физика еще не запущена
-                    pendingObjects.push(data.id);
-                    console.log(`[WS] Объект ${data.id} добавлен в список ожидания - физика еще не активна`);
-                } else {
-                    // Активируем тело сразу
-                    obj.body.activate(true);
-                    // Устанавливаем начальную позицию точно по серверным координатам
-                    if (obj.serverPos) {
-                        const transform = new Ammo.btTransform();
-                        obj.body.getMotionState().getWorldTransform(transform);
-                        transform.setOrigin(new Ammo.btVector3(
-                            obj.serverPos.x, 
-                            obj.serverPos.y, 
-                            obj.serverPos.z
-                        ));
-                        obj.body.getMotionState().setWorldTransform(transform);
-                        obj.mesh.position.set(obj.serverPos.x, obj.serverPos.y, obj.serverPos.z);
-                        
-                        console.log(`[WS] Объект ${data.id} телепортирован в исходные координаты:`, 
-                            { x: obj.serverPos.x, y: obj.serverPos.y, z: obj.serverPos.z });
+            // Проверяем, что объект был успешно создан
+            if (obj) {
+                obj.physicsBy = data.physics_by || "both";
+                obj.serverPos = {
+                    x: data.x || 0,
+                    y: data.y || 0,
+                    z: data.z || 0
+                };
+                // Добавляем временную метку сервера
+                obj.serverCreationTime = data.server_time;
+                obj.clientCreationTime = Date.now();
+                
+                objects[data.id] = obj;
+                
+                // Запоминаем точное время создания объекта для дальнейшей синхронизации
+                obj.createdAt = Date.now();
+                
+                console.log(`[WS] Объект ${data.id} создан с physicsBy: ${obj.physicsBy}`);
+                
+                // Если физический мир активен, активируем тело
+                if (obj.body && localPhysicsWorld) {
+                    if (!physicsStarted) {
+                        // Добавляем в список ожидающих, если физика еще не запущена
+                        pendingObjects.push(data.id);
+                        console.log(`[WS] Объект ${data.id} добавлен в список ожидания - физика еще не активна`);
+                    } else {
+                        // Активируем тело сразу
+                        obj.body.activate(true);
+                        // Устанавливаем начальную позицию точно по серверным координатам
+                        if (obj.serverPos) {
+                            try {
+                                // Проверяем наличие Ammo
+                                if (typeof window.Ammo === 'undefined') {
+                                    console.error('[WS] window.Ammo не определен при попытке телепортации объекта');
+                                    return;
+                                }
+                                
+                                const transform = new window.Ammo.btTransform();
+                                obj.body.getMotionState().getWorldTransform(transform);
+                                transform.setOrigin(new window.Ammo.btVector3(
+                                    obj.serverPos.x, 
+                                    obj.serverPos.y, 
+                                    obj.serverPos.z
+                                ));
+                                obj.body.getMotionState().setWorldTransform(transform);
+                                obj.mesh.position.set(obj.serverPos.x, obj.serverPos.y, obj.serverPos.z);
+                                
+                                console.log(`[WS] Объект ${data.id} телепортирован в исходные координаты:`, 
+                                    { x: obj.serverPos.x, y: obj.serverPos.y, z: obj.serverPos.z });
+                                
+                                // Очищаем память
+                                window.Ammo.destroy(transform);
+                            } catch (error) {
+                                console.error(`[WS] Ошибка при телепортации объекта ${data.id}:`, error);
+                            }
+                        }
                     }
                 }
+            } else {
+                console.error(`[WS] Не удалось создать объект ${data.id}, тип: ${data.object_type}`);
             }
         } 
         else if (data.type === "cmd_ack") {

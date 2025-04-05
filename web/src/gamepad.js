@@ -1,56 +1,222 @@
 import * as THREE from 'three';
 
+// Константы для настройки поведения
+const DEBUG_MODE = true; // Включает/выключает отладочные элементы (arrowHelper)
+const MIN_ARROW_LENGTH = 10;
+const MAX_ARROW_LENGTH = 50;
+const SEND_INTERVAL = 50; // Уменьшаем интервал с 200 до 50 мс для большей отзывчивости
+const ARROW_HEIGHT_OFFSET = 2; // Смещение стрелки по высоте над игроком
+const RAY_UPDATE_INTERVAL = 50; // Интервал обновления луча при движении камеры (мс)
+const KEY_FORCE = 40; // Увеличиваем силу импульса клавиатуры до 40
+
 let arrowHelper;
 let lastSentPosition = new THREE.Vector3();
-let sendInterval = 200; // Интервал отправки в миллисекундах
 let lastSendTime = 0;
+let raycaster = new THREE.Raycaster();
+let mouse = new THREE.Vector2();
+let cameraLastPosition = new THREE.Vector3();
+let lastRayUpdateTime = 0;
+let lastIntersectPoint = new THREE.Vector3();
+let isMouseActive = false; // Флаг активности мыши над игровой областью
+
+// Флаги для клавиатурного управления
+let keys = {
+    w: false,
+    a: false,
+    s: false,
+    d: false
+};
+
+// Переменные для хранения направления
+let currentDirection = new THREE.Vector3();
+let directionNeedsUpdate = false;
+let terrainMeshRef = null;
+let playerMeshRef = null;
+let cameraRef = null;
+let socketRef = null;
+
+export function getArrowDirection() {
+    return lastSentPosition.clone();
+}
 
 function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
-    arrowHelper = new THREE.ArrowHelper(new THREE.Vector3(), playerMesh.position, 5, 0xffff00);
-    scene.add(arrowHelper);
+    // Сохраняем ссылки на объекты для использования в других функциях
+    terrainMeshRef = terrainMesh;
+    playerMeshRef = playerMesh;
+    cameraRef = camera;
+    socketRef = socket;
+    cameraLastPosition.copy(camera.position);
+    
+    // Создаем и добавляем arrowHelper в сцену
+    arrowHelper = new THREE.ArrowHelper(
+        new THREE.Vector3(0, 0, 1), // Начальное направление
+        playerMesh.position,        // Начальная позиция
+        MIN_ARROW_LENGTH,          // Длина стрелки (начальная)
+        0xffff00                    // Цвет стрелки
+    );
+    
+    // Добавляем arrowHelper в сцену только если DEBUG_MODE включен
+    if (DEBUG_MODE) {
+        scene.add(arrowHelper);
+        console.log("ArrowHelper initialized and added to scene");
+    } else {
+        console.log("ArrowHelper initialized but hidden (DEBUG_MODE is off)");
+    }
 
-    function onMouseMove(event) {
-        const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-        const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+    // Добавляем обработчики событий мыши и клавиатуры
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    
+    // Запускаем анимацию для обновления стрелки и обработки клавиатурного ввода
+    animate();
 
-        const mouseVector = new THREE.Vector3(mouseX, mouseY, 0.5);
-        mouseVector.unproject(camera);
-
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
-
-        const intersects = raycaster.intersectObject(terrainMesh);
-
-        if (intersects.length > 0) {
-            const intersectPoint = intersects[0].point;
-
-            const currentTime = Date.now();
-            if (currentTime - lastSendTime >= sendInterval) {
-                if (!intersectPoint.equals(lastSentPosition)) {
-                    sendPositionToServer(intersectPoint, socket);
-                    lastSentPosition.copy(intersectPoint);
-                }
-                lastSendTime = currentTime;
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        // Обновляем стрелку если нужно и если она видима
+        if (directionNeedsUpdate && DEBUG_MODE) {
+            updateArrowHelper(playerMesh);
+            directionNeedsUpdate = false;
+        }
+        
+        // Проверяем, двигалась ли камера и нужно ли обновить луч
+        const now = Date.now();
+        if (isMouseActive && cameraRef && now - lastRayUpdateTime > RAY_UPDATE_INTERVAL) {
+            // Если камера движется и мышь активна над игровой областью
+            if (!cameraRef.position.equals(cameraLastPosition)) {
+                // Обновляем луч с последних координат мыши
+                updateRayFromLastMouse();
+                cameraLastPosition.copy(cameraRef.position);
+                lastRayUpdateTime = now;
             }
-
-            const direction = new THREE.Vector3().subVectors(intersectPoint, playerMesh.position);
-            const length = direction.length();
-            arrowHelper.setDirection(direction.clone().normalize());
-            arrowHelper.setLength(length);
-            arrowHelper.position.copy(playerMesh.position);
+        }
+        
+        // Обрабатываем клавиатурное управление
+        processKeyboardInput();
+    }
+    
+    function processKeyboardInput() {
+        if (!playerMeshRef || !socketRef) return;
+        
+        // Проверяем, если хотя бы одна клавиша нажата
+        if (keys.w || keys.a || keys.s || keys.d) {
+            // Создаем вектор направления на основе нажатых клавиш
+            const direction = new THREE.Vector3(0, 0, 0);
+            
+            if (keys.w) direction.z -= 1;
+            if (keys.s) direction.z += 1;
+            if (keys.a) direction.x -= 1;
+            if (keys.d) direction.x += 1;
+            
+            // Нормализуем направление, если оно не нулевое
+            if (direction.length() > 0) {
+                direction.normalize();
+                
+                // Отправляем направление на сервер
+                if (Date.now() - lastSendTime > SEND_INTERVAL) {
+                    sendDirectionToServer(direction, KEY_FORCE, socketRef);
+                    lastSendTime = Date.now();
+                    
+                    // Обновляем lastSentPosition для отображения стрелки
+                    lastSentPosition.copy(direction);
+                    lastSentPosition.userData = { distance: KEY_FORCE };
+                    directionNeedsUpdate = true;
+                }
+            }
+        }
+    }
+    
+    function onKeyDown(event) {
+        // Обновляем состояние клавиш
+        switch(event.key.toLowerCase()) {
+            case 'w': keys.w = true; break;
+            case 'a': keys.a = true; break;
+            case 's': keys.s = true; break;
+            case 'd': keys.d = true; break;
+        }
+    }
+    
+    function onKeyUp(event) {
+        // Обновляем состояние клавиш
+        switch(event.key.toLowerCase()) {
+            case 'w': keys.w = false; break;
+            case 'a': keys.a = false; break;
+            case 's': keys.s = false; break;
+            case 'd': keys.d = false; break;
         }
     }
 
-    function sendPositionToServer(position, socket) {
-        console.warn("Отправляю позицию на сервер:", position);
+    function onMouseMove(event) {
+        // Обновляем координаты мыши
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        
+        // Устанавливаем флаг активности мыши
+        isMouseActive = true;
+        
+        // Вызываем функцию обновления направления
+        castRayAndUpdateDirection();
+    }
+    
+    function updateRayFromLastMouse() {
+        // Обновляем луч с текущими координатами мыши и новой позицией камеры
+        castRayAndUpdateDirection();
+    }
+    
+    function castRayAndUpdateDirection() {
+        if (!cameraRef || !terrainMeshRef || !playerMeshRef || !socketRef) return;
+        
+        // Устанавливаем луч от камеры через координаты мыши
+        raycaster.setFromCamera(mouse, cameraRef);
+        
+        // Находим пересечения с террейном
+        const intersects = raycaster.intersectObjects([terrainMeshRef]);
+    
+        if (intersects.length > 0) {
+            const targetPosition = intersects[0].point;
+            lastIntersectPoint.copy(targetPosition);
+            
+            // Вычисляем направление в 3D пространстве (с учетом оси Y)
+            currentDirection.set(
+                targetPosition.x - playerMeshRef.position.x,
+                targetPosition.y - playerMeshRef.position.y, // Учитываем высоту
+                targetPosition.z - playerMeshRef.position.z
+            );
+            
+            // Сохраняем длину до нормализации (расстояние от игрока до точки пересечения)
+            const distance = currentDirection.length();
+            
+            // Нормализуем для получения направления
+            currentDirection.normalize();
+            
+            // Запоминаем направление и расстояние
+            lastSentPosition.copy(currentDirection);
+            
+            // Сохраняем исходное расстояние для использования в updateArrowHelper
+            lastSentPosition.userData = { distance: distance };
+            
+            // Помечаем, что направление нужно обновить
+            directionNeedsUpdate = true;
+            
+            // Проверяем, нужно ли отправлять данные на сервер
+            if (Date.now() - lastSendTime > SEND_INTERVAL) {
+                sendDirectionToServer(currentDirection, distance, socketRef);
+                lastSendTime = Date.now();
+            }
+        }
+    }
+
+    function sendDirectionToServer(direction, distance, socket) {
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({
                 type: 'cmd',
-                cmd: 'MOVE',
+                cmd: 'MOUSE_VECTOR',
                 data: {
-                    x: position.x,
-                    y: position.y,
-                    z: position.z
+                    x: direction.x,
+                    y: direction.y, // Теперь отправляем реальное значение Y
+                    z: direction.z,
+                    distance: distance // Добавляем информацию о расстоянии
                 },
                 client_time: Date.now(),
                 object_id: 'mainPlayer1'
@@ -59,16 +225,49 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
             console.error('WebSocket не подключен');
         }
     }
-
-    window.addEventListener('mousemove', onMouseMove);
 }
 
-function updateArrowHelper(playerMesh) {
+// Функция для включения/выключения отображения arrowHelper
+export function setDebugMode(enabled) {
     if (arrowHelper) {
-        arrowHelper.position.copy(playerMesh.position);
-        arrowHelper.setDirection(new THREE.Vector3().subVectors(lastSentPosition, playerMesh.position).normalize());
-        arrowHelper.setLength(new THREE.Vector3().subVectors(lastSentPosition, playerMesh.position).length());
+        arrowHelper.visible = enabled;
+        console.log(`ArrowHelper visibility set to ${enabled}`);
     }
 }
 
+// Функция для получения текущего статуса отладочного режима
+export function getDebugMode() {
+    return DEBUG_MODE;
+}
+
+// Обновляем позицию и направление arrowHelper
+function updateArrowHelper(playerMesh) {
+    if (arrowHelper) {
+        // Позиция стрелки с учетом смещения по высоте
+        const arrowPosition = new THREE.Vector3(
+            playerMesh.position.x,
+            playerMesh.position.y + ARROW_HEIGHT_OFFSET, // Поднимаем стрелку над игроком
+            playerMesh.position.z
+        );
+        
+        // Обновляем позицию стрелки
+        arrowHelper.position.copy(arrowPosition);
+        
+        // Устанавливаем направление стрелки (теперь с учетом оси Y)
+        arrowHelper.setDirection(lastSentPosition);
+        
+        // Используем сохраненное расстояние до точки пересечения
+        const distance = lastSentPosition.userData ? lastSentPosition.userData.distance : MIN_ARROW_LENGTH;
+        
+        // Ограничиваем длину стрелки, чтобы она не была слишком большой или маленькой
+        const arrowLength = Math.min(MAX_ARROW_LENGTH, Math.max(MIN_ARROW_LENGTH, distance));
+        
+        // Устанавливаем длину стрелки пропорционально расстоянию
+        arrowHelper.setLength(arrowLength);
+    } else {
+        console.error("arrowHelper не инициализирован");
+    }
+}
+
+// Экспортируем функции для использования в других модулях
 export { initGamepad, updateArrowHelper };

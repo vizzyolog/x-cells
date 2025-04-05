@@ -204,50 +204,43 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 		impulse.Z = 5
 	case "SPACE":
 		impulse.Y = 10
-	case "MOVE":
-		// обработчик вектора на go сервере.
+	case "MOUSE_VECTOR":
+		// Получаем данные о направлении
+		var direction struct {
+			X        float32 `json:"x"`
+			Y        float32 `json:"y"`
+			Z        float32 `json:"z"`
+			Distance float32 `json:"distance"`
+		}
 
-		var target pb.Vector3
-		data, err := json.Marshal(cmdMsg.Data)
+		// Преобразуем interface{} в []byte для json.Unmarshal
+		dataBytes, err := json.Marshal(cmdMsg.Data)
 		if err != nil {
-			log.Printf("[Go] Ошибка маршалинга данных: %v", err)
+			log.Printf("[Go] Ошибка преобразования данных MOUSE_VECTOR: %v", err)
 			return nil
 		}
 
-		log.Printf("[Go] Получено сообщение от клиента: %s", data)
-		err = json.Unmarshal(data, &target)
-		if err != nil {
-			log.Printf("[Go] Ошибка размаршалирования данных: %v", err)
+		if err := json.Unmarshal(dataBytes, &direction); err != nil {
+			log.Printf("[Go] Ошибка разбора данных MOUSE_VECTOR: %v", err)
 			return nil
 		}
 
-		// Получаем позицию объекта
-		obj, ok := s.objectManager.GetObject(cmdMsg.ObjectID)
-		if !ok {
-			log.Printf("[Go] Объект с ID %s не найден", cmdMsg.ObjectID)
-			return nil
-		}
+		log.Printf("[Go] Получен вектор направления: (%f, %f, %f), расстояние: %f",
+			direction.X, direction.Y, direction.Z, direction.Distance)
 
-		// Вычисляем вектор направления от объекта к точке
-		currentPos := pb.Vector3{X: obj.Position.X, Y: obj.Position.Y, Z: obj.Position.Z}
-		directionVector := VectorSub(&target, &currentPos) // Используем VectorSub
+		// Вычисляем силу импульса на основе расстояния от центра
+		// Минимальный импульс 12.0 (было 8.0)
+		impulseStrength := float32(12.0)
+		// Рассчитываем дополнительную силу в зависимости от расстояния до клика
+		// Множитель 0.2 (было 0.15) с максимальным добавлением 20 (было 15)
+		additionalStrength := float32(math.Min(20.0, float64(direction.Distance)*0.2))
+		impulseStrength += additionalStrength
 
-		// Вычисляем длину вектора направления
-		directionVectorLength := VectorLength(directionVector) // Используем VectorLength
+		// Создаем импульс в направлении X, Y и Z с учетом полученного вектора
+		impulse.X = direction.X * impulseStrength
+		impulse.Y = direction.Y * impulseStrength // Теперь используем Y составляющую
+		impulse.Z = direction.Z * impulseStrength
 
-		// Вычисляем импульс на основе расстояния
-		maxSpeed := float32(0.0)             // Максимальная скорость
-		speed := directionVectorLength * 0.0 // Увеличиваем скорость с увеличением расстояния
-		if speed > maxSpeed {
-			speed = maxSpeed // Ограничиваем максимальную скорость
-		}
-
-		impulse.X = directionVector.X * speed
-		impulse.Y = directionVector.Y * speed
-		impulse.Z = directionVector.Z * speed
-
-		log.Printf("[Go] Получена целевая позиция: (%f, %f, %f), импульс: (%f, %f, %f)",
-			target.X, target.Y, target.Z, impulse.X, impulse.Y, impulse.Z)
 	default:
 		log.Printf("[Go] Неизвестная команда: %s", cmdMsg.Cmd)
 		return nil

@@ -19,32 +19,46 @@ export function createMeshAndBodyForObject(data) {
     }
 
     const type = data.object_type;
-    let mesh, body = null;
+    let mesh = null, body = null;
 
-    switch (type) {
-        case "terrain":
-            mesh = createTerrainMesh(data);
-            body = createPhysicsBodyForTerrain(data);
-            break;
-        case "sphere":
-            mesh = createSphereMesh(data);
-            body = createPhysicsBodyForSphere(data);
-            break;
-        case "tree":
-            mesh = createTreeMesh(data);
-            break;
-        case "box":
-            mesh = createBoxMesh(data);
-            body = createPhysicsBodyForBox(data);
-            break;
-        default:
-            console.warn(`Unknown object type: ${type}`);
-           
-            break;
+    try {
+        switch (type) {
+            case "terrain":
+                mesh = createTerrainMesh(data);
+                body = createPhysicsBodyForTerrain(data);
+                break;
+            case "sphere":
+                mesh = createSphereMesh(data);
+                body = createPhysicsBodyForSphere(data);
+                break;
+            case "tree":
+                mesh = createTreeMesh(data);
+                break;
+            case "box":
+                mesh = createBoxMesh(data);
+                body = createPhysicsBodyForBox(data);
+                break;
+            default:
+                console.warn(`Unknown object type: ${type}`);
+                return null;
+        }
+
+        // Проверяем, что mesh был успешно создан
+        if (!mesh) {
+            console.error(`Failed to create mesh for object type: ${type}`);
+            return null;
+        }
+
+        scene.add(mesh);
+        return { mesh, body };
+    } catch (error) {
+        console.error(`Ошибка при создании объекта типа ${type}:`, error);
+        // Если mesh был создан, но произошла ошибка, удаляем его из сцены
+        if (mesh) {
+            scene.remove(mesh);
+        }
+        return null;
     }
-
-    scene.add(mesh);
-    return { mesh, body };
 }
 
 function createPhysicsBodyForTerrain(data) {
@@ -169,27 +183,30 @@ function createTerrainMesh(data) {
 }
 
 export function createSphereMesh(data) {
-    const geo = new THREE.SphereGeometry(data.radius || 1, 32, 32);
-    const mesh = new THREE.Mesh(
-        geo,
-        new THREE.MeshPhongMaterial({ 
-            color: parseColor(data.color || "#888888"),
-            shininess: 30
-        })
-    );
-    
-    // Включаем тени для сфер
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    
+    try {
+        const geo = new THREE.SphereGeometry(data.radius || 1, 32, 32);
+        const mesh = new THREE.Mesh(
+            geo,
+            new THREE.MeshPhongMaterial({ 
+                color: parseColor(data.color || "#888888"),
+                shininess: 30
+            })
+        );
+        
+        // Включаем тени для сфер
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        
+        if (data.id === "mainPlayer1") {
+            playerMesh = mesh
+            gameStateManager.setPlayerMesh(playerMesh);
+        }
 
-    if (data.id === "mainPlayer1") {
-        playerMesh = mesh
-        gameStateManager.setPlayerMesh(playerMesh);
+        return mesh;
+    } catch (error) {
+        console.error("Ошибка при создании меша сферы:", error);
+        return null;
     }
-
-
-    return mesh;
 }
 
 function createBoxMesh(data) {
@@ -212,8 +229,15 @@ function createPhysicsBodyForSphere(data) {
             return null;
         }
 
+        // Безопасная проверка window.Ammo
+        if (typeof window.Ammo === 'undefined') {
+            console.error('window.Ammo не инициализирован');
+            return null;
+        }
+
         const radius = data.radius || 1;
-        const mass = data.mass || 1;
+        // Увеличиваем массу для лучшей физики отскока
+        const mass = data.mass || 3.0;
 
         // Создаем все Ammo объекты через window.Ammo
         const shape = new window.Ammo.btSphereShape(radius);
@@ -233,8 +257,24 @@ function createPhysicsBodyForSphere(data) {
         );
         const body = new window.Ammo.btRigidBody(rbInfo);
         
+        // Проверяем, что тело имеет необходимые методы
+        if (!body || typeof body.getMotionState !== 'function') {
+            console.error('Ошибка: созданное физическое тело недействительно');
+            window.Ammo.destroy(rbInfo);
+            window.Ammo.destroy(localInertia);
+            return null;
+        }
+        
+        // Устанавливаем дополнительные свойства
+        body.setFriction(0.3);         // Уменьшаем трение для лучшего скольжения
+        body.setRestitution(0.95);      // Увеличиваем упругость почти до максимума для лучшего отскока
+        body.setRollingFriction(0.1);  // Низкое сопротивление качению
+        
         // Отключаем деактивацию
         body.setActivationState(4); // DISABLE_DEACTIVATION
+        
+        // Для небольших сфер включаем CCD (continuous collision detection),
+        // чтобы предотвратить проваливание сквозь поверхности при высокой скорости
 
         // Добавляем тело в физический мир
         const SPHERE_GROUP = 2;
@@ -252,8 +292,8 @@ function createPhysicsBodyForSphere(data) {
                 motionThreshold: radius * 0.8,
                 sweptSphereRadius: radius * 0.7
             },
-            friction: 0.5,
-            restitution: 0.2
+            friction: 0.3,
+            restitution: 0.95
         });
 
         // Очистка памяти
@@ -374,7 +414,7 @@ export function createTestSphere() {
 
     // Создаем физическое тело
     const shape = new Ammo.btSphereShape(radius);
-    const mass = 1;
+    const mass = 3; // Увеличиваем массу с 1 до 3
     
     const transform = new Ammo.btTransform();
     transform.setIdentity();
@@ -389,9 +429,14 @@ export function createTestSphere() {
 
     // Важные настройки для физического тела
     body.setActivationState(4); // DISABLE_DEACTIVATION
-    body.setFriction(0.5);
-    body.setRollingFriction(0.1);
-    body.setRestitution(0.5); // Упругость
+    body.setFriction(0.3);       // Уменьшаем с 0.5 до 0.3
+    body.setRollingFriction(0.05); // Уменьшаем с 0.1 до 0.05
+    body.setRestitution(0.95);    // Увеличиваем с 0.5 до 0.95 для лучшего отскока
+    body.setDamping(0.0, 0.0);    // Отключаем затухание для более долгого движения
+
+    // Включаем CCD для предотвращения проваливания сквозь объекты
+    body.setCcdMotionThreshold(radius * 0.7);
+    body.setCcdSweptSphereRadius(radius * 0.6);
 
     // Добавляем тело в физический мир
     const SPHERE_GROUP = 2;

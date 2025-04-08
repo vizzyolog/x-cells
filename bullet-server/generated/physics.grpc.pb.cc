@@ -26,6 +26,7 @@ static const char* Physics_method_names[] = {
   "/physics.Physics/ApplyImpulse",
   "/physics.Physics/ApplyTorque",
   "/physics.Physics/GetObjectState",
+  "/physics.Physics/UpdateObjectMass",
 };
 
 std::unique_ptr< Physics::Stub> Physics::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -39,6 +40,7 @@ Physics::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, c
   , rpcmethod_ApplyImpulse_(Physics_method_names[1], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_ApplyTorque_(Physics_method_names[2], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetObjectState_(Physics_method_names[3], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_UpdateObjectMass_(Physics_method_names[4], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::Status Physics::Stub::CreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::physics::CreateObjectResponse* response) {
@@ -133,6 +135,29 @@ void Physics::Stub::async::GetObjectState(::grpc::ClientContext* context, const 
   return result;
 }
 
+::grpc::Status Physics::Stub::UpdateObjectMass(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest& request, ::physics::UpdateObjectMassResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::physics::UpdateObjectMassRequest, ::physics::UpdateObjectMassResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_UpdateObjectMass_, context, request, response);
+}
+
+void Physics::Stub::async::UpdateObjectMass(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest* request, ::physics::UpdateObjectMassResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::physics::UpdateObjectMassRequest, ::physics::UpdateObjectMassResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_UpdateObjectMass_, context, request, response, std::move(f));
+}
+
+void Physics::Stub::async::UpdateObjectMass(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest* request, ::physics::UpdateObjectMassResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_UpdateObjectMass_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassResponse>* Physics::Stub::PrepareAsyncUpdateObjectMassRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::physics::UpdateObjectMassResponse, ::physics::UpdateObjectMassRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_UpdateObjectMass_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassResponse>* Physics::Stub::AsyncUpdateObjectMassRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncUpdateObjectMassRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
 Physics::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Physics_method_names[0],
@@ -174,6 +199,16 @@ Physics::Service::Service() {
              ::physics::GetObjectStateResponse* resp) {
                return service->GetObjectState(ctx, req, resp);
              }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Physics_method_names[4],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Physics::Service, ::physics::UpdateObjectMassRequest, ::physics::UpdateObjectMassResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](Physics::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::physics::UpdateObjectMassRequest* req,
+             ::physics::UpdateObjectMassResponse* resp) {
+               return service->UpdateObjectMass(ctx, req, resp);
+             }, this)));
 }
 
 Physics::Service::~Service() {
@@ -201,6 +236,13 @@ Physics::Service::~Service() {
 }
 
 ::grpc::Status Physics::Service::GetObjectState(::grpc::ServerContext* context, const ::physics::GetObjectStateRequest* request, ::physics::GetObjectStateResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Physics::Service::UpdateObjectMass(::grpc::ServerContext* context, const ::physics::UpdateObjectMassRequest* request, ::physics::UpdateObjectMassResponse* response) {
   (void) context;
   (void) request;
   (void) response;

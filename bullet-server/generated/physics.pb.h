@@ -88,6 +88,12 @@ extern SphereDataDefaultTypeInternal _SphereData_default_instance_;
 class TerrainData;
 struct TerrainDataDefaultTypeInternal;
 extern TerrainDataDefaultTypeInternal _TerrainData_default_instance_;
+class UpdateObjectMassRequest;
+struct UpdateObjectMassRequestDefaultTypeInternal;
+extern UpdateObjectMassRequestDefaultTypeInternal _UpdateObjectMassRequest_default_instance_;
+class UpdateObjectMassResponse;
+struct UpdateObjectMassResponseDefaultTypeInternal;
+extern UpdateObjectMassResponseDefaultTypeInternal _UpdateObjectMassResponse_default_instance_;
 class Vector3;
 struct Vector3DefaultTypeInternal;
 extern Vector3DefaultTypeInternal _Vector3_default_instance_;
@@ -107,6 +113,8 @@ template<> ::physics::Quaternion* Arena::CreateMaybeMessage<::physics::Quaternio
 template<> ::physics::ShapeDescriptor* Arena::CreateMaybeMessage<::physics::ShapeDescriptor>(Arena*);
 template<> ::physics::SphereData* Arena::CreateMaybeMessage<::physics::SphereData>(Arena*);
 template<> ::physics::TerrainData* Arena::CreateMaybeMessage<::physics::TerrainData>(Arena*);
+template<> ::physics::UpdateObjectMassRequest* Arena::CreateMaybeMessage<::physics::UpdateObjectMassRequest>(Arena*);
+template<> ::physics::UpdateObjectMassResponse* Arena::CreateMaybeMessage<::physics::UpdateObjectMassResponse>(Arena*);
 template<> ::physics::Vector3* Arena::CreateMaybeMessage<::physics::Vector3>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 namespace physics {
@@ -2923,6 +2931,323 @@ class GetObjectStateResponse final :
   union { Impl_ _impl_; };
   friend struct ::TableStruct_physics_2eproto;
 };
+// -------------------------------------------------------------------
+
+class UpdateObjectMassRequest final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:physics.UpdateObjectMassRequest) */ {
+ public:
+  inline UpdateObjectMassRequest() : UpdateObjectMassRequest(nullptr) {}
+  ~UpdateObjectMassRequest() override;
+  explicit PROTOBUF_CONSTEXPR UpdateObjectMassRequest(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  UpdateObjectMassRequest(const UpdateObjectMassRequest& from);
+  UpdateObjectMassRequest(UpdateObjectMassRequest&& from) noexcept
+    : UpdateObjectMassRequest() {
+    *this = ::std::move(from);
+  }
+
+  inline UpdateObjectMassRequest& operator=(const UpdateObjectMassRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline UpdateObjectMassRequest& operator=(UpdateObjectMassRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const UpdateObjectMassRequest& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const UpdateObjectMassRequest* internal_default_instance() {
+    return reinterpret_cast<const UpdateObjectMassRequest*>(
+               &_UpdateObjectMassRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    15;
+
+  friend void swap(UpdateObjectMassRequest& a, UpdateObjectMassRequest& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(UpdateObjectMassRequest* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(UpdateObjectMassRequest* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  UpdateObjectMassRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<UpdateObjectMassRequest>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const UpdateObjectMassRequest& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const UpdateObjectMassRequest& from) {
+    UpdateObjectMassRequest::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(UpdateObjectMassRequest* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "physics.UpdateObjectMassRequest";
+  }
+  protected:
+  explicit UpdateObjectMassRequest(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kIdFieldNumber = 1,
+    kMassFieldNumber = 2,
+  };
+  // string id = 1;
+  void clear_id();
+  const std::string& id() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_id(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_id();
+  PROTOBUF_NODISCARD std::string* release_id();
+  void set_allocated_id(std::string* id);
+  private:
+  const std::string& _internal_id() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_id(const std::string& value);
+  std::string* _internal_mutable_id();
+  public:
+
+  // float mass = 2;
+  void clear_mass();
+  float mass() const;
+  void set_mass(float value);
+  private:
+  float _internal_mass() const;
+  void _internal_set_mass(float value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:physics.UpdateObjectMassRequest)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr id_;
+    float mass_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_physics_2eproto;
+};
+// -------------------------------------------------------------------
+
+class UpdateObjectMassResponse final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:physics.UpdateObjectMassResponse) */ {
+ public:
+  inline UpdateObjectMassResponse() : UpdateObjectMassResponse(nullptr) {}
+  ~UpdateObjectMassResponse() override;
+  explicit PROTOBUF_CONSTEXPR UpdateObjectMassResponse(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  UpdateObjectMassResponse(const UpdateObjectMassResponse& from);
+  UpdateObjectMassResponse(UpdateObjectMassResponse&& from) noexcept
+    : UpdateObjectMassResponse() {
+    *this = ::std::move(from);
+  }
+
+  inline UpdateObjectMassResponse& operator=(const UpdateObjectMassResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline UpdateObjectMassResponse& operator=(UpdateObjectMassResponse&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const UpdateObjectMassResponse& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const UpdateObjectMassResponse* internal_default_instance() {
+    return reinterpret_cast<const UpdateObjectMassResponse*>(
+               &_UpdateObjectMassResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    16;
+
+  friend void swap(UpdateObjectMassResponse& a, UpdateObjectMassResponse& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(UpdateObjectMassResponse* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(UpdateObjectMassResponse* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  UpdateObjectMassResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<UpdateObjectMassResponse>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const UpdateObjectMassResponse& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const UpdateObjectMassResponse& from) {
+    UpdateObjectMassResponse::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(UpdateObjectMassResponse* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "physics.UpdateObjectMassResponse";
+  }
+  protected:
+  explicit UpdateObjectMassResponse(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kStatusFieldNumber = 1,
+  };
+  // string status = 1;
+  void clear_status();
+  const std::string& status() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_status(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_status();
+  PROTOBUF_NODISCARD std::string* release_status();
+  void set_allocated_status(std::string* status);
+  private:
+  const std::string& _internal_status() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_status(const std::string& value);
+  std::string* _internal_mutable_status();
+  public:
+
+  // @@protoc_insertion_point(class_scope:physics.UpdateObjectMassResponse)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr status_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_physics_2eproto;
+};
 // ===================================================================
 
 
@@ -5088,9 +5413,141 @@ inline void GetObjectStateResponse::set_allocated_state(::physics::ObjectState* 
   // @@protoc_insertion_point(field_set_allocated:physics.GetObjectStateResponse.state)
 }
 
+// -------------------------------------------------------------------
+
+// UpdateObjectMassRequest
+
+// string id = 1;
+inline void UpdateObjectMassRequest::clear_id() {
+  _impl_.id_.ClearToEmpty();
+}
+inline const std::string& UpdateObjectMassRequest::id() const {
+  // @@protoc_insertion_point(field_get:physics.UpdateObjectMassRequest.id)
+  return _internal_id();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void UpdateObjectMassRequest::set_id(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.id_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:physics.UpdateObjectMassRequest.id)
+}
+inline std::string* UpdateObjectMassRequest::mutable_id() {
+  std::string* _s = _internal_mutable_id();
+  // @@protoc_insertion_point(field_mutable:physics.UpdateObjectMassRequest.id)
+  return _s;
+}
+inline const std::string& UpdateObjectMassRequest::_internal_id() const {
+  return _impl_.id_.Get();
+}
+inline void UpdateObjectMassRequest::_internal_set_id(const std::string& value) {
+  
+  _impl_.id_.Set(value, GetArenaForAllocation());
+}
+inline std::string* UpdateObjectMassRequest::_internal_mutable_id() {
+  
+  return _impl_.id_.Mutable(GetArenaForAllocation());
+}
+inline std::string* UpdateObjectMassRequest::release_id() {
+  // @@protoc_insertion_point(field_release:physics.UpdateObjectMassRequest.id)
+  return _impl_.id_.Release();
+}
+inline void UpdateObjectMassRequest::set_allocated_id(std::string* id) {
+  if (id != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.id_.SetAllocated(id, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.id_.IsDefault()) {
+    _impl_.id_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:physics.UpdateObjectMassRequest.id)
+}
+
+// float mass = 2;
+inline void UpdateObjectMassRequest::clear_mass() {
+  _impl_.mass_ = 0;
+}
+inline float UpdateObjectMassRequest::_internal_mass() const {
+  return _impl_.mass_;
+}
+inline float UpdateObjectMassRequest::mass() const {
+  // @@protoc_insertion_point(field_get:physics.UpdateObjectMassRequest.mass)
+  return _internal_mass();
+}
+inline void UpdateObjectMassRequest::_internal_set_mass(float value) {
+  
+  _impl_.mass_ = value;
+}
+inline void UpdateObjectMassRequest::set_mass(float value) {
+  _internal_set_mass(value);
+  // @@protoc_insertion_point(field_set:physics.UpdateObjectMassRequest.mass)
+}
+
+// -------------------------------------------------------------------
+
+// UpdateObjectMassResponse
+
+// string status = 1;
+inline void UpdateObjectMassResponse::clear_status() {
+  _impl_.status_.ClearToEmpty();
+}
+inline const std::string& UpdateObjectMassResponse::status() const {
+  // @@protoc_insertion_point(field_get:physics.UpdateObjectMassResponse.status)
+  return _internal_status();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void UpdateObjectMassResponse::set_status(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.status_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:physics.UpdateObjectMassResponse.status)
+}
+inline std::string* UpdateObjectMassResponse::mutable_status() {
+  std::string* _s = _internal_mutable_status();
+  // @@protoc_insertion_point(field_mutable:physics.UpdateObjectMassResponse.status)
+  return _s;
+}
+inline const std::string& UpdateObjectMassResponse::_internal_status() const {
+  return _impl_.status_.Get();
+}
+inline void UpdateObjectMassResponse::_internal_set_status(const std::string& value) {
+  
+  _impl_.status_.Set(value, GetArenaForAllocation());
+}
+inline std::string* UpdateObjectMassResponse::_internal_mutable_status() {
+  
+  return _impl_.status_.Mutable(GetArenaForAllocation());
+}
+inline std::string* UpdateObjectMassResponse::release_status() {
+  // @@protoc_insertion_point(field_release:physics.UpdateObjectMassResponse.status)
+  return _impl_.status_.Release();
+}
+inline void UpdateObjectMassResponse::set_allocated_status(std::string* status) {
+  if (status != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.status_.SetAllocated(status, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.status_.IsDefault()) {
+    _impl_.status_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:physics.UpdateObjectMassResponse.status)
+}
+
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

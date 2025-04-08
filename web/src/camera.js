@@ -36,6 +36,9 @@ let lastMeasuredAngle = 0; // Последний измеренный угол �
 let lastMeasuredDistance = 0; // Последнее измеренное расстояние для логирования
 let turningActive = false; // Флаг активного поворота для логирования
 
+// Добавим новую переменную для сглаживания точки, на которую смотрит камера
+let smoothLookAtTarget = new THREE.Vector3();
+
 export function initCamera() {
     // Создаем камеру
     camera = new THREE.PerspectiveCamera(
@@ -103,92 +106,44 @@ function calculateAdaptiveRotationFactor(angle, distance) {
 export function updateCamera() {
     if (!camera) return;
     
-    // Ищем основного игрока
     const player = objects[PLAYER_ID];
     
-    // Если игрок найден и имеет позицию, обновляем камеру
     if (player && player.mesh) {
-        // Получаем текущую позицию игрока
         const currentPlayerPosition = player.mesh.position.clone();
-        
-        // Получаем направление arrowHelper и его свойства
         const arrowDirection = getArrowDirection();
         
-        // Получаем расстояние из userData (если доступно)
-        let distance = 0;
-        if (arrowDirection.userData && arrowDirection.userData.distance) {
-            distance = arrowDirection.userData.distance;
-            lastMeasuredDistance = distance; // Сохраняем для логирования
-        }
+        // Плавно обновляем точку, на которую смотрит камера
+        smoothLookAtTarget.lerp(currentPlayerPosition, SMOOTH_FACTOR);
         
         if (arrowDirection.length() > 0) {
-            // Вычисляем угол между текущим направлением стрелки и последним сохраненным
             const angle = angleBetweenDirections(arrowDirection, lastArrowDirection);
-            lastMeasuredAngle = angle; // Сохраняем для логирования
             
-            // Если угол больше мертвой зоны, обновляем целевое направление камеры
             if (angle > DEAD_ZONE_ANGLE) {
-                // Создаем инвертированное направление для камеры (смотрим с противоположной стороны)
-                // Сохраняем вертикальную составляющую, но с ограничениями
                 const yComponent = Math.max(MIN_Y_ANGLE, Math.min(MAX_Y_ANGLE, -arrowDirection.y));
-                
-                // Устанавливаем новое целевое направление
                 targetCameraDirection.set(-arrowDirection.x, yComponent, -arrowDirection.z).normalize();
-                
-                // Обновляем последнее известное направление стрелки
                 lastArrowDirection.copy(arrowDirection);
-                
-                // Устанавливаем флаг активного поворота
                 turningActive = true;
-                
-                // Логируем начало поворота
-                console.log(`[Camera] Начало поворота: угол=${angle.toFixed(2)} рад (${(angle * 180 / Math.PI).toFixed(1)}°), расстояние=${distance.toFixed(1)}, превышение мертвой зоны ${(angle - DEAD_ZONE_ANGLE).toFixed(2)} рад`);
             }
         }
         
-        // Вычисляем адаптивный фактор доворота с учетом квадратичной зависимости от расстояния
         const adaptiveRotationFactor = calculateAdaptiveRotationFactor(lastMeasuredAngle, lastMeasuredDistance);
-        
-        // Плавно интерполируем направление камеры с адаптивным фактором
-        const oldDirection = lastCameraDirection.clone(); // Сохраняем старое направление для сравнения
         lastCameraDirection.lerp(targetCameraDirection, adaptiveRotationFactor);
         lastCameraDirection.normalize();
         
-        // Вычисляем угол изменения направления камеры для логирования
-        const directionChangeAngle = angleBetweenDirections(oldDirection, lastCameraDirection);
-        
-        // Логируем процесс доворота, если он активен
-        if (turningActive && directionChangeAngle > 0.01) { // Порог для отсечения незначительных изменений
-            console.log(`[Camera] Доворот: изменение=${directionChangeAngle.toFixed(3)} рад, адаптивный фактор=${adaptiveRotationFactor.toFixed(3)}, расстояние=${lastMeasuredDistance.toFixed(1)}, кв.фактор=${currentQuadraticFactor.toFixed(2)}`);
-            
-            // Если камера почти довернулась до целевого направления, завершаем поворот
-            if (angleBetweenDirections(lastCameraDirection, targetCameraDirection) < 0.05) {
-                console.log('[Camera] Поворот завершен');
-                turningActive = false;
-            }
-        }
-        
-        // Учитываем вертикальную составляющую при расчете смещения камеры
         const horizontalDistance = CAMERA_DISTANCE * Math.cos(lastCameraDirection.y);
-        
-        // Вычисляем позицию камеры с учетом вертикальной составляющей направления
         const cameraOffset = new THREE.Vector3(
             lastCameraDirection.x * horizontalDistance,
-            CAMERA_HEIGHT + lastCameraDirection.y * CAMERA_DISTANCE, // Добавляем вертикальное смещение
+            CAMERA_HEIGHT + lastCameraDirection.y * CAMERA_DISTANCE,
             lastCameraDirection.z * horizontalDistance
         );
         
-        // Целевая позиция камеры - это позиция игрока + смещение камеры
         const targetPosition = currentPlayerPosition.clone().add(cameraOffset);
-        
-        // Интерполируем позицию камеры для плавности
         cameraTarget.lerp(targetPosition, SMOOTH_FACTOR);
         camera.position.copy(cameraTarget);
         
-        // Направляем камеру на игрока
-        camera.lookAt(currentPlayerPosition);
+        // Камера теперь смотрит на сглаженную позицию
+        camera.lookAt(smoothLookAtTarget);
         
-        // Сохраняем текущую позицию игрока для следующего кадра
         lastKnownPosition.copy(currentPlayerPosition);
     }
 }

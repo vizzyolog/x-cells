@@ -544,15 +544,8 @@ public:
             rawImpulse *= (MAX_IMPULSE_MAGNITUDE / rawImpulseMagnitude);
         }
         
-        // Просто применяем импульс с очень малым множителем
-        btVector3 scaledImpulse(
-            rawImpulse.x() * 0.1f, // Увеличиваем множитель с 0.01 до 0.1
-            rawImpulse.y() * 0.1f,
-            rawImpulse.z() * 0.1f
-        );
-        
         // Проверяем, не превысит ли скорость допустимый предел после применения импульса
-        btVector3 expectedVelocity = currentVelocity + scaledImpulse / body->getMass();
+        btVector3 expectedVelocity = currentVelocity + rawImpulse / body->getMass();
         float expectedSpeed = expectedVelocity.length();
         
         // Проверяем максимальную скорость для объекта
@@ -565,14 +558,14 @@ public:
         // Если ожидаемая скорость превысит максимальную, уменьшаем импульс
         if (expectedSpeed > maxSpeed && expectedSpeed > 0) {
             float scale = maxSpeed / expectedSpeed;
-            scaledImpulse *= scale;
+            rawImpulse *= scale;
             std::cout << "Предварительное ограничение импульса: " << scale << " от изначального" << std::endl;
         }
         
-        std::cout << "Применяем импульс: [" << scaledImpulse.x() << ", " << scaledImpulse.y() 
-                  << ", " << scaledImpulse.z() << "]" << std::endl;
+        std::cout << "Применяем импульс: [" << rawImpulse.x() << ", " << rawImpulse.y() 
+                  << ", " << rawImpulse.z() << "]" << std::endl;
         
-        body->applyCentralImpulse(scaledImpulse);
+        body->applyCentralImpulse(rawImpulse);
         
         // Окончательная проверка, что не превысили максимальную скорость
         btVector3 finalVelocity = body->getLinearVelocity();

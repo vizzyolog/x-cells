@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	DefaultUpdateInterval = 50 * time.Millisecond // Интервал отправки обновлений
-	DefaultPingInterval   = 10 * time.Second      // Интервал отправки пингов
+	DefaultUpdateInterval = 150 * time.Millisecond // Интервал отправки обновлений
+	DefaultPingInterval   = 2 * time.Second        // Интервал отправки пингов
 )
 
 type ObjectManager interface {

@@ -536,15 +536,11 @@ export function applyImpulseToSphere(id, direction, strength) {
             return;
         }
         
-        // Используем умеренный базовый импульс
-        const baseImpulse = 0.5; // Увеличиваем базовый импульс для более заметного движения
-        const impulseStrength = strength || baseImpulse;
-        
         // Нормализуем направление и применяем силу
         const impulseVec = new Ammo.btVector3(
-            direction.x * impulseStrength,
-            direction.y * impulseStrength, 
-            direction.z * impulseStrength
+            direction.x * strength,
+            direction.y * strength, 
+            direction.z * strength
         );
         
         // Применяем импульс к телу
@@ -553,7 +549,7 @@ export function applyImpulseToSphere(id, direction, strength) {
         // Выводим информацию о примененном импульсе
         console.log(`[Physics] Импульс применен к ${id}: 
             Направление: (${direction.x.toFixed(2)}, ${direction.y.toFixed(2)}, ${direction.z.toFixed(2)})
-            Сила: ${impulseStrength.toFixed(2)}`);
+            Сила: ${strength.toFixed(2)}`);
         
         // Освобождаем память
         Ammo.destroy(impulseVec);

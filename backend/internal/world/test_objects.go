@@ -76,7 +76,7 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 		"mainPlayer1",
 		Vector3{X: 0, Y: terrainMaxHeight + 50, Z: 0},
 		1.0,       // Радиус
-		3.0,       // Масса - увеличили до 3.0 для лучшего баланса (было 1.0)
+		15.0,      // Увеличиваем массу с 5.0 до 15.0 для соответствия с клиентской частью
 		"#ff00ff", // Пурпурный цвет для игрока
 	)
 	// Явно устанавливаем тип физики both

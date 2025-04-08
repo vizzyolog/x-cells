@@ -1,13 +1,14 @@
 import * as THREE from 'three';
+import { getPhysicsConfig } from './network';
 
 // Константы для настройки поведения
 const DEBUG_MODE = true; // Включает/выключает отладочные элементы (arrowHelper)
 const MIN_ARROW_LENGTH = 10;
 const MAX_ARROW_LENGTH = 50;
-const SEND_INTERVAL = 50; // Уменьшаем интервал с 200 до 50 мс для большей отзывчивости
+const SEND_INTERVAL = 50; // Уменьшаем интервал отправки до 50 мс для лучшей отзывчивости
 const ARROW_HEIGHT_OFFSET = 2; // Смещение стрелки по высоте над игроком
 const RAY_UPDATE_INTERVAL = 50; // Интервал обновления луча при движении камеры (мс)
-const KEY_FORCE = 40; // Увеличиваем силу импульса клавиатуры до 40
+const KEY_FORCE = 2.0; // Значительно увеличиваем силу импульса для клавиатурного управления
 
 let arrowHelper;
 let lastSentPosition = new THREE.Vector3();
@@ -115,12 +116,27 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
                 
                 // Отправляем направление на сервер
                 if (Date.now() - lastSendTime > SEND_INTERVAL) {
-                    sendDirectionToServer(direction, KEY_FORCE, socketRef);
+                    // Получаем текущую конфигурацию физики
+                    const physicsConfig = getPhysicsConfig();
+                    
+                    // Используем множитель импульса из конфигурации, если она доступна
+                    let keyForce = KEY_FORCE;
+                    if (physicsConfig && physicsConfig.impulse_multiplier) {
+                        keyForce = (physicsConfig.base_impulse || 0.5) * 8.0; // Увеличиваем в 8 раз базовый импульс
+                    } else {
+                        keyForce = KEY_FORCE * 4.0; // Или увеличиваем в 4 раза значение по умолчанию
+                    }
+                    
+                    // Логируем для отладки
+                    console.log(`[Gamepad] Отправка импульса с клавиатуры: направление (${direction.x.toFixed(2)}, ${direction.y.toFixed(2)}, ${direction.z.toFixed(2)}), сила ${keyForce}`);
+                    
+                    // Отправляем импульс на сервер
+                    sendDirectionToServer(direction, keyForce, socketRef);
                     lastSendTime = Date.now();
                     
                     // Обновляем lastSentPosition для отображения стрелки
                     lastSentPosition.copy(direction);
-                    lastSentPosition.userData = { distance: KEY_FORCE };
+                    lastSentPosition.userData = { distance: keyForce };
                     directionNeedsUpdate = true;
                 }
             }
@@ -209,6 +225,9 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
 
     function sendDirectionToServer(direction, distance, socket) {
         if (socket && socket.readyState === WebSocket.OPEN) {
+            // Для мышиного управления увеличиваем дистанцию, которая используется как сила импульса
+            const enhancedDistance = Math.min(distance * 1.5, 100); // Увеличиваем на 50%, но не больше 100
+            
             socket.send(JSON.stringify({
                 type: 'cmd',
                 cmd: 'MOUSE_VECTOR',
@@ -216,7 +235,7 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
                     x: direction.x,
                     y: direction.y, // Теперь отправляем реальное значение Y
                     z: direction.z,
-                    distance: distance // Добавляем информацию о расстоянии
+                    distance: enhancedDistance // Используем увеличенное значение дистанции
                 },
                 client_time: Date.now(),
                 object_id: 'mainPlayer1'

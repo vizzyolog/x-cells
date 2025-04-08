@@ -34,7 +34,7 @@ type MessageHandler func(conn *SafeWriter, message interface{}) error
 type WSServer struct {
 	upgrader           websocket.Upgrader
 	objectManager      ObjectManager
-	physics            *transport.PhysicsClient
+	physics            transport.IPhysicsClient
 	handlers           map[string]MessageHandler
 	connectionHandlers []func(conn *SafeWriter)
 	pingInterval       time.Duration
@@ -42,7 +42,7 @@ type WSServer struct {
 }
 
 // NewWSServer создает новый экземпляр WebSocket сервера
-func NewWSServer(objectManager ObjectManager, physics *transport.PhysicsClient, serialaizer *WorldSerializer) *WSServer {
+func NewWSServer(objectManager ObjectManager, physics transport.IPhysicsClient, serialaizer *WorldSerializer) *WSServer {
 	server := &WSServer{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
@@ -97,6 +97,10 @@ func (s *WSServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Отправляем клиенту конфигурацию физики перед созданием объектов
+	s.sendPhysicsConfig(safeConn)
+
+	// Теперь отправляем объекты
 	if err := s.serializer.SendCreateForAllObjects(safeConn); err != nil {
 		log.Printf("[Go] Ошибка при отправке существующих объектов: %v", err)
 		return
@@ -195,15 +199,15 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 	var impulse pb.Vector3
 	switch cmdMsg.Cmd {
 	case "LEFT":
-		impulse.X = -5
+		impulse.X = -15
 	case "RIGHT":
-		impulse.X = 5
+		impulse.X = 15
 	case "UP":
-		impulse.Z = -5
+		impulse.Z = -15
 	case "DOWN":
-		impulse.Z = 5
+		impulse.Z = 15
 	case "SPACE":
-		impulse.Y = 10
+		impulse.Y = 20
 	case "MOUSE_VECTOR":
 		// Получаем данные о направлении
 		var direction struct {
@@ -228,18 +232,32 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 		log.Printf("[Go] Получен вектор направления: (%f, %f, %f), расстояние: %f",
 			direction.X, direction.Y, direction.Z, direction.Distance)
 
-		// Вычисляем силу импульса на основе расстояния от центра
-		// Минимальный импульс 12.0 (было 8.0)
-		impulseStrength := float32(12.0)
-		// Рассчитываем дополнительную силу в зависимости от расстояния до клика
-		// Множитель 0.2 (было 0.15) с максимальным добавлением 20 (было 15)
-		additionalStrength := float32(math.Min(20.0, float64(direction.Distance)*0.2))
-		impulseStrength += additionalStrength
+		// Используем настройки из конфигурации физики
+		physicsConfig := world.GetPhysicsConfig()
+
+		// Подбираем силу импульса в зависимости от размера мира и желаемой физики
+		// Базовый импульс с учетом оптимальной динамики
+		minImpulse := physicsConfig.BaseImpulse
+
+		// Рассчитываем дополнительную силу импульса на основе расстояния
+		distanceMultiplier := physicsConfig.DistanceMultiplier
+		// Увеличиваем множитель для дополнительного импульса и максимальное значение
+		additionalImpulse := float32(math.Min(float64(direction.Distance*distanceMultiplier), float64(physicsConfig.BaseImpulse*10)))
+
+		// Итоговая сила импульса
+		impulseStrength := minImpulse + additionalImpulse
+
+		// Для дополнительного усиления умножаем на коэффициент
+		impulseStrength *= 1.5
 
 		// Создаем импульс в направлении X, Y и Z с учетом полученного вектора
 		impulse.X = direction.X * impulseStrength
 		impulse.Y = direction.Y * impulseStrength // Теперь используем Y составляющую
 		impulse.Z = direction.Z * impulseStrength
+
+		// Добавляем логирование для отладки
+		log.Printf("[Go] Рассчитанная сила импульса: базовая=%f, доп=%f, итого=%f",
+			minImpulse, additionalImpulse, impulseStrength)
 
 	default:
 		log.Printf("[Go] Неизвестная команда: %s", cmdMsg.Cmd)
@@ -363,6 +381,57 @@ func (s *WSServer) startClientStreaming(wsWriter *SafeWriter) {
 			if err := s.serializer.SendUpdateForObject(wsWriter, obj.ID, position, rotation); err != nil {
 				log.Printf("[Go] Ошибка отправки обновления для %s: %v", obj.ID, err)
 			}
+
+			// Дополнительно отправляем скорость, если она есть в ответе от сервера
+			if resp.State.LinearVelocity != nil {
+				velocity := map[string]interface{}{
+					"type":             "update",
+					"id":               obj.ID,
+					"server_time":      GetCurrentServerTime(),
+					"server_send_time": time.Now().UnixMilli(),
+					"objects": map[string]interface{}{
+						obj.ID: map[string]interface{}{
+							"velocity": map[string]float32{
+								"x": resp.State.LinearVelocity.X,
+								"y": resp.State.LinearVelocity.Y,
+								"z": resp.State.LinearVelocity.Z,
+							},
+						},
+					},
+				}
+
+				// Вычисляем общую скорость для логирования
+				speed := float32(math.Sqrt(float64(
+					resp.State.LinearVelocity.X*resp.State.LinearVelocity.X +
+						resp.State.LinearVelocity.Y*resp.State.LinearVelocity.Y +
+						resp.State.LinearVelocity.Z*resp.State.LinearVelocity.Z)))
+
+				// Логируем отправку скорости только для основного игрока (чтобы не загрязнять лог)
+				if obj.ID == "mainPlayer1" {
+					log.Printf("[Go] Отправка данных о скорости %s: (%f, %f, %f), скорость: %f м/с",
+						obj.ID, resp.State.LinearVelocity.X, resp.State.LinearVelocity.Y, resp.State.LinearVelocity.Z, speed)
+				}
+
+				if err := wsWriter.WriteJSON(velocity); err != nil {
+					log.Printf("[Go] Ошибка отправки скорости для %s: %v", obj.ID, err)
+				}
+			}
 		}
+	}
+}
+
+// Добавляем новый обработчик для отправки конфигурации физики клиенту
+func (s *WSServer) sendPhysicsConfig(conn *SafeWriter) {
+	physicsConfig := world.GetPhysicsConfig()
+
+	configMessage := map[string]interface{}{
+		"type":   "physics_config",
+		"config": physicsConfig,
+	}
+
+	if err := conn.WriteJSON(configMessage); err != nil {
+		log.Printf("[Go] Ошибка отправки конфигурации физики: %v", err)
+	} else {
+		log.Printf("[Go] Конфигурация физики отправлена клиенту")
 	}
 }

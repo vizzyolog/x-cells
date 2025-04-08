@@ -1,6 +1,6 @@
 // network.js
 import { objects, createMeshAndBodyForObject } from './objects';
-import { applyImpulseToSphere, receiveObjectUpdate, localPhysicsWorld } from './physics';
+import { applyImpulseToSphere, receiveObjectUpdate, localPhysicsWorld, applyPhysicsConfig } from './physics';
 
 let ws = null;
 let physicsStarted = false;
@@ -12,6 +12,14 @@ let serverTimeOffsetSamples = []; // Хранение образцов для в
 const MAX_OFFSET_SAMPLES = 10;  // Максимальное количество образцов
 let pingHistory = [];           // История пингов для анализа
 const MAX_PING_SAMPLES = 10;    // Максимальное количество образцов пинга
+
+// Глобальная конфигурация физики
+let physicsConfig = null;
+
+// Функция для получения текущей конфигурации физики
+export function getPhysicsConfig() {
+    return physicsConfig;
+}
 
 // Вычисляем текущее серверное время на основе смещения
 function estimateServerTime() {
@@ -92,6 +100,17 @@ function handleMessage(data) {
             updateServerTimeOffset(data.server_time);
         }
 
+        // Обрабатываем конфигурацию физики
+        if (data.type === "physics_config") {
+            console.log("[Network] Получена конфигурация физики:", data.config);
+            physicsConfig = data.config;
+            
+            // Применяем конфигурацию к физике на клиенте
+            applyPhysicsConfig(physicsConfig);
+            
+            return; // Прекращаем обработку этого сообщения
+        }
+
         // Обрабатываем pong-сообщения для синхронизации времени
         if (data.type === "pong") {
             const now = Date.now();
@@ -118,18 +137,19 @@ function handleMessage(data) {
         }
 
         if (data.type === "update") {
-            // Вычисляем задержку
-            if (data.server_send_time) {
-                const now = Date.now();
-                serverDelay = now - data.server_send_time;
-                console.log("serverDelay: ", serverDelay);
-                updateServerDelayDisplay(serverDelay);
+            // Проверяем, содержит ли update сообщение данные объекта
+            if (data.objects || data.id) {
+                // Отладочная информация
+                console.log('[WS] Получено update сообщение:', 
+                    data.id ? `id: ${data.id}` : `Количество объектов: ${Object.keys(data.objects).length}`);
+                
+                // Передаем данные в функцию обработки обновлений
+                receiveObjectUpdate(data);
+            } else {
+                console.warn('[WS] Получено update сообщение без объектов:', data);
             }
-
-            receiveObjectUpdate(data);
-        }
-        
-        if (data.type === "create" && data.id) {
+        } 
+        else if (data.type === "create" && data.id) {
             console.log("[WS] Получено сообщение о создании объекта:", data.id, "в координатах:", 
                 { x: data.x || 0, y: data.y || 0, z: data.z || 0 },
                 "время сервера:", data.server_time);

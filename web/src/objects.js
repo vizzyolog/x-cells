@@ -50,7 +50,16 @@ export function createMeshAndBodyForObject(data) {
         }
 
         scene.add(mesh);
-        return { mesh, body };
+        
+        // Сохраняем в объекте исходные данные, включая массу
+        const result = { 
+            mesh, 
+            body, 
+            object_type: type, 
+            mass: data.mass || 0 // Сохраняем массу из данных сервера
+        };
+        
+        return result;
     } catch (error) {
         console.error(`Ошибка при создании объекта типа ${type}:`, error);
         // Если mesh был создан, но произошла ошибка, удаляем его из сцены
@@ -236,8 +245,8 @@ function createPhysicsBodyForSphere(data) {
         }
 
         const radius = data.radius || 1;
-        // Увеличиваем массу для лучшей физики отскока
-        const mass = data.mass || 3.0;
+        // Увеличиваем массу в три раза для лучшей физики
+        const mass = data.mass || 15.0; // Увеличиваем с 5.0 до 15.0
 
         // Создаем все Ammo объекты через window.Ammo
         const shape = new window.Ammo.btSphereShape(radius);
@@ -266,15 +275,18 @@ function createPhysicsBodyForSphere(data) {
         }
         
         // Устанавливаем дополнительные свойства
-        body.setFriction(0.3);         // Уменьшаем трение для лучшего скольжения
-        body.setRestitution(0.95);      // Увеличиваем упругость почти до максимума для лучшего отскока
-        body.setRollingFriction(0.1);  // Низкое сопротивление качению
+        body.setFriction(0.02);         // Уменьшаем трение для лучшего скольжения
+        body.setRestitution(1.0);       // Максимальная упругость для мощного отскока
+        body.setRollingFriction(0.01);  // Очень низкое сопротивление качению
+        body.setDamping(0.0, 0.0);      // Убираем затухание для сохранения энергии
         
         // Отключаем деактивацию
         body.setActivationState(4); // DISABLE_DEACTIVATION
         
         // Для небольших сфер включаем CCD (continuous collision detection),
         // чтобы предотвратить проваливание сквозь поверхности при высокой скорости
+        body.setCcdMotionThreshold(radius * 0.7);
+        body.setCcdSweptSphereRadius(radius * 0.6);
 
         // Добавляем тело в физический мир
         const SPHERE_GROUP = 2;
@@ -289,11 +301,11 @@ function createPhysicsBodyForSphere(data) {
                 z: data.z || 0
             },
             ccd: {
-                motionThreshold: radius * 0.8,
-                sweptSphereRadius: radius * 0.7
+                motionThreshold: radius * 0.7,
+                sweptSphereRadius: radius * 0.6
             },
-            friction: 0.3,
-            restitution: 0.95
+            friction: 0.02,
+            restitution: 1.0
         });
 
         // Очистка памяти
@@ -414,7 +426,7 @@ export function createTestSphere() {
 
     // Создаем физическое тело
     const shape = new Ammo.btSphereShape(radius);
-    const mass = 3; // Увеличиваем массу с 1 до 3
+    const mass = 5; // Увеличиваем массу с 3 до 5
     
     const transform = new Ammo.btTransform();
     transform.setIdentity();
@@ -429,14 +441,14 @@ export function createTestSphere() {
 
     // Важные настройки для физического тела
     body.setActivationState(4); // DISABLE_DEACTIVATION
-    body.setFriction(0.3);       // Уменьшаем с 0.5 до 0.3
-    body.setRollingFriction(0.05); // Уменьшаем с 0.1 до 0.05
-    body.setRestitution(0.95);    // Увеличиваем с 0.5 до 0.95 для лучшего отскока
-    body.setDamping(0.0, 0.0);    // Отключаем затухание для более долгого движения
+    body.setFriction(0.2);      // Уменьшаем с 0.3 до 0.2
+    body.setRollingFriction(0.03); // Уменьшаем с 0.05 до 0.03
+    body.setRestitution(0.99);    // Увеличиваем до максимума
+    body.setDamping(0.0, 0.0);    // Отключаем затухание полностью
 
     // Включаем CCD для предотвращения проваливания сквозь объекты
-    body.setCcdMotionThreshold(radius * 0.7);
-    body.setCcdSweptSphereRadius(radius * 0.6);
+    body.setCcdMotionThreshold(radius * 0.6);
+    body.setCcdSweptSphereRadius(radius * 0.5);
 
     // Добавляем тело в физический мир
     const SPHERE_GROUP = 2;

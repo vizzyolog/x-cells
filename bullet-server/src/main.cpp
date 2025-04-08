@@ -25,6 +25,8 @@ using physics::GetObjectStateResponse;
 using physics::ObjectState;
 using physics::ApplyImpulseRequest;
 using physics::ApplyImpulseResponse;
+using physics::UpdateObjectMassRequest;
+using physics::UpdateObjectMassResponse;
 
 class PhysicsServiceImpl final : public Physics::Service {
 private:
@@ -181,27 +183,29 @@ private:
         if (desc.type() == ShapeDescriptor::TERRAIN) {
             body->setCollisionFlags(body->getCollisionFlags() | 
                                   btCollisionObject::CF_STATIC_OBJECT);
-            body->setRestitution(0.6f); // Средняя упругость для террейна
+            body->setRestitution(0.9f); // Увеличиваем упругость террейна с 0.7 до 0.9 для максимального отскока
         } else if (mass != 0.0f) {
             // Для динамических объектов включаем угловое движение
             body->setAngularFactor(btVector3(1.0f, 1.0f, 1.0f));
-            body->setDamping(0.0f, 0.1f);  // Линейное и угловое затухание
+            body->setDamping(0.0f, 0.0f);  // Убираем затухание полностью
             body->setActivationState(DISABLE_DEACTIVATION); // Отключаем деактивацию
             
-            // Устанавливаем высокую упругость для отскока
-            body->setRestitution(0.98);       // Увеличиваем с 0.9 до 0.98
-            body->setFriction(0.2);           // Уменьшаем с 0.3 до 0.2, меньше трения
-            body->setRollingFriction(0.05);   // Уменьшаем сопротивление качению
+            // Устанавливаем максимальную упругость для отскока
+            body->setRestitution(1.0);       // Максимальная упругость
+            body->setFriction(0.05);        // Минимальное трение
+            body->setRollingFriction(0.01); // Минимальное сопротивление качению
             
             // Отключаем затухание для более долгого движения
             body->setDamping(0.0, 0.0);  // Убираем затухание для линейного и углового движения
 
             // Активируем обнаружение непрерывных столкновений для высоких скоростей
-            body->setCcdMotionThreshold(desc.sphere().radius() * 0.7);
-            body->setCcdSweptSphereRadius(desc.sphere().radius() * 0.6);
+            if (desc.type() == ShapeDescriptor::SPHERE) {
+                body->setCcdMotionThreshold(desc.sphere().radius() * 0.6);
+                body->setCcdSweptSphereRadius(desc.sphere().radius() * 0.5);
+            }
             
-            // Вместо встроенного метода setMaxLinearVelocity храним максимальную скорость отдельно
-            // и будем проверять её при каждом шаге симуляции
+            // Устанавливаем максимальную скорость для всех динамических объектов
+            // все объекты будут иметь ограничение 80 м/с
         }
 
         dynamicsWorld->addRigidBody(body);
@@ -351,15 +355,22 @@ private:
                 
                 // Если скорость превышает максимальную, ограничиваем её
                 if (speed > maxSpeed && speed > 0) {
+                    // Логируем неожиданно высокую скорость
+                    if (speed > maxSpeed * 2) {
+                        std::cout << "ВНИМАНИЕ: Чрезмерная скорость у объекта " << id 
+                                  << ": " << speed << " м/с, ограничиваем до " << maxSpeed << " м/с" << std::endl;
+                    }
+                    
+                    // Жестко ограничиваем скорость, сохраняя направление
                     velocity *= (maxSpeed / speed);
                     body->setLinearVelocity(velocity);
                     
-                    // Добавляем немного случайности для более интересного поведения
-                    if (std::rand() % 100 < 10) { // 10% шанс
-                        float randomX = ((float)std::rand() / RAND_MAX - 0.5f) * 5.0f;
-                        float randomY = ((float)std::rand() / RAND_MAX) * 2.0f;
-                        float randomZ = ((float)std::rand() / RAND_MAX - 0.5f) * 5.0f;
-                        body->applyCentralImpulse(btVector3(randomX, randomY, randomZ));
+                    // Также сбрасываем угловую скорость, если она слишком велика
+                    btVector3 angVel = body->getAngularVelocity();
+                    float angSpeed = angVel.length();
+                    if (angSpeed > 10.0f) {
+                        angVel *= (10.0f / angSpeed);
+                        body->setAngularVelocity(angVel);
                     }
                 }
             }
@@ -401,8 +412,8 @@ private:
         body->setMassProps(mass, localInertia);
         
         // Обновляем максимальную скорость с учетом новой массы
-        // Чем больше масса, тем меньше максимальная скорость
-        float newMaxSpeed = 25.0f * (1.0f / std::sqrt(mass));
+        // Исправляем формулу: теперь не уменьшаем скорость при увеличении массы
+        float newMaxSpeed = 80.0f; // Устанавливаем высокое фиксированное значение максимальной скорости
         maxSpeeds[id] = newMaxSpeed;
         
         // Пересчитываем центр масс
@@ -458,10 +469,9 @@ public:
         // Сохраняем объект
         objects[request->id()] = body;
         
-        // Устанавливаем максимальную скорость (по умолчанию 25.0)
-        if (request->shape().type() == ShapeDescriptor::SPHERE) {
-            maxSpeeds[request->id()] = 25.0f; // Увеличиваем с 20.0f до 25.0f
-        }
+        // Устанавливаем максимальную скорость для всех типов объектов
+        maxSpeeds[request->id()] = 80.0f;
+        std::cout << "Установлена максимальная скорость для " << request->id() << ": 80.0 м/с" << std::endl;
         
         response->set_status("OK");
         return Status::OK;
@@ -519,30 +529,62 @@ public:
         btVector3 currentVelocity = body->getLinearVelocity();
         float currentSpeed = currentVelocity.length();
         
-        // Масштабируем импульс в зависимости от текущей скорости
-        // Чем больше скорость, тем меньше будет применяемый импульс
-        float speedFactor = 1.0f; // Увеличиваем с 1.5f до 2.0f
+        // Логируем скорость и входящий импульс
+        std::cout << "Текущая скорость объекта " << request->id() << ": " << currentSpeed << std::endl;
+
+        // Получаем величину входящего импульса
+        btVector3 rawImpulse(impulse.x(), impulse.y(), impulse.z());
+        float rawImpulseMagnitude = rawImpulse.length();
         
-        // Получаем максимальную скорость для этого объекта
-        float maxSpeed = 20.0f; // Значение по умолчанию
+        // Ограничиваем только очень большие импульсы
+        const float MAX_IMPULSE_MAGNITUDE = 1000.0f;
+        if (rawImpulseMagnitude > MAX_IMPULSE_MAGNITUDE) {
+            std::cout << "ВНИМАНИЕ: Очень большой импульс: " << rawImpulseMagnitude 
+                      << ", ограничиваем до " << MAX_IMPULSE_MAGNITUDE << std::endl;
+            rawImpulse *= (MAX_IMPULSE_MAGNITUDE / rawImpulseMagnitude);
+        }
+        
+        // Просто применяем импульс с очень малым множителем
+        btVector3 scaledImpulse(
+            rawImpulse.x() * 0.1f, // Увеличиваем множитель с 0.01 до 0.1
+            rawImpulse.y() * 0.1f,
+            rawImpulse.z() * 0.1f
+        );
+        
+        // Проверяем, не превысит ли скорость допустимый предел после применения импульса
+        btVector3 expectedVelocity = currentVelocity + scaledImpulse / body->getMass();
+        float expectedSpeed = expectedVelocity.length();
+        
+        // Проверяем максимальную скорость для объекта
+        float maxSpeed = 80.0f; // Значение по умолчанию
         auto speedIt = maxSpeeds.find(request->id());
         if (speedIt != maxSpeeds.end()) {
             maxSpeed = speedIt->second;
         }
         
-        if (currentSpeed > 0.0f) {
-            // Плавное уменьшение импульса при приближении к максимальной скорости
-            speedFactor = std::max(0.3f, 2.0f - (currentSpeed / maxSpeed)); // Увеличиваем минимум и множитель
+        // Если ожидаемая скорость превысит максимальную, уменьшаем импульс
+        if (expectedSpeed > maxSpeed && expectedSpeed > 0) {
+            float scale = maxSpeed / expectedSpeed;
+            scaledImpulse *= scale;
+            std::cout << "Предварительное ограничение импульса: " << scale << " от изначального" << std::endl;
         }
         
-        // Применяем импульс с учетом фактора скорости
-        btVector3 scaledImpulse(
-            impulse.x() * speedFactor,
-            impulse.y() * speedFactor,
-            impulse.z() * speedFactor
-        );
+        std::cout << "Применяем импульс: [" << scaledImpulse.x() << ", " << scaledImpulse.y() 
+                  << ", " << scaledImpulse.z() << "]" << std::endl;
         
         body->applyCentralImpulse(scaledImpulse);
+        
+        // Окончательная проверка, что не превысили максимальную скорость
+        btVector3 finalVelocity = body->getLinearVelocity();
+        float finalSpeed = finalVelocity.length();
+        
+        if (finalSpeed > maxSpeed) {
+            std::cout << "ВНИМАНИЕ: Чрезмерная скорость у объекта " << request->id() << ": " << finalSpeed 
+                      << " м/с, ограничиваем до " << maxSpeed << " м/с" << std::endl;
+            
+            finalVelocity *= (maxSpeed / finalSpeed);
+            body->setLinearVelocity(finalVelocity);
+        }
         
         response->set_status("OK");
         return Status::OK;
@@ -556,6 +598,44 @@ public:
     // Обновление массы объекта (для тестирования)
     bool testUpdateMass(const std::string& id, float mass) {
         return updateObjectMass(id, mass);
+    }
+
+    // Метод для обновления массы объекта
+    Status UpdateObjectMass(ServerContext* context, 
+                             const UpdateObjectMassRequest* request,
+                             UpdateObjectMassResponse* response) override {
+        auto it = objects.find(request->id());
+        if (it == objects.end()) {
+            response->set_status("ERROR: Object not found");
+            return Status::OK;
+        }
+        
+        btRigidBody* body = it->second;
+        
+        // Получаем текущую форму
+        btCollisionShape* shape = body->getCollisionShape();
+        
+        // Создаем вектор локальной инерции
+        btVector3 localInertia(0, 0, 0);
+        
+        // Вычисляем новую инерцию в зависимости от массы (важно для правильной физики)
+        if (shape) {
+            shape->calculateLocalInertia(request->mass(), localInertia);
+        }
+        
+        // Применяем новые свойства массы
+        body->setMassProps(request->mass(), localInertia);
+        
+        // Обновляем информацию о максимальной скорости
+        maxSpeeds[request->id()] = 80.0f; // Можно было бы сделать параметром
+        
+        // Активируем объект для обновления физики
+        body->activate(true);
+        
+        std::cout << "Обновлена масса для объекта " << request->id() << ": " << request->mass() << std::endl;
+        
+        response->set_status("OK");
+        return Status::OK;
     }
 
     ~PhysicsServiceImpl() {

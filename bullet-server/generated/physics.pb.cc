@@ -245,8 +245,35 @@ struct GetObjectStateResponseDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GetObjectStateResponseDefaultTypeInternal _GetObjectStateResponse_default_instance_;
+PROTOBUF_CONSTEXPR UpdateObjectMassRequest::UpdateObjectMassRequest(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.id_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.mass_)*/0
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct UpdateObjectMassRequestDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR UpdateObjectMassRequestDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~UpdateObjectMassRequestDefaultTypeInternal() {}
+  union {
+    UpdateObjectMassRequest _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 UpdateObjectMassRequestDefaultTypeInternal _UpdateObjectMassRequest_default_instance_;
+PROTOBUF_CONSTEXPR UpdateObjectMassResponse::UpdateObjectMassResponse(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.status_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_._cached_size_)*/{}} {}
+struct UpdateObjectMassResponseDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR UpdateObjectMassResponseDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
+  ~UpdateObjectMassResponseDefaultTypeInternal() {}
+  union {
+    UpdateObjectMassResponse _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 UpdateObjectMassResponseDefaultTypeInternal _UpdateObjectMassResponse_default_instance_;
 }  // namespace physics
-static ::_pb::Metadata file_level_metadata_physics_2eproto[15];
+static ::_pb::Metadata file_level_metadata_physics_2eproto[17];
 static const ::_pb::EnumDescriptor* file_level_enum_descriptors_physics_2eproto[1];
 static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_physics_2eproto = nullptr;
 
@@ -387,6 +414,21 @@ const uint32_t TableStruct_physics_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::physics::GetObjectStateResponse, _impl_.status_),
   PROTOBUF_FIELD_OFFSET(::physics::GetObjectStateResponse, _impl_.state_),
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::physics::UpdateObjectMassRequest, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::physics::UpdateObjectMassRequest, _impl_.id_),
+  PROTOBUF_FIELD_OFFSET(::physics::UpdateObjectMassRequest, _impl_.mass_),
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::physics::UpdateObjectMassResponse, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  ~0u,  // no _inlined_string_donated_
+  PROTOBUF_FIELD_OFFSET(::physics::UpdateObjectMassResponse, _impl_.status_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::physics::Vector3)},
@@ -404,6 +446,8 @@ static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protode
   { 111, -1, -1, sizeof(::physics::GetObjectStateRequest)},
   { 118, -1, -1, sizeof(::physics::ObjectState)},
   { 128, -1, -1, sizeof(::physics::GetObjectStateResponse)},
+  { 136, -1, -1, sizeof(::physics::UpdateObjectMassRequest)},
+  { 144, -1, -1, sizeof(::physics::UpdateObjectMassResponse)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -422,6 +466,8 @@ static const ::_pb::Message* const file_default_instances[] = {
   &::physics::_GetObjectStateRequest_default_instance_._instance,
   &::physics::_ObjectState_default_instance_._instance,
   &::physics::_GetObjectStateResponse_default_instance_._instance,
+  &::physics::_UpdateObjectMassRequest_default_instance_._instance,
+  &::physics::_UpdateObjectMassResponse_default_instance_._instance,
 };
 
 const char descriptor_table_protodef_physics_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
@@ -459,22 +505,27 @@ const char descriptor_table_protodef_physics_2eproto[] PROTOBUF_SECTION_VARIABLE
   "\0132\020.physics.Vector3\022*\n\020angular_velocity\030"
   "\004 \001(\0132\020.physics.Vector3\"M\n\026GetObjectStat"
   "eResponse\022\016\n\006status\030\001 \001(\t\022#\n\005state\030\002 \001(\013"
-  "2\024.physics.ObjectState2\300\002\n\007Physics\022K\n\014Cr"
-  "eateObject\022\034.physics.CreateObjectRequest"
-  "\032\035.physics.CreateObjectResponse\022K\n\014Apply"
-  "Impulse\022\034.physics.ApplyImpulseRequest\032\035."
-  "physics.ApplyImpulseResponse\022H\n\013ApplyTor"
-  "que\022\033.physics.ApplyTorqueRequest\032\034.physi"
-  "cs.ApplyTorqueResponse\022Q\n\016GetObjectState"
-  "\022\036.physics.GetObjectStateRequest\032\037.physi"
-  "cs.GetObjectStateResponseB,Z*x-cells/bac"
-  "kend/internal/physics/generatedb\006proto3"
+  "2\024.physics.ObjectState\"3\n\027UpdateObjectMa"
+  "ssRequest\022\n\n\002id\030\001 \001(\t\022\014\n\004mass\030\002 \001(\002\"*\n\030U"
+  "pdateObjectMassResponse\022\016\n\006status\030\001 \001(\t2"
+  "\231\003\n\007Physics\022K\n\014CreateObject\022\034.physics.Cr"
+  "eateObjectRequest\032\035.physics.CreateObject"
+  "Response\022K\n\014ApplyImpulse\022\034.physics.Apply"
+  "ImpulseRequest\032\035.physics.ApplyImpulseRes"
+  "ponse\022H\n\013ApplyTorque\022\033.physics.ApplyTorq"
+  "ueRequest\032\034.physics.ApplyTorqueResponse\022"
+  "Q\n\016GetObjectState\022\036.physics.GetObjectSta"
+  "teRequest\032\037.physics.GetObjectStateRespon"
+  "se\022W\n\020UpdateObjectMass\022 .physics.UpdateO"
+  "bjectMassRequest\032!.physics.UpdateObjectM"
+  "assResponseB,Z*x-cells/backend/internal/"
+  "physics/generatedb\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_physics_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_physics_2eproto = {
-    false, false, 1759, descriptor_table_protodef_physics_2eproto,
+    false, false, 1945, descriptor_table_protodef_physics_2eproto,
     "physics.proto",
-    &descriptor_table_physics_2eproto_once, nullptr, 0, 15,
+    &descriptor_table_physics_2eproto_once, nullptr, 0, 17,
     schemas, file_default_instances, TableStruct_physics_2eproto::offsets,
     file_level_metadata_physics_2eproto, file_level_enum_descriptors_physics_2eproto,
     file_level_service_descriptors_physics_2eproto,
@@ -4753,6 +4804,451 @@ void GetObjectStateResponse::InternalSwap(GetObjectStateResponse* other) {
       file_level_metadata_physics_2eproto[14]);
 }
 
+// ===================================================================
+
+class UpdateObjectMassRequest::_Internal {
+ public:
+};
+
+UpdateObjectMassRequest::UpdateObjectMassRequest(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:physics.UpdateObjectMassRequest)
+}
+UpdateObjectMassRequest::UpdateObjectMassRequest(const UpdateObjectMassRequest& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  UpdateObjectMassRequest* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.id_){}
+    , decltype(_impl_.mass_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  _impl_.id_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.id_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_id().empty()) {
+    _this->_impl_.id_.Set(from._internal_id(), 
+      _this->GetArenaForAllocation());
+  }
+  _this->_impl_.mass_ = from._impl_.mass_;
+  // @@protoc_insertion_point(copy_constructor:physics.UpdateObjectMassRequest)
+}
+
+inline void UpdateObjectMassRequest::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.id_){}
+    , decltype(_impl_.mass_){0}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+  _impl_.id_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.id_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+}
+
+UpdateObjectMassRequest::~UpdateObjectMassRequest() {
+  // @@protoc_insertion_point(destructor:physics.UpdateObjectMassRequest)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void UpdateObjectMassRequest::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.id_.Destroy();
+}
+
+void UpdateObjectMassRequest::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void UpdateObjectMassRequest::Clear() {
+// @@protoc_insertion_point(message_clear_start:physics.UpdateObjectMassRequest)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.id_.ClearToEmpty();
+  _impl_.mass_ = 0;
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
+}
+
+const char* UpdateObjectMassRequest::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // string id = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          auto str = _internal_mutable_id();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "physics.UpdateObjectMassRequest.id"));
+        } else
+          goto handle_unusual;
+        continue;
+      // float mass = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 21)) {
+          _impl_.mass_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr);
+          ptr += sizeof(float);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* UpdateObjectMassRequest::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:physics.UpdateObjectMassRequest)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // string id = 1;
+  if (!this->_internal_id().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_id().data(), static_cast<int>(this->_internal_id().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "physics.UpdateObjectMassRequest.id");
+    target = stream->WriteStringMaybeAliased(
+        1, this->_internal_id(), target);
+  }
+
+  // float mass = 2;
+  static_assert(sizeof(uint32_t) == sizeof(float), "Code assumes uint32_t and float are the same size.");
+  float tmp_mass = this->_internal_mass();
+  uint32_t raw_mass;
+  memcpy(&raw_mass, &tmp_mass, sizeof(tmp_mass));
+  if (raw_mass != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteFloatToArray(2, this->_internal_mass(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:physics.UpdateObjectMassRequest)
+  return target;
+}
+
+size_t UpdateObjectMassRequest::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:physics.UpdateObjectMassRequest)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // string id = 1;
+  if (!this->_internal_id().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_id());
+  }
+
+  // float mass = 2;
+  static_assert(sizeof(uint32_t) == sizeof(float), "Code assumes uint32_t and float are the same size.");
+  float tmp_mass = this->_internal_mass();
+  uint32_t raw_mass;
+  memcpy(&raw_mass, &tmp_mass, sizeof(tmp_mass));
+  if (raw_mass != 0) {
+    total_size += 1 + 4;
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData UpdateObjectMassRequest::_class_data_ = {
+    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
+    UpdateObjectMassRequest::MergeImpl
+};
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*UpdateObjectMassRequest::GetClassData() const { return &_class_data_; }
+
+
+void UpdateObjectMassRequest::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<UpdateObjectMassRequest*>(&to_msg);
+  auto& from = static_cast<const UpdateObjectMassRequest&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:physics.UpdateObjectMassRequest)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!from._internal_id().empty()) {
+    _this->_internal_set_id(from._internal_id());
+  }
+  static_assert(sizeof(uint32_t) == sizeof(float), "Code assumes uint32_t and float are the same size.");
+  float tmp_mass = from._internal_mass();
+  uint32_t raw_mass;
+  memcpy(&raw_mass, &tmp_mass, sizeof(tmp_mass));
+  if (raw_mass != 0) {
+    _this->_internal_set_mass(from._internal_mass());
+  }
+  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void UpdateObjectMassRequest::CopyFrom(const UpdateObjectMassRequest& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:physics.UpdateObjectMassRequest)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool UpdateObjectMassRequest::IsInitialized() const {
+  return true;
+}
+
+void UpdateObjectMassRequest::InternalSwap(UpdateObjectMassRequest* other) {
+  using std::swap;
+  auto* lhs_arena = GetArenaForAllocation();
+  auto* rhs_arena = other->GetArenaForAllocation();
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.id_, lhs_arena,
+      &other->_impl_.id_, rhs_arena
+  );
+  swap(_impl_.mass_, other->_impl_.mass_);
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata UpdateObjectMassRequest::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_physics_2eproto_getter, &descriptor_table_physics_2eproto_once,
+      file_level_metadata_physics_2eproto[15]);
+}
+
+// ===================================================================
+
+class UpdateObjectMassResponse::_Internal {
+ public:
+};
+
+UpdateObjectMassResponse::UpdateObjectMassResponse(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
+  SharedCtor(arena, is_message_owned);
+  // @@protoc_insertion_point(arena_constructor:physics.UpdateObjectMassResponse)
+}
+UpdateObjectMassResponse::UpdateObjectMassResponse(const UpdateObjectMassResponse& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  UpdateObjectMassResponse* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.status_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  _impl_.status_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.status_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_status().empty()) {
+    _this->_impl_.status_.Set(from._internal_status(), 
+      _this->GetArenaForAllocation());
+  }
+  // @@protoc_insertion_point(copy_constructor:physics.UpdateObjectMassResponse)
+}
+
+inline void UpdateObjectMassResponse::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.status_){}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+  _impl_.status_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.status_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+}
+
+UpdateObjectMassResponse::~UpdateObjectMassResponse() {
+  // @@protoc_insertion_point(destructor:physics.UpdateObjectMassResponse)
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
+  (void)arena;
+    return;
+  }
+  SharedDtor();
+}
+
+inline void UpdateObjectMassResponse::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  _impl_.status_.Destroy();
+}
+
+void UpdateObjectMassResponse::SetCachedSize(int size) const {
+  _impl_._cached_size_.Set(size);
+}
+
+void UpdateObjectMassResponse::Clear() {
+// @@protoc_insertion_point(message_clear_start:physics.UpdateObjectMassResponse)
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.status_.ClearToEmpty();
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
+}
+
+const char* UpdateObjectMassResponse::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    uint32_t tag;
+    ptr = ::_pbi::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // string status = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+          auto str = _internal_mutable_status();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "physics.UpdateObjectMassResponse.status"));
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+uint8_t* UpdateObjectMassResponse::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:physics.UpdateObjectMassResponse)
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // string status = 1;
+  if (!this->_internal_status().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_status().data(), static_cast<int>(this->_internal_status().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "physics.UpdateObjectMassResponse.status");
+    target = stream->WriteStringMaybeAliased(
+        1, this->_internal_status(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:physics.UpdateObjectMassResponse)
+  return target;
+}
+
+size_t UpdateObjectMassResponse::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:physics.UpdateObjectMassResponse)
+  size_t total_size = 0;
+
+  uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // string status = 1;
+  if (!this->_internal_status().empty()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_status());
+  }
+
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+}
+
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData UpdateObjectMassResponse::_class_data_ = {
+    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
+    UpdateObjectMassResponse::MergeImpl
+};
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*UpdateObjectMassResponse::GetClassData() const { return &_class_data_; }
+
+
+void UpdateObjectMassResponse::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<UpdateObjectMassResponse*>(&to_msg);
+  auto& from = static_cast<const UpdateObjectMassResponse&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:physics.UpdateObjectMassResponse)
+  GOOGLE_DCHECK_NE(&from, _this);
+  uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!from._internal_status().empty()) {
+    _this->_internal_set_status(from._internal_status());
+  }
+  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void UpdateObjectMassResponse::CopyFrom(const UpdateObjectMassResponse& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:physics.UpdateObjectMassResponse)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool UpdateObjectMassResponse::IsInitialized() const {
+  return true;
+}
+
+void UpdateObjectMassResponse::InternalSwap(UpdateObjectMassResponse* other) {
+  using std::swap;
+  auto* lhs_arena = GetArenaForAllocation();
+  auto* rhs_arena = other->GetArenaForAllocation();
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.status_, lhs_arena,
+      &other->_impl_.status_, rhs_arena
+  );
+}
+
+::PROTOBUF_NAMESPACE_ID::Metadata UpdateObjectMassResponse::GetMetadata() const {
+  return ::_pbi::AssignDescriptors(
+      &descriptor_table_physics_2eproto_getter, &descriptor_table_physics_2eproto_once,
+      file_level_metadata_physics_2eproto[16]);
+}
+
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace physics
 PROTOBUF_NAMESPACE_OPEN
@@ -4815,6 +5311,14 @@ Arena::CreateMaybeMessage< ::physics::ObjectState >(Arena* arena) {
 template<> PROTOBUF_NOINLINE ::physics::GetObjectStateResponse*
 Arena::CreateMaybeMessage< ::physics::GetObjectStateResponse >(Arena* arena) {
   return Arena::CreateMessageInternal< ::physics::GetObjectStateResponse >(arena);
+}
+template<> PROTOBUF_NOINLINE ::physics::UpdateObjectMassRequest*
+Arena::CreateMaybeMessage< ::physics::UpdateObjectMassRequest >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::physics::UpdateObjectMassRequest >(arena);
+}
+template<> PROTOBUF_NOINLINE ::physics::UpdateObjectMassResponse*
+Arena::CreateMaybeMessage< ::physics::UpdateObjectMassResponse >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::physics::UpdateObjectMassResponse >(arena);
 }
 PROTOBUF_NAMESPACE_CLOSE
 

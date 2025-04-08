@@ -1,7 +1,12 @@
+/*
+Этот файл больше не используется после перехода на гексагональную архитектуру.
+Функциональность перемещена в backend/internal/adapter/in/ws.
+
 package ws
 
 import (
 	"log"
+	"math"
 	"time"
 
 	"x-cells/backend/internal/world"
@@ -19,6 +24,14 @@ func NewWorldSerializer(worldManager *world.Manager) *WorldSerializer {
 	}
 }
 
+// Вспомогательная функция для проверки и замены NaN
+func safeFloat32(val float32, defaultVal float32) float32 {
+	if math.IsNaN(float64(val)) {
+		return defaultVal
+	}
+	return val
+}
+
 // SendCreateForAllObjects отправляет информацию о всех объектах клиенту
 func (s *WorldSerializer) SendCreateForAllObjects(wsWriter *SafeWriter) error {
 	worldObjects := s.worldManager.GetAllWorldObjects()
@@ -31,9 +44,9 @@ func (s *WorldSerializer) SendCreateForAllObjects(wsWriter *SafeWriter) error {
 		msg := map[string]interface{}{
 			"type":        "create",
 			"id":          obj.ID,
-			"x":           obj.Position.X,
-			"y":           obj.Position.Y,
-			"z":           obj.Position.Z,
+			"x":           safeFloat32(obj.Position.X, 0.0),
+			"y":           safeFloat32(obj.Position.Y, 0.0),
+			"z":           safeFloat32(obj.Position.Z, 0.0),
 			"color":       obj.Color,
 			"physics_by":  string(obj.PhysicsType),
 			"server_time": serverTime,
@@ -43,26 +56,37 @@ func (s *WorldSerializer) SendCreateForAllObjects(wsWriter *SafeWriter) error {
 		switch obj.Shape.Type {
 		case world.SPHERE:
 			msg["object_type"] = "sphere"
-			msg["radius"] = obj.Shape.Sphere.Radius
-			msg["mass"] = obj.Shape.Sphere.Mass
+			msg["radius"] = safeFloat32(obj.Shape.Sphere.Radius, 1.0)
+			msg["mass"] = safeFloat32(obj.Shape.Sphere.Mass, 1.0)
 
 		case world.BOX:
 			msg["object_type"] = "box"
-			msg["width"] = obj.Shape.Box.Width
-			msg["height"] = obj.Shape.Box.Height
-			msg["depth"] = obj.Shape.Box.Depth
-			msg["mass"] = obj.Shape.Box.Mass
+			msg["width"] = safeFloat32(obj.Shape.Box.Width, 1.0)
+			msg["height"] = safeFloat32(obj.Shape.Box.Height, 1.0)
+			msg["depth"] = safeFloat32(obj.Shape.Box.Depth, 1.0)
+			msg["mass"] = safeFloat32(obj.Shape.Box.Mass, 1.0)
 
 		case world.TERRAIN:
 			msg["object_type"] = "terrain"
-			msg["height_data"] = obj.Shape.Terrain.HeightData
+
+			// Проверяем HeightData на NaN
+			if obj.Shape.Terrain.HeightData != nil {
+				safeHeightData := make([]float32, len(obj.Shape.Terrain.HeightData))
+				for i, h := range obj.Shape.Terrain.HeightData {
+					safeHeightData[i] = safeFloat32(h, 0.0)
+				}
+				msg["height_data"] = safeHeightData
+			} else {
+				msg["height_data"] = []float32{}
+			}
+
 			msg["heightmap_w"] = obj.Shape.Terrain.Width
 			msg["heightmap_h"] = obj.Shape.Terrain.Depth
-			msg["scale_x"] = obj.Shape.Terrain.ScaleX
-			msg["scale_y"] = obj.Shape.Terrain.ScaleY
-			msg["scale_z"] = obj.Shape.Terrain.ScaleZ
-			msg["min_height"] = obj.MinHeight
-			msg["max_height"] = obj.MaxHeight
+			msg["scale_x"] = safeFloat32(obj.Shape.Terrain.ScaleX, 1.0)
+			msg["scale_y"] = safeFloat32(obj.Shape.Terrain.ScaleY, 1.0)
+			msg["scale_z"] = safeFloat32(obj.Shape.Terrain.ScaleZ, 1.0)
+			msg["min_height"] = safeFloat32(obj.MinHeight, 0.0)
+			msg["max_height"] = safeFloat32(obj.MaxHeight, 10.0)
 		}
 
 		// Отправляем сообщение
@@ -79,19 +103,35 @@ func (s *WorldSerializer) SendCreateForAllObjects(wsWriter *SafeWriter) error {
 func (s *WorldSerializer) SendUpdateForObject(wsWriter *SafeWriter, objectID string, position world.Vector3, rotation world.Quaternion) error {
 	// Получаем текущее время в миллисекундах для временной метки
 	serverTime := time.Now().UnixNano() / int64(time.Millisecond)
+	serverSendTime := time.Now().UnixNano() / int64(time.Millisecond)
 
-	// Создаем сообщение обновления
+	// Получаем скорость объекта из менеджера мира
+	var velocity world.Vector3
+	obj, exists := s.worldManager.GetWorldObject(objectID)
+	if exists && obj != nil {
+		// Используем поле Velocity из объекта
+		velocity = obj.Velocity
+	} else {
+		// Если объект не найден, устанавливаем нулевую скорость
+		velocity = world.Vector3{X: 0, Y: 0, Z: 0}
+	}
+
+	// Создаем сообщение обновления с безопасными значениями
 	msg := map[string]interface{}{
-		"type":        "update",
-		"id":          objectID,
-		"x":           position.X,
-		"y":           position.Y,
-		"z":           position.Z,
-		"qx":          rotation.X,
-		"qy":          rotation.Y,
-		"qz":          rotation.Z,
-		"qw":          rotation.W,
-		"server_time": serverTime,
+		"type":             "update",
+		"id":               objectID,
+		"x":                safeFloat32(position.X, 0.0),
+		"y":                safeFloat32(position.Y, 0.0),
+		"z":                safeFloat32(position.Z, 0.0),
+		"qx":               safeFloat32(rotation.X, 0.0),
+		"qy":               safeFloat32(rotation.Y, 0.0),
+		"qz":               safeFloat32(rotation.Z, 0.0),
+		"qw":               safeFloat32(rotation.W, 1.0), // 1.0 как значение по умолчанию для w
+		"server_time":      serverTime,
+		"server_send_time": serverSendTime,
+		"vx":               safeFloat32(velocity.X, 0.0),
+		"vy":               safeFloat32(velocity.Y, 0.0),
+		"vz":               safeFloat32(velocity.Z, 0.0),
 	}
 
 	// Отправляем сообщение
@@ -102,3 +142,4 @@ func (s *WorldSerializer) SendUpdateForObject(wsWriter *SafeWriter, objectID str
 
 	return nil
 }
+*/

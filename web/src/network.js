@@ -1,6 +1,6 @@
 // network.js
 import { objects, createMeshAndBodyForObject } from './objects';
-import { applyImpulseToSphere, receiveObjectUpdate, localPhysicsWorld } from './physics';
+import { applyImpulseToSphere, receiveObjectUpdate, localPhysicsWorld, updatePhysicsConfig } from './physics';
 
 let ws = null;
 let physicsStarted = false;
@@ -84,18 +84,59 @@ function updateServerDelayDisplay(delay) {
     }
 }
 
-function handleMessage(data) {      
+// Функция безопасной обработки числовых значений
+function safeNumber(value, defaultValue = 0) {
+    return (value !== undefined && value !== null && !isNaN(value)) ? value : defaultValue;
+}
+
+// Функция проверки и преобразования поступающих данных
+function validateObjectData(data) {
+    if (!data) return data;
+    
+    // Проверка и исправление позиции
+    if (data.position) {
+        data.position.x = safeNumber(data.position.x);
+        data.position.y = safeNumber(data.position.y);
+        data.position.z = safeNumber(data.position.z);
+    }
+    
+    // Проверка и исправление скорости
+    if (data.velocity) {
+        data.velocity.x = safeNumber(data.velocity.x);
+        data.velocity.y = safeNumber(data.velocity.y);
+        data.velocity.z = safeNumber(data.velocity.z);
+    }
+    
+    // Проверка и исправление отдельных координат
+    if (data.x !== undefined) data.x = safeNumber(data.x);
+    if (data.y !== undefined) data.y = safeNumber(data.y);
+    if (data.z !== undefined) data.z = safeNumber(data.z);
+    
+    // Проверка и исправление отдельных компонентов скорости
+    if (data.vx !== undefined) data.vx = safeNumber(data.vx);
+    if (data.vy !== undefined) data.vy = safeNumber(data.vy);
+    if (data.vz !== undefined) data.vz = safeNumber(data.vz);
+    
+    return data;
+}
+
+// Обработка входящих сообщений
+function handleMessage(data) {
     try {
+        // Применяем валидацию ко всем входящим данным
+        data = validateObjectData(data);
+
         // Если сообщение содержит временную метку сервера, обновляем смещение
-        if (data.server_time) {
-            console.log("data.server_time: ", data.server_time)
-            updateServerTimeOffset(data.server_time);
+        if (data.serverTime || data.server_time) {
+            const serverTime = data.serverTime || data.server_time;
+            updateServerTimeOffset(serverTime);
         }
 
         // Обрабатываем pong-сообщения для синхронизации времени
         if (data.type === "pong") {
             const now = Date.now();
-            const roundTripTime = now - data.client_time;
+            const clientTime = data.clientTime || data.client_time || 0;
+            const roundTripTime = now - clientTime;
             
             // Добавляем измерение пинга в историю
             pingHistory.push(roundTripTime);
@@ -112,33 +153,87 @@ function handleMessage(data) {
             console.log(`[WS] Получен pong, RTT: ${roundTripTime}ms, Средний RTT: ${avgPing.toFixed(2)}ms`);
             
             // Обновляем смещение серверного времени с учетом RTT/2 (предполагаем симметричную задержку)
-            updateServerTimeOffset(data.server_time + roundTripTime / 2);
+            const serverTime = data.serverTime || data.server_time || 0;
+            updateServerTimeOffset(serverTime + roundTripTime / 2);
             
             return; // Прекращаем обработку этого сообщения
         }
 
         if (data.type === "update") {
             // Вычисляем задержку
-            if (data.server_send_time) {
+            if (data.server_send_time || data.serverSendTime) {
                 const now = Date.now();
-                serverDelay = now - data.server_send_time;
-                console.log("serverDelay: ", serverDelay);
+                serverDelay = now - (data.server_send_time || data.serverSendTime);
                 updateServerDelayDisplay(serverDelay);
             }
 
+            // Проверяем формат сообщения update
+            if (data.objects && typeof data.objects === 'object') {
+                // Формат с массивом объектов
+                console.log("[WS] Получено сообщение update с массивом объектов:", Object.keys(data.objects).length);
+                
+                // Обрабатываем каждый объект в массиве
+                for (const id in data.objects) {
+                    const objData = data.objects[id];
+                    // Добавляем id к данным объекта
+                    objData.id = id;
+                    // Обрабатываем обновление этого объекта
+                    receiveObjectUpdate(objData);
+                }
+            } else if (data.id) {
+                // Стандартный формат с обновлением одного объекта
+                receiveObjectUpdate(data);
+            } else {
+                console.log("[WS] Некорректный формат сообщения update:", data);
+            }
+        }
+        else if (data.type === 'cmd_ack' || data.type === 'COMMAND_ACK') {
+            // Обрабатываем подтверждение команды с временной меткой
+            const clientTime = data.clientTime || data.client_time;
+            const serverTime = data.serverTime || data.server_time;
+            
+            if (clientTime && serverTime) {
+                const roundTripTime = Date.now() - clientTime;
+                
+                // Добавляем измерение пинга в историю
+                pingHistory.push(roundTripTime);
+                if (pingHistory.length > MAX_PING_SAMPLES) {
+                    pingHistory.shift();
+                }
+                
+                // Вычисляем средний пинг
+                const avgPing = pingHistory.reduce((sum, ping) => sum + ping, 0) / pingHistory.length;
+                
+                // Обновляем отображение пинга на экране
+                updatePingDisplay(avgPing);
+                
+                console.log(`[WS] Подтверждение команды: ${data.cmd}, RTT: ${roundTripTime}ms, Средний RTT: ${avgPing.toFixed(2)}ms`);
+                
+                // Обновляем смещение серверного времени с учетом RTT/2 (предполагаем симметричную задержку)
+                updateServerTimeOffset(serverTime + roundTripTime / 2);
+            }
+        }
+        else if (data.type === 'objects') {
+            receiveInitialObjects(data.objects);
+        }
+        else if (data.type === 'object_update') {
             receiveObjectUpdate(data);
         }
-        
-        if (data.type === "create" && data.id) {
+        else if (data.type === 'physics_config') {
+            updatePhysicsConfig(data.config);
+        }
+        else if (data.type === 'create') {
             console.log("[WS] Получено сообщение о создании объекта:", data.id, "в координатах:", 
                 { x: data.x || 0, y: data.y || 0, z: data.z || 0 },
-                "время сервера:", data.server_time);
+                "время сервера:", data.server_time || data.serverTime);
+            console.log("[WS] Полные данные объекта:", JSON.stringify(data));
             
             // Создаем объект и добавляем его в список объектов
             const obj = createMeshAndBodyForObject(data);
             
             // Проверяем, что объект был успешно создан
             if (obj) {
+                console.log(`[WS] Объект ${data.id} успешно создан, mesh:`, obj.mesh !== undefined, "body:", obj.body !== undefined);
                 obj.physicsBy = data.physics_by || "both";
                 obj.serverPos = {
                     x: data.x || 0,
@@ -146,7 +241,7 @@ function handleMessage(data) {
                     z: data.z || 0
                 };
                 // Добавляем временную метку сервера
-                obj.serverCreationTime = data.server_time;
+                obj.serverCreationTime = data.server_time || data.serverTime;
                 obj.clientCreationTime = Date.now();
                 
                 objects[data.id] = obj;
@@ -198,29 +293,9 @@ function handleMessage(data) {
             } else {
                 console.error(`[WS] Не удалось создать объект ${data.id}, тип: ${data.object_type}`);
             }
-        } 
-        else if (data.type === "cmd_ack") {
-            // Обрабатываем подтверждение команды с временной меткой
-            if (data.client_time && data.server_time) {
-                const roundTripTime = Date.now() - data.client_time;
-                
-                // Добавляем измерение пинга в историю
-                pingHistory.push(roundTripTime);
-                if (pingHistory.length > MAX_PING_SAMPLES) {
-                    pingHistory.shift();
-                }
-                
-                // Вычисляем средний пинг
-                const avgPing = pingHistory.reduce((sum, ping) => sum + ping, 0) / pingHistory.length;
-                
-                // Обновляем отображение пинга на экране
-                updatePingDisplay(avgPing);
-                
-                console.log(`[WS] Подтверждение команды: ${data.cmd}, RTT: ${roundTripTime}ms, Средний RTT: ${avgPing.toFixed(2)}ms`);
-                
-                // Обновляем смещение серверного времени с учетом RTT/2 (предполагаем симметричную задержку)
-                updateServerTimeOffset(data.server_time + roundTripTime / 2);
-            }
+        }
+        else {
+            console.log('Неизвестный тип сообщения:', data.type);
         }
     } catch (error) {
         console.error("[WS] Ошибка при обработке сообщения:", error);
@@ -306,6 +381,14 @@ export async function initNetwork() {
 
         ws.onmessage = (evt) => {
             try {
+                // Проверка на пустые данные
+                if (!evt.data || evt.data.trim() === '') {
+                    console.warn('[WS] Получены пустые данные');
+                    return;
+                }
+                
+                console.log('[WS] Получено сообщение:', evt.data.substring(0, 200) + (evt.data.length > 200 ? '...' : ''));
+                
                 const data = JSON.parse(evt.data);
                 
                 if (!data || typeof data !== 'object') {
@@ -317,27 +400,14 @@ export async function initNetwork() {
                     console.log('[WS] Получен объект без type, считаем это create:', data);
                     // Добавляем тип для совместимости с существующим кодом
                     data.type = "create";
-                    // Обрабатываем как create
-                    handleMessage(data);
                 }
-                // Обрабатываем update сообщения через нашу новую функцию
-                else if (data.type === "update" && data.id) {
-                    receiveObjectUpdate(data);
-                } 
-                else if (data.type === "create" && data.id) {
-                    // Оставляем существующую логику создания объектов
-                    handleMessage(data);
-                }
-                else if (data.type === "pong") {
-                    // Обрабатываем pong сообщения для синхронизации времени
-                    handleMessage(data);
-                }
-                else {
-                    // Обрабатываем другие типы сообщений, например "cmd_ack"
-                    handleMessage(data);
-                }
+                
+                // Обрабатываем все сообщения через handleMessage
+                handleMessage(data);
+                
             } catch (error) {
                 console.error("[WS] Ошибка при обработке сообщения:", error);
+                console.error("[WS] Необработанные данные:", evt.data);
             }
         };
 
@@ -374,8 +444,6 @@ export async function initNetwork() {
         console.error("[WS] Ошибка при создании WebSocket:", error);
         console.error("[WS] Стек вызовов:", error.stack);
     }
-
-    
 }
 
 // Функция для отправки ping-сообщения с временной меткой клиента
@@ -432,3 +500,39 @@ export function startPhysicsSimulation() {
 
 // Экспортируем функции для доступа из других модулей
 export { estimateServerTime };
+
+// Отправка данных на сервер
+export function sendData(data) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        const message = {
+            type: 'COMMAND',
+            command: 'MOUSE_VECTOR',
+            data: {
+                x: data.direction.x,
+                y: data.direction.y, 
+                z: data.direction.z,
+                distance: data.distance || 0,
+                force: data.force
+            },
+            clientTime: Date.now(),
+            objectId: 'mainPlayer1'
+        };
+        
+        ws.send(JSON.stringify(message));
+    } else {
+        console.warn('WebSocket не подключен, невозможно отправить данные');
+    }
+}
+
+// Запрос конфигурации физики от сервера
+export function requestPhysicsConfig() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'COMMAND',
+            command: 'GET_PHYSICS_CONFIG',
+            clientTime: Date.now()
+        }));
+    } else {
+        console.warn('WebSocket не подключен, невозможно запросить конфигурацию физики');
+    }
+}

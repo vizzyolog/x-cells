@@ -105,3 +105,14 @@ func (m *Manager) UpdateObjectRotation(id string, rotation Quaternion) {
 		obj.Rotation = rotation
 	}
 }
+
+// UpdateObjectVelocity обновляет скорость объекта
+func (m *Manager) UpdateObjectVelocity(id string, velocity Vector3) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if obj, exists := m.worldObjects[id]; exists {
+		obj.Velocity = velocity
+		return true
+	}
+	return false
+}

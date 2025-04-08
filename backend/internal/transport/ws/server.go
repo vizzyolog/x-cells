@@ -1,3 +1,7 @@
+/*
+Этот файл больше не используется после перехода на гексагональную архитектуру.
+Функциональность перемещена в backend/internal/adapter/in/ws.
+
 package ws
 
 import (
@@ -10,6 +14,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"x-cells/backend/internal/physics"
 	pb "x-cells/backend/internal/physics/generated"
 	"x-cells/backend/internal/transport"
 	"x-cells/backend/internal/world"
@@ -192,18 +197,21 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 		return ErrInvalidMessage
 	}
 
+	// Получаем конфигурацию физики
+	config := physics.GetPhysicsConfig()
+
 	var impulse pb.Vector3
 	switch cmdMsg.Cmd {
 	case "LEFT":
-		impulse.X = -5
+		impulse.X = -float32(config.BaseImpulse) // Используем BaseImpulse из конфигурации
 	case "RIGHT":
-		impulse.X = 5
+		impulse.X = float32(config.BaseImpulse) // Используем BaseImpulse из конфигурации
 	case "UP":
-		impulse.Z = -5
+		impulse.Z = -float32(config.BaseImpulse) // Используем BaseImpulse из конфигурации
 	case "DOWN":
-		impulse.Z = 5
+		impulse.Z = float32(config.BaseImpulse) // Используем BaseImpulse из конфигурации
 	case "SPACE":
-		impulse.Y = 10
+		impulse.Y = float32(config.BaseImpulse * 1.5) // Используем увеличенный BaseImpulse для прыжка
 	case "MOUSE_VECTOR":
 		// Получаем данные о направлении
 		var direction struct {
@@ -229,16 +237,21 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 			direction.X, direction.Y, direction.Z, direction.Distance)
 
 		// Вычисляем силу импульса на основе расстояния от центра
-		// Минимальный импульс 12.0 (было 8.0)
-		impulseStrength := float32(12.0)
+		// Минимальный импульс из конфигурации
+		impulseStrength := float32(config.BaseImpulse)
+
 		// Рассчитываем дополнительную силу в зависимости от расстояния до клика
-		// Множитель 0.2 (было 0.15) с максимальным добавлением 20 (было 15)
-		additionalStrength := float32(math.Min(20.0, float64(direction.Distance)*0.2))
+		// Используем множитель и максимальный импульс из конфигурации
+		maxAdditionalStrength := float32(config.MaxImpulse - config.BaseImpulse)
+		additionalStrength := float32(math.Min(
+			float64(maxAdditionalStrength),
+			float64(direction.Distance)*config.DistanceMultiplier,
+		))
 		impulseStrength += additionalStrength
 
 		// Создаем импульс в направлении X, Y и Z с учетом полученного вектора
 		impulse.X = direction.X * impulseStrength
-		impulse.Y = direction.Y * impulseStrength // Теперь используем Y составляющую
+		impulse.Y = direction.Y * impulseStrength
 		impulse.Z = direction.Z * impulseStrength
 
 	default:
@@ -366,3 +379,4 @@ func (s *WSServer) startClientStreaming(wsWriter *SafeWriter) {
 		}
 	}
 }
+*/

@@ -1,7 +1,7 @@
 // physics.js
 
 import { objects } from './objects';
-import { startPhysicsSimulation } from './network';
+import { startPhysicsSimulation, sendData } from './network';
 import { throttledLog, logMainPlayerInfo} from './throttledlog';
 
 export let localPhysicsWorld = null;
@@ -28,6 +28,38 @@ let lastServerUpdateTime = 0; // Время последнего серверн�
 // Добавляем маркер времени создания объектов
 const objectCreationTimes = new Map();
 
+let world = null;
+let tmpPos = null;
+
+// Настройки физики, получаемые с сервера
+let physicsConfig = {
+    baseImpulse: 25.0,
+    impulseMultiplier: 0.3,
+    distanceMultiplier: 0.2,
+    maxImpulse: 50.0,
+    maxSpeed: 80.0
+};
+
+// Обновление конфигурации физики
+export function updatePhysicsConfig(config) {
+    console.log('Получена новая конфигурация физики:', config);
+    if (config) {
+        physicsConfig = {
+            ...physicsConfig,
+            ...config
+        };
+        console.log('Обновлена конфигурация физики:', physicsConfig);
+        
+        // Обновляем константу максимальной скорости
+        MAX_SPEED = physicsConfig.maxSpeed;
+    }
+}
+
+// Получение текущей конфигурации физики
+export function getPhysicsConfig() {
+    return physicsConfig;
+}
+
 // Функция для настройки физического мира
 function setupPhysicsWorld() {
     if (!window.Ammo) {
@@ -52,9 +84,6 @@ function setupPhysicsWorld() {
     localPhysicsWorld.setGravity(new Ammo.btVector3(0, -9.81, 0));
     
     console.log("[Physics] Физический мир успешно создан");
-    
-    // Добавляем эффект отскока после создания мира
-    addCollisionBounceEffect();
 }
 
 export async function initAmmo() {
@@ -131,47 +160,38 @@ export function stepPhysics(deltaTime) {
     }
 }
 
-// Функция для ограничения скорости в Ammo.js
-export function applySpeedLimits() {
+// Функция для ограничения скорости объектов
+function applySpeedLimits(obj) {
+    if (!obj || !obj.body || !window.Ammo) return;
+    
     try {
-        if (!objects || !window.Ammo) return;
+        // Получаем текущую скорость объекта
+        const velocity = obj.body.getLinearVelocity();
+        const speedSquared = velocity.x() * velocity.x() + velocity.y() * velocity.y() + velocity.z() * velocity.z();
+        const speed = Math.sqrt(speedSquared);
         
-        // Максимальная скорость для объектов
-        const MAX_SPEED = 25.0; // Увеличено с 20.0 до 25.0
-        
-        for (let id in objects) {
-            const obj = objects[id];
-            if (!obj || !obj.body) continue;
+        // Если скорость превышает максимальную, масштабируем её
+        if (speed > MAX_SPEED) {
+            console.log(`[Physics] Ограничение скорости объекта. Текущая: ${speed.toFixed(2)}, максимальная: ${MAX_SPEED}`);
             
-            // Пропускаем статические объекты или террейн
-            if (obj.object_type === "terrain") continue;
+            // Вычисляем коэффициент масштабирования
+            const scaleFactor = MAX_SPEED / speed;
             
-            // Получаем текущую линейную скорость
-            const velocity = obj.body.getLinearVelocity();
-            const speed = velocity.length();
+            // Применяем новую скорость
+            const newVelocity = new window.Ammo.btVector3(
+                velocity.x() * scaleFactor,
+                velocity.y() * scaleFactor,
+                velocity.z() * scaleFactor
+            );
             
-            // Если скорость превышает максимальную, уменьшаем её
-            if (speed > MAX_SPEED && speed > 0) {
-                velocity.op_mul(MAX_SPEED / speed);
-                obj.body.setLinearVelocity(velocity);
-                
-                // Добавляем небольшой случайный импульс при достижении максимальной скорости
-                // для более интересного поведения при столкновениях
-                if (Math.random() < 0.1) { // 10% шанс
-                    const randomImpulse = new window.Ammo.btVector3(
-                        (Math.random() - 0.5) * 5,
-                        Math.random() * 2,
-                        (Math.random() - 0.5) * 5
-                    );
-                    obj.body.applyCentralImpulse(randomImpulse);
-                    window.Ammo.destroy(randomImpulse);
-                }
-            }
+            // Устанавливаем новую скорость
+            obj.body.setLinearVelocity(newVelocity);
             
-            window.Ammo.destroy(velocity);
+            // Освобождаем ресурсы
+            window.Ammo.destroy(newVelocity);
         }
     } catch (error) {
-        console.error('Ошибка при применении ограничений скорости:', error);
+        console.error('Ошибка при применении ограничения скорости:', error);
     }
 }
 
@@ -495,239 +515,212 @@ export function updatePhysicsObjects(objects, deltaTime) {
 
 
 // Функция для применения импульса с сохранением в истории
-export function applyImpulseToSphere(id, direction, strength) {
-    const object = objects[id];
-    if (!object || !object.body) return;
-    
-    try {
-        if (typeof Ammo === 'undefined') {
-            console.error('Ammo.js не инициализирован');
-            return;
-        }
-        
-        // Увеличиваем базовый импульс для лучшего движения
-        const baseImpulse = 25.0; // Увеличиваем с 20.0 до 25.0
-        const impulseStrength = strength || baseImpulse;
-        
-        // Нормализуем направление и применяем силу
-        const impulseVec = new Ammo.btVector3(
-            direction.x * impulseStrength,
-            direction.y * impulseStrength, 
-            direction.z * impulseStrength
-        );
-        
-        // Применяем импульс к телу
-        object.body.applyCentralImpulse(impulseVec);
-        
-        // Выводим информацию о примененном импульсе
-        console.log(`Импульс применен к ${id}: 
-            Направление: (${direction.x.toFixed(2)}, ${direction.y.toFixed(2)}, ${direction.z.toFixed(2)})
-            Сила: ${impulseStrength.toFixed(2)}`);
-        
-        // Освобождаем память
-        Ammo.destroy(impulseVec);
-    } catch (error) {
-        console.error('Ошибка при применении импульса:', error);
+export function applyImpulseToSphere(objectId, direction, distance) {
+    const object = objects[objectId];
+    if (!object || !object.physicsBody) {
+        console.warn('Объект не найден или не имеет физического тела:', objectId);
+        return;
     }
+
+    // Вычисление силы импульса на основе конфигурации физики
+    const baseForce = physicsConfig.baseImpulse;
+    const distanceMultiplier = physicsConfig.distanceMultiplier;
+    const maxImpulse = physicsConfig.maxImpulse;
+    
+    // Расчёт силы с учётом дистанции (для клика мыши)
+    let force = baseForce;
+    if (distance > 0) {
+        force += distance * distanceMultiplier;
+        // Ограничиваем максимальную силу
+        force = Math.min(force, maxImpulse);
+    }
+    
+    // Нормализуем направление
+    const normalizedDir = new Ammo.btVector3(direction.x, direction.y, direction.z);
+    normalizedDir.normalize();
+    
+    // Применяем множитель к направлению
+    normalizedDir.op_mul(force);
+    
+    // Устанавливаем активацию тела
+    object.physicsBody.activate(true);
+    
+    // Применяем импульс
+    object.physicsBody.applyCentralImpulse(normalizedDir);
+    
+    // Уничтожаем временные объекты Ammo.js
+    Ammo.destroy(normalizedDir);
 }
 
-export function receiveObjectUpdate(data) {
+// Добавляем функцию для отправки запроса на применение импульса на сервере
+export function requestServerImpulse(objectId, direction, force) {
+    const data = {
+        type: 'apply_impulse',
+        object_id: objectId,
+        direction: direction, // { x, y, z }
+        force: force
+    };
+    sendData(data);
+    console.log(`Отправлен запрос на импульс для объекта ${objectId}, сила: ${force}`);
+}
+
+/**
+ * Функция для безопасной обработки потенциально NaN значений
+ * @param {number} value - Проверяемое значение
+ * @param {number} fallback - Значение по умолчанию, если value является NaN, null или undefined
+ * @return {number} - Безопасное значение
+ */
+function safeValue(value, fallback = 0) {
+    if (value === undefined || value === null || isNaN(value)) {
+        return fallback;
+    }
+    return value;
+}
+
+// Функция для обработки обновления объекта от сервера
+function receiveObjectUpdate(data) {
     const id = data.id;
-    
     const obj = objects[id];
+
     if (!obj) {
-        // throttledLog("Error", `Получено обновление для несуществующего объекта: ${id}`);
+        console.warn(`[Physics] Получено обновление для несуществующего объекта: ${id}`);
         return;
-    }
-    
-    // Логируем информацию о полученном обновлении
-    // throttledLog("Physics", 
-    //     `Получено обновление для объекта ${id} (${obj.physicsBy}): ` +
-    //     `x=${data.x?.toFixed(2)}, y=${data.y?.toFixed(2)}, z=${data.z?.toFixed(2)}, ` +
-    //     `server_time=${data.server_time}`
-    // );
-    
-    // Проверяем, является ли объект новым
-    if (!objectCreationTimes.has(id)) {
-        objectCreationTimes.set(id, Date.now());
-        console.log(`[Physics] Установлен таймер для нового объекта ${id}`);
-    }
-    
-    // Получаем временную метку сервера
-    const serverTime = data.server_time;
-    if (!serverTime) {
-      //  throttledLog("Warning", `Получено обновление без временной метки сервера для ${id}`);
-    }
-    
-    // Обновляем время последнего обновления
-    const now = Date.now();
-    const timeSinceLastUpdate = now - lastServerUpdateTime;
-    lastServerUpdateTime = now;
-    
-    // Обновляем серверную позицию
-    const oldServerPos = obj.serverPos ? { ...obj.serverPos } : null;
-    obj.serverPos = {
-        x: data.x || 0,
-        y: data.y || 0,
-        z: data.z || 0
-    };
-    
-    // Сохраняем временную метку сервера для этого обновления
-    obj.lastServerUpdate = {
-        time: serverTime,
-        clientTime: now,
-        position: { ...obj.serverPos }
-    };
-    
-    // Если это первое обновление, просто принимаем серверную позицию
-    if (!oldServerPos) {
-       // throttledLog("Physics", `Первое обновление для объекта ${id}, принимаем серверную позицию`);
-        return;
-    }
-    
-    // Рассчитываем скорость сервера, учитывая временные метки
-    if (obj.previousServerUpdate && serverTime && obj.previousServerUpdate.time) {
-        const timeDelta = (serverTime - obj.previousServerUpdate.time) / 1000; // в секундах
-        
-        if (timeDelta > 0) {
-            obj.serverVelocity = {
-                x: (obj.serverPos.x - obj.previousServerUpdate.position.x) / timeDelta,
-                y: (obj.serverPos.y - obj.previousServerUpdate.position.y) / timeDelta,
-                z: (obj.serverPos.z - obj.previousServerUpdate.position.z) / timeDelta
-            };
-            
-            // Логируем информацию о скорости для всех объектов с bullet-физикой
-            if (obj.physicsBy === "bullet" || obj.physicsBy === "both") {
-                // throttledLog("Physics", 
-                //     `Вычислена скорость сервера для ${id} (${obj.physicsBy}): ` +
-                //     `vx=${obj.serverVelocity.x.toFixed(2)}, ` +
-                //     `vy=${obj.serverVelocity.y.toFixed(2)}, ` +
-                //     `vz=${obj.serverVelocity.z.toFixed(2)}, ` +
-                //     `delta=${timeDelta.toFixed(3)}с`
-                // );
-            }
-        }
-    }
-    
-    // Сохраняем текущее обновление как предыдущее для следующего расчета
-    obj.previousServerUpdate = {
-        time: serverTime,
-        clientTime: now,
-        position: { ...obj.serverPos }
-    };
-    
-    // Анализируем расхождение между прогнозируемым и фактическим состоянием
-    if (obj.lastImpulse && serverTime) {
-        // Вычисляем, сколько времени прошло с момента применения последнего импульса
-        const timeSinceLastImpulse = now - obj.lastImpulse.clientTime;
-        
-        // Проверяем, учтен ли наш последний импульс в обновлении с сервера
-        // (обычно требуется RTT для получения реакции сервера)
-        if (timeSinceLastImpulse > 50) { // Предполагаем минимальную задержку сети
-            // Теперь мы можем сравнить наше предсказанное положение с фактическим
-            // и скорректировать нашу модель предсказания
-            
-            // Текущее состояние объекта в клиентской физике
-            const transform = new window.Ammo.btTransform();
-            if (obj.body) {
-                obj.body.getMotionState().getWorldTransform(transform);
-                const currentX = transform.getOrigin().x();
-                const currentY = transform.getOrigin().y();
-                const currentZ = transform.getOrigin().z();
-                
-                // Вычисляем расхождение между нашим предсказанием и обновлением сервера
-                const dx = obj.serverPos.x - currentX;
-                const dy = obj.serverPos.y - currentY;
-                const dz = obj.serverPos.z - currentZ;
-                const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
-                
-                if (id === "mainPlayer1" && distance > 1.0) {
-                    // throttledLog("Physics", 
-                    //     `Анализ расхождения для ${id}: расстояние=${distance.toFixed(2)}, ` +
-                    //     `время с последнего импульса=${timeSinceLastImpulse}мс, ` +
-                    //     `команда=${obj.lastImpulse.cmd}`
-                    // );
-                }
-                
-                window.Ammo.destroy(transform);
-            }
-        }
     }
 
-    // Применяем импульс от сервера к объектам с типами физики bullet или both
-    if ((obj.physicsBy === "bullet" || obj.physicsBy === "both") && obj.serverVelocity) {
-        // Создаем импульс на основе серверной скорости
-        const impulse = new window.Ammo.btVector3(
-            obj.serverVelocity.x,
-            obj.serverVelocity.y,
-            obj.serverVelocity.z
-        );
-        
-        // Применяем импульс к физическому телу
-        if (obj.body) {
-            obj.body.activate(true);
-            obj.body.applyCentralImpulse(impulse);
-            
-            // throttledLog("Physics", 
-            //     `Применен серверный импульс к ${id} (${obj.physicsBy}): ` +
-            //     `vx=${obj.serverVelocity.x.toFixed(2)}, ` +
-            //     `vy=${obj.serverVelocity.y.toFixed(2)}, ` +
-            //     `vz=${obj.serverVelocity.z.toFixed(2)}`
-            // );
-        } else {
-            // Если нет физического тела, просто обновляем позицию меша
-            obj.mesh.position.set(
-                obj.serverPos.x,
-                obj.serverPos.y,
-                obj.serverPos.z
-            );
-            
-            // throttledLog("Physics", 
-            //     `Обновлена позиция меша для ${id} (${obj.physicsBy}): ` +
-            //     `x=${obj.serverPos.x.toFixed(2)}, ` +
-            //     `y=${obj.serverPos.y.toFixed(2)}, ` +
-            //     `z=${obj.serverPos.z.toFixed(2)}`
-            // );
+    // Проверка на NaN значения во входных данных
+    const position = data.position || {};
+    const velocity = data.velocity || {};
+    
+    // Проверка на полностью недопустимые объекты данных
+    if (!position || !velocity || 
+        (typeof position !== 'object') || 
+        (typeof velocity !== 'object')) {
+        console.error(`[Physics] Получены некорректные данные позиции/скорости для объекта ${id}:`, data);
+        return; // Пропускаем обновление полностью при серьезной ошибке в данных
+    }
+    
+    // Проверяем, все ли компоненты позиции валидны
+    const positionValid = !isNaN(position.x) && !isNaN(position.y) && !isNaN(position.z) &&
+                          position.x !== undefined && position.y !== undefined && position.z !== undefined;
+    
+    // Проверяем, все ли компоненты скорости валидны
+    const velocityValid = !isNaN(velocity.x) && !isNaN(velocity.y) && !isNaN(velocity.z) &&
+                          velocity.x !== undefined && velocity.y !== undefined && velocity.z !== undefined;
+    
+    // Защита от NaN значений
+    const safePos = {
+        x: isNaN(position.x) ? (obj.lastSafePosition ? obj.lastSafePosition.x : 0) : position.x,
+        y: isNaN(position.y) ? (obj.lastSafePosition ? obj.lastSafePosition.y : 0) : position.y,
+        z: isNaN(position.z) ? (obj.lastSafePosition ? obj.lastSafePosition.z : 0) : position.z
+    };
+    
+    const safeVel = {
+        x: isNaN(velocity.x) ? 0 : velocity.x,
+        y: isNaN(velocity.y) ? 0 : velocity.y,
+        z: isNaN(velocity.z) ? 0 : velocity.z
+    };
+    
+    // Сохраняем последнюю безопасную позицию только если текущая валидна
+    if (positionValid) {
+        obj.lastSafePosition = { ...position };
+    } else if (!obj.lastSafePosition) {
+        // Если у нас еще нет безопасной позиции, используем текущую исправленную
+        obj.lastSafePosition = { ...safePos };
+    }
+    
+    // Логируем только при создании нового объекта
+    if (isNew(id)) {
+        const now = performance.now();
+        objectCreationTimes.set(id, now);
+        console.log(`[Physics] Новый объект ${id} создан в позиции:`, positionValid ? position : safePos);
+    }
+
+    // Проверка и обновление физического тела
+    if (obj.body) {
+        // Обновление дополнительных данных
+        if (data.active !== undefined) {
+            obj.active = data.active;
         }
         
-        window.Ammo.destroy(impulse);
+        if (data.serverFrame !== undefined) {
+            obj.lastServerFrame = data.serverFrame;
+        }
+        
+        if (data.serverTime !== undefined) {
+            obj.lastServerTime = data.serverTime;
+        }
+        
+        const body = obj.body;
+        
+        // Применяем позицию только если она не содержит NaN
+        if (positionValid) {
+            body.position.set(position.x, position.y, position.z);
+            obj.serverPosition.copy(body.position);
+            obj.previousPosition.copy(body.position);
+        } else {
+            // Если позиция содержит NaN, логируем это и используем безопасное значение
+            console.warn(`[Physics] Обнаружены NaN значения в позиции объекта ${id}:`, 
+                {original: position, corrected: safePos});
+                
+            // Используем последнюю безопасную позицию
+            if (obj.lastSafePosition) {
+                body.position.set(safePos.x, safePos.y, safePos.z);
+                obj.serverPosition.copy(body.position);
+            }
+        }
+        
+        // Применяем скорость только если она не содержит NaN
+        if (velocityValid) {
+            body.velocity.set(velocity.x, velocity.y, velocity.z);
+            obj.serverVelocity.copy(body.velocity);
+        } else {
+            // Если скорость содержит NaN, логируем это и используем безопасное значение
+            console.warn(`[Physics] Обнаружены NaN значения в скорости объекта ${id}:`, 
+                {original: velocity, corrected: safeVel});
+                
+            // Устанавливаем безопасную скорость
+            body.velocity.set(safeVel.x, safeVel.y, safeVel.z);
+            obj.serverVelocity.copy(body.velocity);
+        }
     }
 }
 
-// В файле physics.js добавляем функцию для создания случайной силы при столкновении
-export function addCollisionBounceEffect() {
-    try {
-        if (typeof Ammo === 'undefined') return;
+// Функция интерполяции для обновления позиций объектов
+export function updateObjectPositions(deltaTime) {
+    const currentTime = Date.now();
+    
+    // Коэффициент интерполяции - как быстро объект будет стремиться к серверной позиции
+    const lerpFactor = 0.1;
+    
+    for (const [id, obj] of Object.entries(objects)) {
+        if (!obj.mesh || !obj.serverPos) continue;
         
-        // Добавляем обработчик столкновений, который будет добавлять случайную силу
-        // Эта функция может быть вызвана в начале симуляции
-        window.addEventListener('collisions', (e) => {
-            const { body1, body2 } = e.detail;
-            
-            // Добавляем случайный импульс при столкновении
-            if (body1 && body1.getType() === Ammo.btRigidBody) {
-                const randomImpulse = new Ammo.btVector3(
-                    (Math.random() - 0.5) * 10,
-                    Math.random() * 5,
-                    (Math.random() - 0.5) * 10
-                );
-                body1.applyCentralImpulse(randomImpulse);
-                Ammo.destroy(randomImpulse);
-            }
-            
-            if (body2 && body2.getType() === Ammo.btRigidBody) {
-                const randomImpulse = new Ammo.btVector3(
-                    (Math.random() - 0.5) * 10,
-                    Math.random() * 5,
-                    (Math.random() - 0.5) * 10
-                );
-                body2.applyCentralImpulse(randomImpulse);
-                Ammo.destroy(randomImpulse);
-            }
-        });
+        // Проверка на NaN значения в текущей позиции меша
+        if (Number.isNaN(obj.mesh.position.x) || Number.isNaN(obj.mesh.position.y) || Number.isNaN(obj.mesh.position.z)) {
+            console.warn(`[ИСПРАВЛЕНИЕ] NaN в позиции объекта ${id}, сброс в (0,0,0)`);
+            obj.mesh.position.set(0, 0, 0);
+        }
         
-        console.log("Добавлен эффект отскока при столкновениях");
-    } catch (error) {
-        console.error('Ошибка при добавлении эффекта отскока:', error);
+        // Проверка на NaN значения в серверной позиции
+        const targetX = safeValue(obj.serverPos.x);
+        const targetY = safeValue(obj.serverPos.y);
+        const targetZ = safeValue(obj.serverPos.z);
+        
+        // Рассчитываем следующую позицию через интерполяцию
+        const nextX = obj.mesh.position.x + (targetX - obj.mesh.position.x) * lerpFactor;
+        const nextY = obj.mesh.position.y + (targetY - obj.mesh.position.y) * lerpFactor;
+        const nextZ = obj.mesh.position.z + (targetZ - obj.mesh.position.z) * lerpFactor;
+        
+        // Итоговая проверка позиции на NaN перед применением
+        obj.mesh.position.set(
+            safeValue(nextX),
+            safeValue(nextY),
+            safeValue(nextZ)
+        );
+        
+        // Обновляем индикатор направления для игрока
+        if (id === 'mainPlayer1' && playerDirectionIndicator) {
+            updatePlayerDirection();
+        }
     }
 }

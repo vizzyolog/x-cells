@@ -64,6 +64,41 @@ class Physics final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetObjectStateResponse>> PrepareAsyncGetObjectState(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetObjectStateResponse>>(PrepareAsyncGetObjectStateRaw(context, request, cq));
     }
+    virtual ::grpc::Status GetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::physics::GetPhysicsConfigResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetPhysicsConfigResponse>> AsyncGetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetPhysicsConfigResponse>>(AsyncGetPhysicsConfigRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetPhysicsConfigResponse>> PrepareAsyncGetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetPhysicsConfigResponse>>(PrepareAsyncGetPhysicsConfigRaw(context, request, cq));
+    }
+    virtual ::grpc::Status SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::physics::SetPhysicsConfigResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::SetPhysicsConfigResponse>> AsyncSetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::SetPhysicsConfigResponse>>(AsyncSetPhysicsConfigRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::SetPhysicsConfigResponse>> PrepareAsyncSetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::SetPhysicsConfigResponse>>(PrepareAsyncSetPhysicsConfigRaw(context, request, cq));
+    }
+    virtual ::grpc::Status UpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::physics::UpdateObjectResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectResponse>> AsyncUpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectResponse>>(AsyncUpdateObjectRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectResponse>> PrepareAsyncUpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectResponse>>(PrepareAsyncUpdateObjectRaw(context, request, cq));
+    }
+    virtual ::grpc::Status StepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::physics::StepSimulationResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::StepSimulationResponse>> AsyncStepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::StepSimulationResponse>>(AsyncStepSimulationRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::StepSimulationResponse>> PrepareAsyncStepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::StepSimulationResponse>>(PrepareAsyncStepSimulationRaw(context, request, cq));
+    }
+    virtual ::grpc::Status GetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::physics::ObjectResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::ObjectResponse>> AsyncGetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::ObjectResponse>>(AsyncGetObjectRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::ObjectResponse>> PrepareAsyncGetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::ObjectResponse>>(PrepareAsyncGetObjectRaw(context, request, cq));
+    }
     class async_interface {
      public:
       virtual ~async_interface() {}
@@ -75,6 +110,16 @@ class Physics final {
       virtual void ApplyTorque(::grpc::ClientContext* context, const ::physics::ApplyTorqueRequest* request, ::physics::ApplyTorqueResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void GetObjectState(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest* request, ::physics::GetObjectStateResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void GetObjectState(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest* request, ::physics::GetObjectStateResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void GetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest* request, ::physics::GetPhysicsConfigResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest* request, ::physics::GetPhysicsConfigResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void UpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest* request, ::physics::UpdateObjectResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void UpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest* request, ::physics::UpdateObjectResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void StepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest* request, ::physics::StepSimulationResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void StepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest* request, ::physics::StepSimulationResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void GetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest* request, ::physics::ObjectResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest* request, ::physics::ObjectResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
     };
     typedef class async_interface experimental_async_interface;
     virtual class async_interface* async() { return nullptr; }
@@ -88,6 +133,16 @@ class Physics final {
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::ApplyTorqueResponse>* PrepareAsyncApplyTorqueRaw(::grpc::ClientContext* context, const ::physics::ApplyTorqueRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetObjectStateResponse>* AsyncGetObjectStateRaw(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetObjectStateResponse>* PrepareAsyncGetObjectStateRaw(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetPhysicsConfigResponse>* AsyncGetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetPhysicsConfigResponse>* PrepareAsyncGetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::SetPhysicsConfigResponse>* AsyncSetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::SetPhysicsConfigResponse>* PrepareAsyncSetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectResponse>* AsyncUpdateObjectRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectResponse>* PrepareAsyncUpdateObjectRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::StepSimulationResponse>* AsyncStepSimulationRaw(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::StepSimulationResponse>* PrepareAsyncStepSimulationRaw(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::ObjectResponse>* AsyncGetObjectRaw(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::ObjectResponse>* PrepareAsyncGetObjectRaw(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
@@ -120,6 +175,41 @@ class Physics final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::GetObjectStateResponse>> PrepareAsyncGetObjectState(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::GetObjectStateResponse>>(PrepareAsyncGetObjectStateRaw(context, request, cq));
     }
+    ::grpc::Status GetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::physics::GetPhysicsConfigResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::GetPhysicsConfigResponse>> AsyncGetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::GetPhysicsConfigResponse>>(AsyncGetPhysicsConfigRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::GetPhysicsConfigResponse>> PrepareAsyncGetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::GetPhysicsConfigResponse>>(PrepareAsyncGetPhysicsConfigRaw(context, request, cq));
+    }
+    ::grpc::Status SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::physics::SetPhysicsConfigResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::SetPhysicsConfigResponse>> AsyncSetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::SetPhysicsConfigResponse>>(AsyncSetPhysicsConfigRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::SetPhysicsConfigResponse>> PrepareAsyncSetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::SetPhysicsConfigResponse>>(PrepareAsyncSetPhysicsConfigRaw(context, request, cq));
+    }
+    ::grpc::Status UpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::physics::UpdateObjectResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectResponse>> AsyncUpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectResponse>>(AsyncUpdateObjectRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectResponse>> PrepareAsyncUpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectResponse>>(PrepareAsyncUpdateObjectRaw(context, request, cq));
+    }
+    ::grpc::Status StepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::physics::StepSimulationResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::StepSimulationResponse>> AsyncStepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::StepSimulationResponse>>(AsyncStepSimulationRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::StepSimulationResponse>> PrepareAsyncStepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::StepSimulationResponse>>(PrepareAsyncStepSimulationRaw(context, request, cq));
+    }
+    ::grpc::Status GetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::physics::ObjectResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::ObjectResponse>> AsyncGetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::ObjectResponse>>(AsyncGetObjectRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::ObjectResponse>> PrepareAsyncGetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::ObjectResponse>>(PrepareAsyncGetObjectRaw(context, request, cq));
+    }
     class async final :
       public StubInterface::async_interface {
      public:
@@ -131,6 +221,16 @@ class Physics final {
       void ApplyTorque(::grpc::ClientContext* context, const ::physics::ApplyTorqueRequest* request, ::physics::ApplyTorqueResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void GetObjectState(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest* request, ::physics::GetObjectStateResponse* response, std::function<void(::grpc::Status)>) override;
       void GetObjectState(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest* request, ::physics::GetObjectStateResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void GetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest* request, ::physics::GetPhysicsConfigResponse* response, std::function<void(::grpc::Status)>) override;
+      void GetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest* request, ::physics::GetPhysicsConfigResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response, std::function<void(::grpc::Status)>) override;
+      void SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void UpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest* request, ::physics::UpdateObjectResponse* response, std::function<void(::grpc::Status)>) override;
+      void UpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest* request, ::physics::UpdateObjectResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void StepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest* request, ::physics::StepSimulationResponse* response, std::function<void(::grpc::Status)>) override;
+      void StepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest* request, ::physics::StepSimulationResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void GetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest* request, ::physics::ObjectResponse* response, std::function<void(::grpc::Status)>) override;
+      void GetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest* request, ::physics::ObjectResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
      private:
       friend class Stub;
       explicit async(Stub* stub): stub_(stub) { }
@@ -150,10 +250,25 @@ class Physics final {
     ::grpc::ClientAsyncResponseReader< ::physics::ApplyTorqueResponse>* PrepareAsyncApplyTorqueRaw(::grpc::ClientContext* context, const ::physics::ApplyTorqueRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::physics::GetObjectStateResponse>* AsyncGetObjectStateRaw(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::physics::GetObjectStateResponse>* PrepareAsyncGetObjectStateRaw(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::GetPhysicsConfigResponse>* AsyncGetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::GetPhysicsConfigResponse>* PrepareAsyncGetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::SetPhysicsConfigResponse>* AsyncSetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::SetPhysicsConfigResponse>* PrepareAsyncSetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectResponse>* AsyncUpdateObjectRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectResponse>* PrepareAsyncUpdateObjectRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::StepSimulationResponse>* AsyncStepSimulationRaw(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::StepSimulationResponse>* PrepareAsyncStepSimulationRaw(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::ObjectResponse>* AsyncGetObjectRaw(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::ObjectResponse>* PrepareAsyncGetObjectRaw(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_CreateObject_;
     const ::grpc::internal::RpcMethod rpcmethod_ApplyImpulse_;
     const ::grpc::internal::RpcMethod rpcmethod_ApplyTorque_;
     const ::grpc::internal::RpcMethod rpcmethod_GetObjectState_;
+    const ::grpc::internal::RpcMethod rpcmethod_GetPhysicsConfig_;
+    const ::grpc::internal::RpcMethod rpcmethod_SetPhysicsConfig_;
+    const ::grpc::internal::RpcMethod rpcmethod_UpdateObject_;
+    const ::grpc::internal::RpcMethod rpcmethod_StepSimulation_;
+    const ::grpc::internal::RpcMethod rpcmethod_GetObject_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
@@ -165,6 +280,11 @@ class Physics final {
     virtual ::grpc::Status ApplyImpulse(::grpc::ServerContext* context, const ::physics::ApplyImpulseRequest* request, ::physics::ApplyImpulseResponse* response);
     virtual ::grpc::Status ApplyTorque(::grpc::ServerContext* context, const ::physics::ApplyTorqueRequest* request, ::physics::ApplyTorqueResponse* response);
     virtual ::grpc::Status GetObjectState(::grpc::ServerContext* context, const ::physics::GetObjectStateRequest* request, ::physics::GetObjectStateResponse* response);
+    virtual ::grpc::Status GetPhysicsConfig(::grpc::ServerContext* context, const ::physics::GetPhysicsConfigRequest* request, ::physics::GetPhysicsConfigResponse* response);
+    virtual ::grpc::Status SetPhysicsConfig(::grpc::ServerContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response);
+    virtual ::grpc::Status UpdateObject(::grpc::ServerContext* context, const ::physics::UpdateObjectRequest* request, ::physics::UpdateObjectResponse* response);
+    virtual ::grpc::Status StepSimulation(::grpc::ServerContext* context, const ::physics::StepSimulationRequest* request, ::physics::StepSimulationResponse* response);
+    virtual ::grpc::Status GetObject(::grpc::ServerContext* context, const ::physics::ObjectRequest* request, ::physics::ObjectResponse* response);
   };
   template <class BaseClass>
   class WithAsyncMethod_CreateObject : public BaseClass {
@@ -246,7 +366,107 @@ class Physics final {
       ::grpc::Service::RequestAsyncUnary(3, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_CreateObject<WithAsyncMethod_ApplyImpulse<WithAsyncMethod_ApplyTorque<WithAsyncMethod_GetObjectState<Service > > > > AsyncService;
+  template <class BaseClass>
+  class WithAsyncMethod_GetPhysicsConfig : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_GetPhysicsConfig() {
+      ::grpc::Service::MarkMethodAsync(4);
+    }
+    ~WithAsyncMethod_GetPhysicsConfig() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetPhysicsConfig(::grpc::ServerContext* /*context*/, const ::physics::GetPhysicsConfigRequest* /*request*/, ::physics::GetPhysicsConfigResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetPhysicsConfig(::grpc::ServerContext* context, ::physics::GetPhysicsConfigRequest* request, ::grpc::ServerAsyncResponseWriter< ::physics::GetPhysicsConfigResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(4, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_SetPhysicsConfig : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_SetPhysicsConfig() {
+      ::grpc::Service::MarkMethodAsync(5);
+    }
+    ~WithAsyncMethod_SetPhysicsConfig() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status SetPhysicsConfig(::grpc::ServerContext* /*context*/, const ::physics::SetPhysicsConfigRequest* /*request*/, ::physics::SetPhysicsConfigResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestSetPhysicsConfig(::grpc::ServerContext* context, ::physics::SetPhysicsConfigRequest* request, ::grpc::ServerAsyncResponseWriter< ::physics::SetPhysicsConfigResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(5, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_UpdateObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_UpdateObject() {
+      ::grpc::Service::MarkMethodAsync(6);
+    }
+    ~WithAsyncMethod_UpdateObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObject(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectRequest* /*request*/, ::physics::UpdateObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestUpdateObject(::grpc::ServerContext* context, ::physics::UpdateObjectRequest* request, ::grpc::ServerAsyncResponseWriter< ::physics::UpdateObjectResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(6, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_StepSimulation : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_StepSimulation() {
+      ::grpc::Service::MarkMethodAsync(7);
+    }
+    ~WithAsyncMethod_StepSimulation() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status StepSimulation(::grpc::ServerContext* /*context*/, const ::physics::StepSimulationRequest* /*request*/, ::physics::StepSimulationResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestStepSimulation(::grpc::ServerContext* context, ::physics::StepSimulationRequest* request, ::grpc::ServerAsyncResponseWriter< ::physics::StepSimulationResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(7, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_GetObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_GetObject() {
+      ::grpc::Service::MarkMethodAsync(8);
+    }
+    ~WithAsyncMethod_GetObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetObject(::grpc::ServerContext* /*context*/, const ::physics::ObjectRequest* /*request*/, ::physics::ObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetObject(::grpc::ServerContext* context, ::physics::ObjectRequest* request, ::grpc::ServerAsyncResponseWriter< ::physics::ObjectResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(8, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  typedef WithAsyncMethod_CreateObject<WithAsyncMethod_ApplyImpulse<WithAsyncMethod_ApplyTorque<WithAsyncMethod_GetObjectState<WithAsyncMethod_GetPhysicsConfig<WithAsyncMethod_SetPhysicsConfig<WithAsyncMethod_UpdateObject<WithAsyncMethod_StepSimulation<WithAsyncMethod_GetObject<Service > > > > > > > > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_CreateObject : public BaseClass {
    private:
@@ -355,7 +575,142 @@ class Physics final {
     virtual ::grpc::ServerUnaryReactor* GetObjectState(
       ::grpc::CallbackServerContext* /*context*/, const ::physics::GetObjectStateRequest* /*request*/, ::physics::GetObjectStateResponse* /*response*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_CreateObject<WithCallbackMethod_ApplyImpulse<WithCallbackMethod_ApplyTorque<WithCallbackMethod_GetObjectState<Service > > > > CallbackService;
+  template <class BaseClass>
+  class WithCallbackMethod_GetPhysicsConfig : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_GetPhysicsConfig() {
+      ::grpc::Service::MarkMethodCallback(4,
+          new ::grpc::internal::CallbackUnaryHandler< ::physics::GetPhysicsConfigRequest, ::physics::GetPhysicsConfigResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::physics::GetPhysicsConfigRequest* request, ::physics::GetPhysicsConfigResponse* response) { return this->GetPhysicsConfig(context, request, response); }));}
+    void SetMessageAllocatorFor_GetPhysicsConfig(
+        ::grpc::MessageAllocator< ::physics::GetPhysicsConfigRequest, ::physics::GetPhysicsConfigResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(4);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::physics::GetPhysicsConfigRequest, ::physics::GetPhysicsConfigResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_GetPhysicsConfig() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetPhysicsConfig(::grpc::ServerContext* /*context*/, const ::physics::GetPhysicsConfigRequest* /*request*/, ::physics::GetPhysicsConfigResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetPhysicsConfig(
+      ::grpc::CallbackServerContext* /*context*/, const ::physics::GetPhysicsConfigRequest* /*request*/, ::physics::GetPhysicsConfigResponse* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_SetPhysicsConfig : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_SetPhysicsConfig() {
+      ::grpc::Service::MarkMethodCallback(5,
+          new ::grpc::internal::CallbackUnaryHandler< ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response) { return this->SetPhysicsConfig(context, request, response); }));}
+    void SetMessageAllocatorFor_SetPhysicsConfig(
+        ::grpc::MessageAllocator< ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(5);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_SetPhysicsConfig() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status SetPhysicsConfig(::grpc::ServerContext* /*context*/, const ::physics::SetPhysicsConfigRequest* /*request*/, ::physics::SetPhysicsConfigResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* SetPhysicsConfig(
+      ::grpc::CallbackServerContext* /*context*/, const ::physics::SetPhysicsConfigRequest* /*request*/, ::physics::SetPhysicsConfigResponse* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_UpdateObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_UpdateObject() {
+      ::grpc::Service::MarkMethodCallback(6,
+          new ::grpc::internal::CallbackUnaryHandler< ::physics::UpdateObjectRequest, ::physics::UpdateObjectResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::physics::UpdateObjectRequest* request, ::physics::UpdateObjectResponse* response) { return this->UpdateObject(context, request, response); }));}
+    void SetMessageAllocatorFor_UpdateObject(
+        ::grpc::MessageAllocator< ::physics::UpdateObjectRequest, ::physics::UpdateObjectResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(6);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::physics::UpdateObjectRequest, ::physics::UpdateObjectResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_UpdateObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObject(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectRequest* /*request*/, ::physics::UpdateObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* UpdateObject(
+      ::grpc::CallbackServerContext* /*context*/, const ::physics::UpdateObjectRequest* /*request*/, ::physics::UpdateObjectResponse* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_StepSimulation : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_StepSimulation() {
+      ::grpc::Service::MarkMethodCallback(7,
+          new ::grpc::internal::CallbackUnaryHandler< ::physics::StepSimulationRequest, ::physics::StepSimulationResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::physics::StepSimulationRequest* request, ::physics::StepSimulationResponse* response) { return this->StepSimulation(context, request, response); }));}
+    void SetMessageAllocatorFor_StepSimulation(
+        ::grpc::MessageAllocator< ::physics::StepSimulationRequest, ::physics::StepSimulationResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(7);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::physics::StepSimulationRequest, ::physics::StepSimulationResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_StepSimulation() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status StepSimulation(::grpc::ServerContext* /*context*/, const ::physics::StepSimulationRequest* /*request*/, ::physics::StepSimulationResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* StepSimulation(
+      ::grpc::CallbackServerContext* /*context*/, const ::physics::StepSimulationRequest* /*request*/, ::physics::StepSimulationResponse* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_GetObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_GetObject() {
+      ::grpc::Service::MarkMethodCallback(8,
+          new ::grpc::internal::CallbackUnaryHandler< ::physics::ObjectRequest, ::physics::ObjectResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::physics::ObjectRequest* request, ::physics::ObjectResponse* response) { return this->GetObject(context, request, response); }));}
+    void SetMessageAllocatorFor_GetObject(
+        ::grpc::MessageAllocator< ::physics::ObjectRequest, ::physics::ObjectResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(8);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::physics::ObjectRequest, ::physics::ObjectResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_GetObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetObject(::grpc::ServerContext* /*context*/, const ::physics::ObjectRequest* /*request*/, ::physics::ObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetObject(
+      ::grpc::CallbackServerContext* /*context*/, const ::physics::ObjectRequest* /*request*/, ::physics::ObjectResponse* /*response*/)  { return nullptr; }
+  };
+  typedef WithCallbackMethod_CreateObject<WithCallbackMethod_ApplyImpulse<WithCallbackMethod_ApplyTorque<WithCallbackMethod_GetObjectState<WithCallbackMethod_GetPhysicsConfig<WithCallbackMethod_SetPhysicsConfig<WithCallbackMethod_UpdateObject<WithCallbackMethod_StepSimulation<WithCallbackMethod_GetObject<Service > > > > > > > > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_CreateObject : public BaseClass {
@@ -421,6 +776,91 @@ class Physics final {
     }
     // disable synchronous version of this method
     ::grpc::Status GetObjectState(::grpc::ServerContext* /*context*/, const ::physics::GetObjectStateRequest* /*request*/, ::physics::GetObjectStateResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_GetPhysicsConfig : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_GetPhysicsConfig() {
+      ::grpc::Service::MarkMethodGeneric(4);
+    }
+    ~WithGenericMethod_GetPhysicsConfig() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetPhysicsConfig(::grpc::ServerContext* /*context*/, const ::physics::GetPhysicsConfigRequest* /*request*/, ::physics::GetPhysicsConfigResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_SetPhysicsConfig : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_SetPhysicsConfig() {
+      ::grpc::Service::MarkMethodGeneric(5);
+    }
+    ~WithGenericMethod_SetPhysicsConfig() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status SetPhysicsConfig(::grpc::ServerContext* /*context*/, const ::physics::SetPhysicsConfigRequest* /*request*/, ::physics::SetPhysicsConfigResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_UpdateObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_UpdateObject() {
+      ::grpc::Service::MarkMethodGeneric(6);
+    }
+    ~WithGenericMethod_UpdateObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObject(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectRequest* /*request*/, ::physics::UpdateObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_StepSimulation : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_StepSimulation() {
+      ::grpc::Service::MarkMethodGeneric(7);
+    }
+    ~WithGenericMethod_StepSimulation() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status StepSimulation(::grpc::ServerContext* /*context*/, const ::physics::StepSimulationRequest* /*request*/, ::physics::StepSimulationResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_GetObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_GetObject() {
+      ::grpc::Service::MarkMethodGeneric(8);
+    }
+    ~WithGenericMethod_GetObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetObject(::grpc::ServerContext* /*context*/, const ::physics::ObjectRequest* /*request*/, ::physics::ObjectResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -503,6 +943,106 @@ class Physics final {
     }
     void RequestGetObjectState(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(3, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_GetPhysicsConfig : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_GetPhysicsConfig() {
+      ::grpc::Service::MarkMethodRaw(4);
+    }
+    ~WithRawMethod_GetPhysicsConfig() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetPhysicsConfig(::grpc::ServerContext* /*context*/, const ::physics::GetPhysicsConfigRequest* /*request*/, ::physics::GetPhysicsConfigResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetPhysicsConfig(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(4, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_SetPhysicsConfig : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_SetPhysicsConfig() {
+      ::grpc::Service::MarkMethodRaw(5);
+    }
+    ~WithRawMethod_SetPhysicsConfig() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status SetPhysicsConfig(::grpc::ServerContext* /*context*/, const ::physics::SetPhysicsConfigRequest* /*request*/, ::physics::SetPhysicsConfigResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestSetPhysicsConfig(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(5, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_UpdateObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_UpdateObject() {
+      ::grpc::Service::MarkMethodRaw(6);
+    }
+    ~WithRawMethod_UpdateObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObject(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectRequest* /*request*/, ::physics::UpdateObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestUpdateObject(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(6, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_StepSimulation : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_StepSimulation() {
+      ::grpc::Service::MarkMethodRaw(7);
+    }
+    ~WithRawMethod_StepSimulation() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status StepSimulation(::grpc::ServerContext* /*context*/, const ::physics::StepSimulationRequest* /*request*/, ::physics::StepSimulationResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestStepSimulation(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(7, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_GetObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_GetObject() {
+      ::grpc::Service::MarkMethodRaw(8);
+    }
+    ~WithRawMethod_GetObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetObject(::grpc::ServerContext* /*context*/, const ::physics::ObjectRequest* /*request*/, ::physics::ObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetObject(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(8, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -591,6 +1131,116 @@ class Physics final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     virtual ::grpc::ServerUnaryReactor* GetObjectState(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_GetPhysicsConfig : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_GetPhysicsConfig() {
+      ::grpc::Service::MarkMethodRawCallback(4,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetPhysicsConfig(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_GetPhysicsConfig() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetPhysicsConfig(::grpc::ServerContext* /*context*/, const ::physics::GetPhysicsConfigRequest* /*request*/, ::physics::GetPhysicsConfigResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetPhysicsConfig(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_SetPhysicsConfig : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_SetPhysicsConfig() {
+      ::grpc::Service::MarkMethodRawCallback(5,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->SetPhysicsConfig(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_SetPhysicsConfig() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status SetPhysicsConfig(::grpc::ServerContext* /*context*/, const ::physics::SetPhysicsConfigRequest* /*request*/, ::physics::SetPhysicsConfigResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* SetPhysicsConfig(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_UpdateObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_UpdateObject() {
+      ::grpc::Service::MarkMethodRawCallback(6,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->UpdateObject(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_UpdateObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObject(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectRequest* /*request*/, ::physics::UpdateObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* UpdateObject(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_StepSimulation : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_StepSimulation() {
+      ::grpc::Service::MarkMethodRawCallback(7,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->StepSimulation(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_StepSimulation() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status StepSimulation(::grpc::ServerContext* /*context*/, const ::physics::StepSimulationRequest* /*request*/, ::physics::StepSimulationResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* StepSimulation(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_GetObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_GetObject() {
+      ::grpc::Service::MarkMethodRawCallback(8,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetObject(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_GetObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetObject(::grpc::ServerContext* /*context*/, const ::physics::ObjectRequest* /*request*/, ::physics::ObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetObject(
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
@@ -701,9 +1351,144 @@ class Physics final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedGetObjectState(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::physics::GetObjectStateRequest,::physics::GetObjectStateResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_CreateObject<WithStreamedUnaryMethod_ApplyImpulse<WithStreamedUnaryMethod_ApplyTorque<WithStreamedUnaryMethod_GetObjectState<Service > > > > StreamedUnaryService;
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_GetPhysicsConfig : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_GetPhysicsConfig() {
+      ::grpc::Service::MarkMethodStreamed(4,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::physics::GetPhysicsConfigRequest, ::physics::GetPhysicsConfigResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::physics::GetPhysicsConfigRequest, ::physics::GetPhysicsConfigResponse>* streamer) {
+                       return this->StreamedGetPhysicsConfig(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_GetPhysicsConfig() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status GetPhysicsConfig(::grpc::ServerContext* /*context*/, const ::physics::GetPhysicsConfigRequest* /*request*/, ::physics::GetPhysicsConfigResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedGetPhysicsConfig(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::physics::GetPhysicsConfigRequest,::physics::GetPhysicsConfigResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_SetPhysicsConfig : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_SetPhysicsConfig() {
+      ::grpc::Service::MarkMethodStreamed(5,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse>* streamer) {
+                       return this->StreamedSetPhysicsConfig(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_SetPhysicsConfig() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status SetPhysicsConfig(::grpc::ServerContext* /*context*/, const ::physics::SetPhysicsConfigRequest* /*request*/, ::physics::SetPhysicsConfigResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedSetPhysicsConfig(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::physics::SetPhysicsConfigRequest,::physics::SetPhysicsConfigResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_UpdateObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_UpdateObject() {
+      ::grpc::Service::MarkMethodStreamed(6,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::physics::UpdateObjectRequest, ::physics::UpdateObjectResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::physics::UpdateObjectRequest, ::physics::UpdateObjectResponse>* streamer) {
+                       return this->StreamedUpdateObject(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_UpdateObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status UpdateObject(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectRequest* /*request*/, ::physics::UpdateObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedUpdateObject(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::physics::UpdateObjectRequest,::physics::UpdateObjectResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_StepSimulation : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_StepSimulation() {
+      ::grpc::Service::MarkMethodStreamed(7,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::physics::StepSimulationRequest, ::physics::StepSimulationResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::physics::StepSimulationRequest, ::physics::StepSimulationResponse>* streamer) {
+                       return this->StreamedStepSimulation(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_StepSimulation() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status StepSimulation(::grpc::ServerContext* /*context*/, const ::physics::StepSimulationRequest* /*request*/, ::physics::StepSimulationResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedStepSimulation(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::physics::StepSimulationRequest,::physics::StepSimulationResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_GetObject : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_GetObject() {
+      ::grpc::Service::MarkMethodStreamed(8,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::physics::ObjectRequest, ::physics::ObjectResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::physics::ObjectRequest, ::physics::ObjectResponse>* streamer) {
+                       return this->StreamedGetObject(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_GetObject() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status GetObject(::grpc::ServerContext* /*context*/, const ::physics::ObjectRequest* /*request*/, ::physics::ObjectResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedGetObject(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::physics::ObjectRequest,::physics::ObjectResponse>* server_unary_streamer) = 0;
+  };
+  typedef WithStreamedUnaryMethod_CreateObject<WithStreamedUnaryMethod_ApplyImpulse<WithStreamedUnaryMethod_ApplyTorque<WithStreamedUnaryMethod_GetObjectState<WithStreamedUnaryMethod_GetPhysicsConfig<WithStreamedUnaryMethod_SetPhysicsConfig<WithStreamedUnaryMethod_UpdateObject<WithStreamedUnaryMethod_StepSimulation<WithStreamedUnaryMethod_GetObject<Service > > > > > > > > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_CreateObject<WithStreamedUnaryMethod_ApplyImpulse<WithStreamedUnaryMethod_ApplyTorque<WithStreamedUnaryMethod_GetObjectState<Service > > > > StreamedService;
+  typedef WithStreamedUnaryMethod_CreateObject<WithStreamedUnaryMethod_ApplyImpulse<WithStreamedUnaryMethod_ApplyTorque<WithStreamedUnaryMethod_GetObjectState<WithStreamedUnaryMethod_GetPhysicsConfig<WithStreamedUnaryMethod_SetPhysicsConfig<WithStreamedUnaryMethod_UpdateObject<WithStreamedUnaryMethod_StepSimulation<WithStreamedUnaryMethod_GetObject<Service > > > > > > > > > StreamedService;
 };
 
 }  // namespace physics

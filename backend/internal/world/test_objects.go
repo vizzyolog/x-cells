@@ -74,9 +74,9 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 	// Этот объект будет иметь тип физики both
 	mainPlayer := NewSphere(
 		"mainPlayer1",
-		Vector3{X: 0, Y: terrainMaxHeight + 50, Z: 0},
+		Vector3{X: 0, Y: terrainMaxHeight + 10, Z: 0},
 		1.0,       // Радиус
-		3.0,       // Масса - увеличили до 3.0 для лучшего баланса (было 1.0)
+		5.0,       // Масса - 5.0 для лучшего баланса
 		"#ff00ff", // Пурпурный цвет для игрока
 	)
 	// Явно устанавливаем тип физики both

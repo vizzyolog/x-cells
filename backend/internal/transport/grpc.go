@@ -1,7 +1,12 @@
+/*
+Этот файл больше не используется после перехода на гексагональную архитектуру.
+Функциональность перемещена в backend/internal/adapter/out/physics.
+
 package transport
 
 import (
 	"context"
+	"log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -9,40 +14,42 @@ import (
 	pb "x-cells/backend/internal/physics/generated"
 )
 
+// PhysicsClient - клиент для взаимодействия с физическим сервером
 type PhysicsClient struct {
-	client pb.PhysicsClient
-	conn   *grpc.ClientConn
+	connection *grpc.ClientConn
+	client     pb.PhysicsServiceClient
 }
 
-func NewPhysicsClient(ctx context.Context, addr string) (*PhysicsClient, error) {
-	conn, err := grpc.DialContext(ctx, addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+// NewPhysicsClient создает новый экземпляр клиента физики
+func NewPhysicsClient(ctx context.Context, serverAddr string) (*PhysicsClient, error) {
+	conn, err := grpc.DialContext(
+		ctx,
+		serverAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
 	if err != nil {
 		return nil, err
 	}
 
+	client := pb.NewPhysicsServiceClient(conn)
 	return &PhysicsClient{
-		client: pb.NewPhysicsClient(conn),
-		conn:   conn,
+		connection: conn,
+		client:     client,
 	}, nil
 }
 
-func (c *PhysicsClient) Close() error {
-	return c.conn.Close()
+// Close закрывает соединение с сервером
+func (p *PhysicsClient) Close() {
+	if p.connection != nil {
+		if err := p.connection.Close(); err != nil {
+			log.Printf("Ошибка при закрытии соединения с физическим сервером: %v", err)
+		}
+	}
 }
 
-func (c *PhysicsClient) CreateObject(ctx context.Context, request *pb.CreateObjectRequest, opts ...grpc.CallOption) (*pb.CreateObjectResponse, error) {
-	return c.client.CreateObject(ctx, request, opts...)
+// GetClient возвращает клиент gRPC для взаимодействия с физикой
+func (p *PhysicsClient) GetClient() pb.PhysicsServiceClient {
+	return p.client
 }
-
-func (c *PhysicsClient) GetObjectState(ctx context.Context, request *pb.GetObjectStateRequest, opts ...grpc.CallOption) (*pb.GetObjectStateResponse, error) {
-	return c.client.GetObjectState(ctx, request, opts...)
-}
-
-func (c *PhysicsClient) ApplyImpulse(ctx context.Context, req *pb.ApplyImpulseRequest, opts ...grpc.CallOption) (*pb.ApplyImpulseResponse, error) {
-	return c.client.ApplyImpulse(ctx, req, opts...)
-}
-
-func (c *PhysicsClient) ApplyTorque(ctx context.Context, req *pb.ApplyTorqueRequest, opts ...grpc.CallOption) (*pb.ApplyTorqueResponse, error) {
-	return c.client.ApplyTorque(ctx, req, opts...)
-}
+*/

@@ -1,13 +1,15 @@
 import * as THREE from 'three';
+import { physicsConfig } from './physics';
+import { sendData } from './network';
+import { applyImpulseToSphere, applySpeedLimits, getPhysicsConfig } from './physics.js';
 
 // Константы для настройки поведения
 const DEBUG_MODE = true; // Включает/выключает отладочные элементы (arrowHelper)
 const MIN_ARROW_LENGTH = 10;
 const MAX_ARROW_LENGTH = 50;
-const SEND_INTERVAL = 50; // Уменьшаем интервал с 200 до 50 мс для большей отзывчивости
-const ARROW_HEIGHT_OFFSET = 2; // Смещение стрелки по высоте над игроком
+const SEND_INTERVAL = 40; // Интервал отправки данных в мс
+const ARROW_HEIGHT_OFFSET = 2; // Высота смещения стрелки
 const RAY_UPDATE_INTERVAL = 50; // Интервал обновления луча при движении камеры (мс)
-const KEY_FORCE = 40; // Увеличиваем силу импульса клавиатуры до 40
 
 let arrowHelper;
 let lastSentPosition = new THREE.Vector3();
@@ -19,12 +21,13 @@ let lastRayUpdateTime = 0;
 let lastIntersectPoint = new THREE.Vector3();
 let isMouseActive = false; // Флаг активности мыши над игровой областью
 
-// Флаги для клавиатурного управления
-let keys = {
-    w: false,
-    a: false,
-    s: false,
-    d: false
+// Состояние клавиш
+let keyStates = {
+    forward: false,
+    backward: false,
+    left: false,
+    right: false,
+    jump: false
 };
 
 // Переменные для хранения направления
@@ -97,54 +100,49 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
     }
     
     function processKeyboardInput() {
-        if (!playerMeshRef || !socketRef) return;
+        // Проверяем, нажаты ли какие-либо клавиши
+        const isAnyKeyPressed = Object.values(keyStates).some(state => state);
         
-        // Проверяем, если хотя бы одна клавиша нажата
-        if (keys.w || keys.a || keys.s || keys.d) {
-            // Создаем вектор направления на основе нажатых клавиш
-            const direction = new THREE.Vector3(0, 0, 0);
+        // Текущее время
+        const currentTime = Date.now();
+        
+        // Если какая-либо клавиша нажата И прошло достаточно времени с последней отправки
+        if (isAnyKeyPressed && currentTime - lastSendTime > SEND_INTERVAL) {
+            // Направление движения
+            let dirX = 0, dirY = 0, dirZ = 0;
             
-            if (keys.w) direction.z -= 1;
-            if (keys.s) direction.z += 1;
-            if (keys.a) direction.x -= 1;
-            if (keys.d) direction.x += 1;
+            // Рассчитываем направление на основе нажатых клавиш
+            if (keyStates.forward) dirZ = -1;
+            if (keyStates.backward) dirZ = 1;
+            if (keyStates.left) dirX = -1;
+            if (keyStates.right) dirX = 1;
+            if (keyStates.jump) dirY = 1;
             
-            // Нормализуем направление, если оно не нулевое
-            if (direction.length() > 0) {
-                direction.normalize();
+            // Нормализуем вектор направления (если не нулевой)
+            const length = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+            if (length > 0) {
+                dirX /= length;
+                dirY /= length;
+                dirZ /= length;
                 
                 // Отправляем направление на сервер
-                if (Date.now() - lastSendTime > SEND_INTERVAL) {
-                    sendDirectionToServer(direction, KEY_FORCE, socketRef);
-                    lastSendTime = Date.now();
-                    
-                    // Обновляем lastSentPosition для отображения стрелки
-                    lastSentPosition.copy(direction);
-                    lastSentPosition.userData = { distance: KEY_FORCE };
-                    directionNeedsUpdate = true;
-                }
+                sendDirectionToServer(dirX, dirY, dirZ);
+                
+                // Обновляем время последней отправки
+                lastSendTime = currentTime;
             }
         }
+        
+        // Продолжаем обработку в следующем кадре
+        requestAnimationFrame(processKeyboardInput);
     }
     
     function onKeyDown(event) {
-        // Обновляем состояние клавиш
-        switch(event.key.toLowerCase()) {
-            case 'w': keys.w = true; break;
-            case 'a': keys.a = true; break;
-            case 's': keys.s = true; break;
-            case 'd': keys.d = true; break;
-        }
+        updateKeyState(event.key, true);
     }
     
     function onKeyUp(event) {
-        // Обновляем состояние клавиш
-        switch(event.key.toLowerCase()) {
-            case 'w': keys.w = false; break;
-            case 'a': keys.a = false; break;
-            case 's': keys.s = false; break;
-            case 'd': keys.d = false; break;
-        }
+        updateKeyState(event.key, false);
     }
 
     function onMouseMove(event) {
@@ -201,28 +199,41 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
             
             // Проверяем, нужно ли отправлять данные на сервер
             if (Date.now() - lastSendTime > SEND_INTERVAL) {
-                sendDirectionToServer(currentDirection, distance, socketRef);
+                sendDirectionToServer(currentDirection.x, currentDirection.y, currentDirection.z);
                 lastSendTime = Date.now();
             }
         }
     }
 
-    function sendDirectionToServer(direction, distance, socket) {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-                type: 'cmd',
-                cmd: 'MOUSE_VECTOR',
-                data: {
-                    x: direction.x,
-                    y: direction.y, // Теперь отправляем реальное значение Y
-                    z: direction.z,
-                    distance: distance // Добавляем информацию о расстоянии
-                },
-                client_time: Date.now(),
-                object_id: 'mainPlayer1'
-            }));
-        } else {
-            console.error('WebSocket не подключен');
+    function sendDirectionToServer(dirX, dirY, dirZ) {
+        // Используем базовый импульс из конфигурации
+        const physicsConfig = getPhysicsConfig();
+        const keyForce = physicsConfig.baseImpulse * 1.5; // Увеличиваем базовый импульс для клавиатуры
+        
+        // Подготавливаем данные для отправки
+        const data = {
+            type: 'direction',
+            direction: {
+                x: dirX,
+                y: dirY,
+                z: dirZ
+            },
+            force: keyForce,
+            distance: 0 // Для клавиатуры расстояние всегда 0
+        };
+        
+        // Отправляем данные
+        sendData(data);
+    }
+
+    // Обновление состояния клавиш
+    function updateKeyState(key, isPressed) {
+        switch(key.toLowerCase()) {
+            case 'w': keyStates.forward = isPressed; break;
+            case 's': keyStates.backward = isPressed; break;
+            case 'a': keyStates.left = isPressed; break;
+            case 'd': keyStates.right = isPressed; break;
+            case ' ': keyStates.jump = isPressed; break;
         }
     }
 }

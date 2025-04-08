@@ -1,7 +1,0 @@
-// Сервис физики
-service Physics {
-    rpc CreateObject(CreateObjectRequest) returns (CreateObjectResponse);
-    rpc ApplyImpulse(ApplyImpulseRequest) returns (ApplyImpulseResponse);
-    rpc ApplyTorque(ApplyTorqueRequest) returns (ApplyTorqueResponse);
-    rpc GetObjectState(GetObjectStateRequest) returns (GetObjectStateResponse);
-} 

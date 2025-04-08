@@ -61,25 +61,54 @@ message TerrainData {
   float max_height = 8;
 }
 
+// Конфигурация физики
+message PhysicsConfigData {
+  float base_impulse = 1;
+  float max_impulse = 2;
+  float distance_multiplier = 3;
+  float impulse_multiplier = 4;
+  float max_speed = 5;
+  float restitution = 6;
+  float max_impulse_magnitude = 7;
+  float terrain_restitution = 8;
+  float object_restitution = 9;
+  float friction = 10;
+  float rolling_friction = 11;
+  float linear_damping = 12;
+  float angular_damping = 13;
+  float ccd_motion_threshold_factor = 14;
+  float ccd_swept_sphere_radius_factor = 15;
+  float min_speed_factor = 16;
+  float step_simulation_rate = 17;
+  float ccd_motion_threshold = 18;
+  float ccd_swept_sphere_radius = 19;
+}
+
 // Сервисные сообщения
 message CreateObjectRequest {
   string id = 1;
   Vector3 position = 2;
   Quaternion rotation = 3;
   ShapeDescriptor shape = 4;
+  float mass = 5;
+  Vector3 linear_velocity = 6;
+  Vector3 angular_velocity = 7;
 }
 
 message CreateObjectResponse {
   string status = 1;
+  string message = 2;
 }
 
 message ApplyImpulseRequest {
   string id = 1;
   Vector3 impulse = 2;
+  Vector3 relative_position = 3;
 }
 
 message ApplyImpulseResponse {
   string status = 1;
+  string message = 2;
 }
 
 message ApplyTorqueRequest {
@@ -89,6 +118,78 @@ message ApplyTorqueRequest {
 
 message ApplyTorqueResponse {
   string status = 1;
+}
+
+// Добавляем недостающие сообщения для работы с обновлением объектов
+message Position {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+message Rotation {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+  float w = 4;
+  float yaw = 5;
+  float pitch = 6;
+  float roll = 7;
+}
+
+message Velocity {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+message Object {
+  string id = 1;
+  Position position = 2;
+  Rotation rotation = 3;
+  Velocity linear_velocity = 4;
+  Velocity angular_velocity = 5;
+}
+
+message UpdateObjectRequest {
+  string id = 1;
+  Position position = 2;
+  Rotation rotation = 3;
+  Vector3 linear_velocity = 4;
+  Vector3 angular_velocity = 5;
+}
+
+message UpdateObjectResponse {
+  string status = 1;
+  string message = 2;
+}
+
+message StepSimulationRequest {
+  float time_step = 1;
+}
+
+message StepSimulationResponse {
+  string status = 1;
+  string message = 2;
+  repeated Object objects = 3;
+}
+
+message ObjectRequest {
+  string id = 1;
+}
+
+message ObjectResponse {
+  string status = 1;
+  float x = 2;
+  float y = 3;
+  float z = 4;
+  float qx = 5;
+  float qy = 6;
+  float qz = 7;
+  float qw = 8;
+  float vx = 9;
+  float vy = 10;
+  float vz = 11;
 }
 
 message GetObjectStateRequest {
@@ -107,10 +208,33 @@ message GetObjectStateResponse {
   ObjectState state = 2;
 }
 
+message GetPhysicsConfigRequest {
+  // Пустой запрос
+}
+
+message GetPhysicsConfigResponse {
+  string status = 1;
+  PhysicsConfigData config = 2;
+}
+
+message SetPhysicsConfigRequest {
+  PhysicsConfigData config = 1;
+}
+
+message SetPhysicsConfigResponse {
+  string status = 1;
+  string message = 2;
+}
+
 // Сервис физики
 service Physics {
   rpc CreateObject(CreateObjectRequest) returns (CreateObjectResponse);
   rpc ApplyImpulse(ApplyImpulseRequest) returns (ApplyImpulseResponse);
   rpc ApplyTorque(ApplyTorqueRequest) returns (ApplyTorqueResponse);
   rpc GetObjectState(GetObjectStateRequest) returns (GetObjectStateResponse);
+  rpc GetPhysicsConfig(GetPhysicsConfigRequest) returns (GetPhysicsConfigResponse);
+  rpc SetPhysicsConfig(SetPhysicsConfigRequest) returns (SetPhysicsConfigResponse);
+  rpc UpdateObject(UpdateObjectRequest) returns (UpdateObjectResponse);
+  rpc StepSimulation(StepSimulationRequest) returns (StepSimulationResponse);
+  rpc GetObject(ObjectRequest) returns (ObjectResponse);
 }

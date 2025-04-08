@@ -26,6 +26,11 @@ static const char* Physics_method_names[] = {
   "/physics.Physics/ApplyImpulse",
   "/physics.Physics/ApplyTorque",
   "/physics.Physics/GetObjectState",
+  "/physics.Physics/GetPhysicsConfig",
+  "/physics.Physics/SetPhysicsConfig",
+  "/physics.Physics/UpdateObject",
+  "/physics.Physics/StepSimulation",
+  "/physics.Physics/GetObject",
 };
 
 std::unique_ptr< Physics::Stub> Physics::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -39,6 +44,11 @@ Physics::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, c
   , rpcmethod_ApplyImpulse_(Physics_method_names[1], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_ApplyTorque_(Physics_method_names[2], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetObjectState_(Physics_method_names[3], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetPhysicsConfig_(Physics_method_names[4], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_SetPhysicsConfig_(Physics_method_names[5], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_UpdateObject_(Physics_method_names[6], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_StepSimulation_(Physics_method_names[7], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetObject_(Physics_method_names[8], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::Status Physics::Stub::CreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::physics::CreateObjectResponse* response) {
@@ -133,6 +143,121 @@ void Physics::Stub::async::GetObjectState(::grpc::ClientContext* context, const 
   return result;
 }
 
+::grpc::Status Physics::Stub::GetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::physics::GetPhysicsConfigResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::physics::GetPhysicsConfigRequest, ::physics::GetPhysicsConfigResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_GetPhysicsConfig_, context, request, response);
+}
+
+void Physics::Stub::async::GetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest* request, ::physics::GetPhysicsConfigResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::physics::GetPhysicsConfigRequest, ::physics::GetPhysicsConfigResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetPhysicsConfig_, context, request, response, std::move(f));
+}
+
+void Physics::Stub::async::GetPhysicsConfig(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest* request, ::physics::GetPhysicsConfigResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetPhysicsConfig_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::GetPhysicsConfigResponse>* Physics::Stub::PrepareAsyncGetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::physics::GetPhysicsConfigResponse, ::physics::GetPhysicsConfigRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_GetPhysicsConfig_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::GetPhysicsConfigResponse>* Physics::Stub::AsyncGetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::GetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncGetPhysicsConfigRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status Physics::Stub::SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::physics::SetPhysicsConfigResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_SetPhysicsConfig_, context, request, response);
+}
+
+void Physics::Stub::async::SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_SetPhysicsConfig_, context, request, response, std::move(f));
+}
+
+void Physics::Stub::async::SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_SetPhysicsConfig_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::SetPhysicsConfigResponse>* Physics::Stub::PrepareAsyncSetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::physics::SetPhysicsConfigResponse, ::physics::SetPhysicsConfigRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_SetPhysicsConfig_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::SetPhysicsConfigResponse>* Physics::Stub::AsyncSetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncSetPhysicsConfigRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status Physics::Stub::UpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::physics::UpdateObjectResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::physics::UpdateObjectRequest, ::physics::UpdateObjectResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_UpdateObject_, context, request, response);
+}
+
+void Physics::Stub::async::UpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest* request, ::physics::UpdateObjectResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::physics::UpdateObjectRequest, ::physics::UpdateObjectResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_UpdateObject_, context, request, response, std::move(f));
+}
+
+void Physics::Stub::async::UpdateObject(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest* request, ::physics::UpdateObjectResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_UpdateObject_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectResponse>* Physics::Stub::PrepareAsyncUpdateObjectRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::physics::UpdateObjectResponse, ::physics::UpdateObjectRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_UpdateObject_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectResponse>* Physics::Stub::AsyncUpdateObjectRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncUpdateObjectRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status Physics::Stub::StepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::physics::StepSimulationResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::physics::StepSimulationRequest, ::physics::StepSimulationResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_StepSimulation_, context, request, response);
+}
+
+void Physics::Stub::async::StepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest* request, ::physics::StepSimulationResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::physics::StepSimulationRequest, ::physics::StepSimulationResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_StepSimulation_, context, request, response, std::move(f));
+}
+
+void Physics::Stub::async::StepSimulation(::grpc::ClientContext* context, const ::physics::StepSimulationRequest* request, ::physics::StepSimulationResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_StepSimulation_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::StepSimulationResponse>* Physics::Stub::PrepareAsyncStepSimulationRaw(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::physics::StepSimulationResponse, ::physics::StepSimulationRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_StepSimulation_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::StepSimulationResponse>* Physics::Stub::AsyncStepSimulationRaw(::grpc::ClientContext* context, const ::physics::StepSimulationRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncStepSimulationRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status Physics::Stub::GetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::physics::ObjectResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::physics::ObjectRequest, ::physics::ObjectResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_GetObject_, context, request, response);
+}
+
+void Physics::Stub::async::GetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest* request, ::physics::ObjectResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::physics::ObjectRequest, ::physics::ObjectResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetObject_, context, request, response, std::move(f));
+}
+
+void Physics::Stub::async::GetObject(::grpc::ClientContext* context, const ::physics::ObjectRequest* request, ::physics::ObjectResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetObject_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::ObjectResponse>* Physics::Stub::PrepareAsyncGetObjectRaw(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::physics::ObjectResponse, ::physics::ObjectRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_GetObject_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::ObjectResponse>* Physics::Stub::AsyncGetObjectRaw(::grpc::ClientContext* context, const ::physics::ObjectRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncGetObjectRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
 Physics::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Physics_method_names[0],
@@ -174,6 +299,56 @@ Physics::Service::Service() {
              ::physics::GetObjectStateResponse* resp) {
                return service->GetObjectState(ctx, req, resp);
              }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Physics_method_names[4],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Physics::Service, ::physics::GetPhysicsConfigRequest, ::physics::GetPhysicsConfigResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](Physics::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::physics::GetPhysicsConfigRequest* req,
+             ::physics::GetPhysicsConfigResponse* resp) {
+               return service->GetPhysicsConfig(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Physics_method_names[5],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Physics::Service, ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](Physics::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::physics::SetPhysicsConfigRequest* req,
+             ::physics::SetPhysicsConfigResponse* resp) {
+               return service->SetPhysicsConfig(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Physics_method_names[6],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Physics::Service, ::physics::UpdateObjectRequest, ::physics::UpdateObjectResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](Physics::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::physics::UpdateObjectRequest* req,
+             ::physics::UpdateObjectResponse* resp) {
+               return service->UpdateObject(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Physics_method_names[7],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Physics::Service, ::physics::StepSimulationRequest, ::physics::StepSimulationResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](Physics::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::physics::StepSimulationRequest* req,
+             ::physics::StepSimulationResponse* resp) {
+               return service->StepSimulation(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Physics_method_names[8],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Physics::Service, ::physics::ObjectRequest, ::physics::ObjectResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](Physics::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::physics::ObjectRequest* req,
+             ::physics::ObjectResponse* resp) {
+               return service->GetObject(ctx, req, resp);
+             }, this)));
 }
 
 Physics::Service::~Service() {
@@ -201,6 +376,41 @@ Physics::Service::~Service() {
 }
 
 ::grpc::Status Physics::Service::GetObjectState(::grpc::ServerContext* context, const ::physics::GetObjectStateRequest* request, ::physics::GetObjectStateResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Physics::Service::GetPhysicsConfig(::grpc::ServerContext* context, const ::physics::GetPhysicsConfigRequest* request, ::physics::GetPhysicsConfigResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Physics::Service::SetPhysicsConfig(::grpc::ServerContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Physics::Service::UpdateObject(::grpc::ServerContext* context, const ::physics::UpdateObjectRequest* request, ::physics::UpdateObjectResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Physics::Service::StepSimulation(::grpc::ServerContext* context, const ::physics::StepSimulationRequest* request, ::physics::StepSimulationResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Physics::Service::GetObject(::grpc::ServerContext* context, const ::physics::ObjectRequest* request, ::physics::ObjectResponse* response) {
   (void) context;
   (void) request;
   (void) response;

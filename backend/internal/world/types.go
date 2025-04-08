@@ -17,6 +17,7 @@ type WorldObject struct {
 	Color       string
 	MinHeight   float32
 	MaxHeight   float32
+	Velocity    Vector3
 }
 
 type Object struct {

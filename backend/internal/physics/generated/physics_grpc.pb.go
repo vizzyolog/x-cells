@@ -19,10 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Physics_CreateObject_FullMethodName   = "/physics.Physics/CreateObject"
-	Physics_ApplyImpulse_FullMethodName   = "/physics.Physics/ApplyImpulse"
-	Physics_ApplyTorque_FullMethodName    = "/physics.Physics/ApplyTorque"
-	Physics_GetObjectState_FullMethodName = "/physics.Physics/GetObjectState"
+	Physics_CreateObject_FullMethodName     = "/physics.Physics/CreateObject"
+	Physics_ApplyImpulse_FullMethodName     = "/physics.Physics/ApplyImpulse"
+	Physics_ApplyTorque_FullMethodName      = "/physics.Physics/ApplyTorque"
+	Physics_GetObjectState_FullMethodName   = "/physics.Physics/GetObjectState"
+	Physics_GetPhysicsConfig_FullMethodName = "/physics.Physics/GetPhysicsConfig"
+	Physics_SetPhysicsConfig_FullMethodName = "/physics.Physics/SetPhysicsConfig"
+	Physics_UpdateObject_FullMethodName     = "/physics.Physics/UpdateObject"
+	Physics_StepSimulation_FullMethodName   = "/physics.Physics/StepSimulation"
+	Physics_GetObject_FullMethodName        = "/physics.Physics/GetObject"
 )
 
 // PhysicsClient is the client API for Physics service.
@@ -35,6 +40,11 @@ type PhysicsClient interface {
 	ApplyImpulse(ctx context.Context, in *ApplyImpulseRequest, opts ...grpc.CallOption) (*ApplyImpulseResponse, error)
 	ApplyTorque(ctx context.Context, in *ApplyTorqueRequest, opts ...grpc.CallOption) (*ApplyTorqueResponse, error)
 	GetObjectState(ctx context.Context, in *GetObjectStateRequest, opts ...grpc.CallOption) (*GetObjectStateResponse, error)
+	GetPhysicsConfig(ctx context.Context, in *GetPhysicsConfigRequest, opts ...grpc.CallOption) (*GetPhysicsConfigResponse, error)
+	SetPhysicsConfig(ctx context.Context, in *SetPhysicsConfigRequest, opts ...grpc.CallOption) (*SetPhysicsConfigResponse, error)
+	UpdateObject(ctx context.Context, in *UpdateObjectRequest, opts ...grpc.CallOption) (*UpdateObjectResponse, error)
+	StepSimulation(ctx context.Context, in *StepSimulationRequest, opts ...grpc.CallOption) (*StepSimulationResponse, error)
+	GetObject(ctx context.Context, in *ObjectRequest, opts ...grpc.CallOption) (*ObjectResponse, error)
 }
 
 type physicsClient struct {
@@ -85,6 +95,56 @@ func (c *physicsClient) GetObjectState(ctx context.Context, in *GetObjectStateRe
 	return out, nil
 }
 
+func (c *physicsClient) GetPhysicsConfig(ctx context.Context, in *GetPhysicsConfigRequest, opts ...grpc.CallOption) (*GetPhysicsConfigResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPhysicsConfigResponse)
+	err := c.cc.Invoke(ctx, Physics_GetPhysicsConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *physicsClient) SetPhysicsConfig(ctx context.Context, in *SetPhysicsConfigRequest, opts ...grpc.CallOption) (*SetPhysicsConfigResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetPhysicsConfigResponse)
+	err := c.cc.Invoke(ctx, Physics_SetPhysicsConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *physicsClient) UpdateObject(ctx context.Context, in *UpdateObjectRequest, opts ...grpc.CallOption) (*UpdateObjectResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateObjectResponse)
+	err := c.cc.Invoke(ctx, Physics_UpdateObject_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *physicsClient) StepSimulation(ctx context.Context, in *StepSimulationRequest, opts ...grpc.CallOption) (*StepSimulationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StepSimulationResponse)
+	err := c.cc.Invoke(ctx, Physics_StepSimulation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *physicsClient) GetObject(ctx context.Context, in *ObjectRequest, opts ...grpc.CallOption) (*ObjectResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ObjectResponse)
+	err := c.cc.Invoke(ctx, Physics_GetObject_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PhysicsServer is the server API for Physics service.
 // All implementations must embed UnimplementedPhysicsServer
 // for forward compatibility.
@@ -95,6 +155,11 @@ type PhysicsServer interface {
 	ApplyImpulse(context.Context, *ApplyImpulseRequest) (*ApplyImpulseResponse, error)
 	ApplyTorque(context.Context, *ApplyTorqueRequest) (*ApplyTorqueResponse, error)
 	GetObjectState(context.Context, *GetObjectStateRequest) (*GetObjectStateResponse, error)
+	GetPhysicsConfig(context.Context, *GetPhysicsConfigRequest) (*GetPhysicsConfigResponse, error)
+	SetPhysicsConfig(context.Context, *SetPhysicsConfigRequest) (*SetPhysicsConfigResponse, error)
+	UpdateObject(context.Context, *UpdateObjectRequest) (*UpdateObjectResponse, error)
+	StepSimulation(context.Context, *StepSimulationRequest) (*StepSimulationResponse, error)
+	GetObject(context.Context, *ObjectRequest) (*ObjectResponse, error)
 	mustEmbedUnimplementedPhysicsServer()
 }
 
@@ -116,6 +181,21 @@ func (UnimplementedPhysicsServer) ApplyTorque(context.Context, *ApplyTorqueReque
 }
 func (UnimplementedPhysicsServer) GetObjectState(context.Context, *GetObjectStateRequest) (*GetObjectStateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetObjectState not implemented")
+}
+func (UnimplementedPhysicsServer) GetPhysicsConfig(context.Context, *GetPhysicsConfigRequest) (*GetPhysicsConfigResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPhysicsConfig not implemented")
+}
+func (UnimplementedPhysicsServer) SetPhysicsConfig(context.Context, *SetPhysicsConfigRequest) (*SetPhysicsConfigResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetPhysicsConfig not implemented")
+}
+func (UnimplementedPhysicsServer) UpdateObject(context.Context, *UpdateObjectRequest) (*UpdateObjectResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateObject not implemented")
+}
+func (UnimplementedPhysicsServer) StepSimulation(context.Context, *StepSimulationRequest) (*StepSimulationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StepSimulation not implemented")
+}
+func (UnimplementedPhysicsServer) GetObject(context.Context, *ObjectRequest) (*ObjectResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetObject not implemented")
 }
 func (UnimplementedPhysicsServer) mustEmbedUnimplementedPhysicsServer() {}
 func (UnimplementedPhysicsServer) testEmbeddedByValue()                 {}
@@ -210,6 +290,96 @@ func _Physics_GetObjectState_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Physics_GetPhysicsConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPhysicsConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PhysicsServer).GetPhysicsConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Physics_GetPhysicsConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PhysicsServer).GetPhysicsConfig(ctx, req.(*GetPhysicsConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Physics_SetPhysicsConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPhysicsConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PhysicsServer).SetPhysicsConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Physics_SetPhysicsConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PhysicsServer).SetPhysicsConfig(ctx, req.(*SetPhysicsConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Physics_UpdateObject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateObjectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PhysicsServer).UpdateObject(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Physics_UpdateObject_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PhysicsServer).UpdateObject(ctx, req.(*UpdateObjectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Physics_StepSimulation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StepSimulationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PhysicsServer).StepSimulation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Physics_StepSimulation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PhysicsServer).StepSimulation(ctx, req.(*StepSimulationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Physics_GetObject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ObjectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PhysicsServer).GetObject(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Physics_GetObject_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PhysicsServer).GetObject(ctx, req.(*ObjectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Physics_ServiceDesc is the grpc.ServiceDesc for Physics service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -232,6 +402,26 @@ var Physics_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetObjectState",
 			Handler:    _Physics_GetObjectState_Handler,
+		},
+		{
+			MethodName: "GetPhysicsConfig",
+			Handler:    _Physics_GetPhysicsConfig_Handler,
+		},
+		{
+			MethodName: "SetPhysicsConfig",
+			Handler:    _Physics_SetPhysicsConfig_Handler,
+		},
+		{
+			MethodName: "UpdateObject",
+			Handler:    _Physics_UpdateObject_Handler,
+		},
+		{
+			MethodName: "StepSimulation",
+			Handler:    _Physics_StepSimulation_Handler,
+		},
+		{
+			MethodName: "GetObject",
+			Handler:    _Physics_GetObject_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

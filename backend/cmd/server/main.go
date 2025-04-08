@@ -5,67 +5,165 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
-	"x-cells/backend/internal/transport"
-	"x-cells/backend/internal/transport/ws"
-	"x-cells/backend/internal/world"
+	"x-cells/backend/internal/adapter/in/ws"
+	physicsAdapter "x-cells/backend/internal/adapter/out/physics"
+	"x-cells/backend/internal/core/domain/entity"
+	"x-cells/backend/internal/core/domain/service"
 )
 
 func main() {
 	ctx := context.Background()
 
-	// Инициализация физического клиента
-	physicsClient, err := transport.NewPhysicsClient(ctx, "localhost:50051")
+	// Инициализация адаптера для физического движка
+	physicsPort, err := physicsAdapter.NewGRPCPhysicsAdapter(ctx, "localhost:50051")
 	if err != nil {
-		log.Fatalf("Failed to create physics client: %v", err)
+		log.Fatalf("Ошибка при создании адаптера физики: %v", err)
 	}
-	defer physicsClient.Close()
+	defer physicsPort.Close()
 
-	// Создаем менеджер игрового мира
-	worldManager := world.NewManager()
+	// Создаем сервис для работы с миром
+	worldService := service.NewWorldService(physicsPort)
 
-	// Создаем фабрику объектов
-	factory := world.NewFactory(worldManager, physicsClient)
+	// Создаем адаптер для WorldService
+	worldServiceAdapter := ws.NewWorldServiceAdapter(worldService)
 
-	// Создаем сериализатор
-	serializer := ws.NewWorldSerializer(worldManager)
+	// Создаем адаптер для WebSocket
+	wsAdapter := ws.NewWSAdapter(worldServiceAdapter)
 
 	// Создаем тестовые объекты
-	testObjectsCreator := world.NewTestObjectsCreator(factory)
-	testObjectsCreator.CreateAll(0.0) // Используем максимальную высоту 50.0
+	createTestObjects(ctx, worldService)
 
-	// Сервер для WS
-	wsServer := ws.NewWSServer(worldManager, physicsClient, serializer)
+	// Запускаем периодическую синхронизацию состояний объектов
+	go startSyncLoop(ctx, worldService, wsAdapter)
 
-	http.HandleFunc("/ws", wsServer.HandleWS)
+	// Настраиваем HTTP обработчики
+	http.HandleFunc("/ws", wsAdapter.HandleWS)
 
-	// Специальный обработчик для файлов Ammo.js
+	// Обработчик для файлов Ammo.js
 	http.HandleFunc("/ammo/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/javascript")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		// Добавляем заголовки для кэширования
 		w.Header().Set("Cache-Control", "public, max-age=31536000")
 		w.Header().Set("Vary", "Accept-Encoding")
 
-		// Путь к статическим файлам
 		staticDir := "../../../dist"
 		http.ServeFile(w, r, staticDir+r.URL.Path)
 	})
 
-	// Добавим проверку существования директории
+	// Проверяем существование директории со статическими файлами
 	staticDir := "../../../dist"
 	if _, err := os.Stat(staticDir); os.IsNotExist(err) {
-		log.Printf("Warning: Directory %s does not exist", staticDir)
+		log.Printf("Предупреждение: Директория %s не существует", staticDir)
 	}
 
-	// Обработчик для остальных статических файлов
+	// Обработчик для статических файлов
 	fs := http.FileServer(http.Dir(staticDir))
 	http.Handle("/", http.StripPrefix("/", fs))
 
-	log.Printf("Serving static files from: %s\n", staticDir)
-	log.Println("Server starting on :8080")
+	log.Printf("Сервер запущен на порту :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// startSyncLoop запускает периодическую синхронизацию состояний объектов
+func startSyncLoop(ctx context.Context, worldService *service.WorldService, wsAdapter *ws.WSAdapter) {
+	ticker := time.NewTicker(50 * time.Millisecond) // 20 раз в секунду
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			// Синхронизируем состояния объектов с физическим движком
+			worldService.SyncObjectStates(ctx)
+
+			// Отправляем обновления клиентам
+			wsAdapter.BroadcastUpdate()
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// createTestObjects создает тестовые объекты для демонстрации
+func createTestObjects(ctx context.Context, worldService *service.WorldService) {
+	// Пространство для тестовых объектов
+	const (
+		startHeight = 10.0 // Уменьшаем высоту, на которой создаются объекты, с 50 до 10
+	)
+
+	// Создаем базовую плоскость (террейн)
+	terrain := entity.NewTerrain("terrain_1", map[string]interface{}{
+		"position":     entity.Vector3{X: 0, Y: 0, Z: 0},
+		"width":        100.0,
+		"height":       2.0,
+		"depth":        100.0,
+		"physics_type": "both",
+		"scale_x":      3.0,
+		"scale_y":      3.0,
+		"scale_z":      3.0,
+		"min_height":   -1.0,
+		"max_height":   1.0,
+		"friction":     0.5,
+		"restitution":  0.3,
+	})
+	if err := worldService.CreateObject(ctx, terrain); err != nil {
+		log.Printf("Ошибка при создании террейна: %v", err)
+	}
+
+	// Создаем основного игрока (сфера с ID mainPlayer1)
+	mainPlayer := entity.NewSphere(
+		"mainPlayer1",
+		entity.Vector3{X: 0, Y: startHeight, Z: 0},
+		1.0,       // Радиус
+		5.0,       // Масса
+		"#ff00ff", // Пурпурный цвет
+	)
+	mainPlayer.Properties["physics_type"] = "both" // Физика и на клиенте, и на сервере
+	if err := worldService.CreateObject(ctx, mainPlayer); err != nil {
+		log.Printf("Ошибка при создании игрока mainPlayer1: %v", err)
+	}
+
+	// Создаем дополнительный шар (mainPlayer3) - обрабатывается только на сервере
+	player3 := entity.NewSphere(
+		"mainPlayer3",
+		entity.Vector3{X: 10, Y: startHeight, Z: 0},
+		1.0,       // Радиус
+		5.0,       // Масса
+		"#0000ff", // Синий цвет
+	)
+	player3.Properties["physics_type"] = "bullet" // Физика только на сервере
+	if err := worldService.CreateObject(ctx, player3); err != nil {
+		log.Printf("Ошибка при создании игрока mainPlayer3: %v", err)
+	}
+
+	// Создаем тестовый бокс
+	box := entity.NewBox(
+		"box_bullet_1",
+		entity.Vector3{X: 10, Y: startHeight, Z: 10},
+		2.0,       // Размер
+		5.0,       // Масса
+		"#ffff00", // Желтый цвет
+	)
+	box.Properties["physics_type"] = "bullet" // Физика только на сервере
+	if err := worldService.CreateObject(ctx, box); err != nil {
+		log.Printf("Ошибка при создании куба box_bullet_1: %v", err)
+	}
+
+	// Создаем дополнительный объект - только для клиента
+	clientSphere := entity.NewSphere(
+		"mainPlayer2",
+		entity.Vector3{X: -10, Y: startHeight, Z: 0},
+		1.0,       // Радиус
+		5.0,       // Масса
+		"#00ff00", // Зеленый цвет
+	)
+	clientSphere.Properties["physics_type"] = "ammo" // Физика только на клиенте
+	if err := worldService.CreateObject(ctx, clientSphere); err != nil {
+		log.Printf("Ошибка при создании игрока mainPlayer2: %v", err)
+	}
+
+	log.Printf("Тестовые объекты созданы успешно")
 }

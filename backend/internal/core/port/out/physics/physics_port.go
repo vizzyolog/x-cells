@@ -36,6 +36,7 @@ type CreateObjectRequest struct {
 	Size       float64
 	Mass       float64
 	Color      string
+	Properties map[string]interface{}
 }
 
 // CreateObjectResponse представляет ответ на создание объекта

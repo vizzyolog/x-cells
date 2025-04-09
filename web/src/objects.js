@@ -146,27 +146,74 @@ function createPhysicsBodyForTerrain(data) {
 }
 
 function createTerrainMesh(data) {
+    // Проверяем входные данные на NaN
     const w = data.heightmap_w || 64;
     const h = data.heightmap_h || 64;
+    const scaleX = isNaN(data.scale_x) ? 1.0 : data.scale_x;
+    const scaleZ = isNaN(data.scale_z) ? 1.0 : data.scale_z;
+    const scaleY = isNaN(data.scale_y) ? 1.0 : data.scale_y;
+    
+    console.log("[Terrain] Создание меша:", {
+        размеры: { w, h },
+        масштаб: { x: scaleX, y: scaleY, z: scaleZ }
+    });
+    
+    // Создаем геометрию
     const geo = new THREE.PlaneGeometry(
-        w * data.scale_x,
-        h * data.scale_z,
+        w * scaleX,
+        h * scaleZ,
         w - 1,
         h - 1
     );
     geo.rotateX(-Math.PI / 2);
 
+    // Проверяем и устанавливаем высоты
     if (data.height_data) {
         const verts = geo.attributes.position.array;
+        let hasNaN = false;
+        
         for (let i = 0; i < verts.length; i += 3) {
             const ix = (i / 3) % w;
             const iz = Math.floor(i / 3 / w);
-            verts[i + 1] = data.height_data[iz * w + ix] * data.scale_y;
+            const heightIndex = iz * w + ix;
+            
+            // Проверяем, что индекс находится в пределах массива
+            if (heightIndex < data.height_data.length) {
+                const height = data.height_data[heightIndex];
+                
+                // Проверяем на NaN и заменяем нулем если нужно
+                if (isNaN(height)) {
+                    verts[i + 1] = 0;
+                    hasNaN = true;
+                } else {
+                    verts[i + 1] = height * scaleY;
+                }
+            } else {
+                // Если индекс за пределами, устанавливаем высоту 0
+                verts[i + 1] = 0;
+            }
+            
+            // Дополнительная проверка на NaN в других координатах
+            if (isNaN(verts[i])) {
+                verts[i] = 0;
+                hasNaN = true;
+            }
+            if (isNaN(verts[i + 2])) {
+                verts[i + 2] = 0;
+                hasNaN = true;
+            }
         }
+        
+        if (hasNaN) {
+            console.warn("[Terrain] Обнаружены NaN значения в карте высот, они были заменены на 0");
+        }
+        
+        // Обновляем геометрию
+        geo.attributes.position.needsUpdate = true;
         geo.computeVertexNormals();
     }
 
-    terrainMesh = new THREE.Mesh( // Присваиваем mesh переменной terrainMesh
+    terrainMesh = new THREE.Mesh(
         geo,
         new THREE.MeshPhongMaterial({
             color: parseColor(data.color || "#0000ff"),

@@ -1,5 +1,9 @@
 package entity
 
+import (
+	"log"
+)
+
 // ObjectType представляет тип игрового объекта
 type ObjectType string
 
@@ -66,11 +70,12 @@ func NewBox(id string, position Vector3, size, mass float64, color string) *Game
 func NewTerrain(id string, properties map[string]interface{}) *GameObject {
 	obj := NewGameObject(id, TypeTerrain)
 	obj.Mass = 0 // Террейн имеет бесконечную массу (статичен)
-
 	// Копируем свойства
 	for k, v := range properties {
 		obj.Properties[k] = v
 	}
+
+	log.Printf("Создаем террейн: id=%s, тип=%s, масса=%f", id, TypeTerrain, 0.0)
 
 	return obj
 }

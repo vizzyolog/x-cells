@@ -38,6 +38,7 @@ func main() {
 	// Запускаем периодическую синхронизацию состояний объектов
 	go startSyncLoop(ctx, worldService, wsAdapter)
 
+	log.Println("started SyncLoop")
 	// Настраиваем HTTP обработчики
 	http.HandleFunc("/ws", wsAdapter.HandleWS)
 
@@ -91,24 +92,14 @@ func startSyncLoop(ctx context.Context, worldService *service.WorldService, wsAd
 func createTestObjects(ctx context.Context, worldService *service.WorldService) {
 	// Пространство для тестовых объектов
 	const (
-		startHeight = 10.0 // Уменьшаем высоту, на которой создаются объекты, с 50 до 10
+		startHeight = 10.0
 	)
 
-	// Создаем базовую плоскость (террейн)
-	terrain := entity.NewTerrain("terrain_1", map[string]interface{}{
-		"position":     entity.Vector3{X: 0, Y: 0, Z: 0},
-		"width":        100.0,
-		"height":       2.0,
-		"depth":        100.0,
-		"physics_type": "both",
-		"scale_x":      3.0,
-		"scale_y":      3.0,
-		"scale_z":      3.0,
-		"min_height":   -1.0,
-		"max_height":   1.0,
-		"friction":     0.5,
-		"restitution":  0.3,
-	})
+	terrain, err := worldService.CreateTerrain(ctx)
+	if err != nil {
+		log.Printf("Ошибка при создании террейна: %v", err)
+	}
+
 	if err := worldService.CreateObject(ctx, terrain); err != nil {
 		log.Printf("Ошибка при создании террейна: %v", err)
 	}

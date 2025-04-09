@@ -371,6 +371,7 @@ func (a *WSAdapter) HandleWS(w http.ResponseWriter, r *http.Request) {
 	a.clients[safeWriter] = true
 	a.clientsMu.Unlock()
 
+	log.Printf("Отправка начлаьных объектов клиенту! ")
 	// Отправляем клиенту все начальные объекты
 	a.BroadcastInitialObjects(safeWriter)
 
@@ -496,9 +497,9 @@ func (a *WSAdapter) BroadcastInitialObjects(client *SafeWriter) {
 			"type":        "create",
 			"id":          id,
 			"object_type": string(obj.ObjectType),
-			"x":           obj.Position.X,
-			"y":           obj.Position.Y,
-			"z":           obj.Position.Z,
+			"x":           safeValue(obj.Position.X, 0.0),
+			"y":           safeValue(obj.Position.Y, 0.0),
+			"z":           safeValue(obj.Position.Z, 0.0),
 			"color":       obj.Color,
 			"server_time": float64(time.Now().UnixNano()) / 1e9,
 		}
@@ -506,14 +507,14 @@ func (a *WSAdapter) BroadcastInitialObjects(client *SafeWriter) {
 		// Добавляем дополнительные параметры в зависимости от типа объекта
 		switch obj.ObjectType {
 		case TypeSphere:
-			objData["radius"] = obj.Radius
-			objData["mass"] = obj.Mass
+			objData["radius"] = safeValue(obj.Radius, 1.0)
+			objData["mass"] = safeValue(obj.Mass, 1.0)
 			spheres++
 		case TypeBox:
-			objData["width"] = obj.Width
-			objData["height"] = obj.Height
-			objData["depth"] = obj.Depth
-			objData["mass"] = obj.Mass
+			objData["width"] = safeValue(obj.Width, 1.0)
+			objData["height"] = safeValue(obj.Height, 1.0)
+			objData["depth"] = safeValue(obj.Depth, 1.0)
+			objData["mass"] = safeValue(obj.Mass, 1.0)
 			boxes++
 		case TypeTerrain:
 			terrains++

@@ -160,10 +160,50 @@ func (a *GRPCPhysicsAdapter) CreateObject(ctx context.Context, req *portPhysics.
 			},
 		}
 	case "terrain":
+		// Лучший подход - получать все из Properties:
+		terrainData := &pb.TerrainData{}
+
+		// Если Properties установлены, берем из них
+		if req.Properties != nil {
+			// Обрабатываем grid_width
+			if gw, ok := req.Properties["grid_width"].(int); ok {
+				terrainData.Width = int32(gw)
+			}
+			// Обрабатываем grid_height или depth
+			if gh, ok := req.Properties["grid_height"].(int); ok {
+				terrainData.Depth = int32(gh)
+			} else if d, ok := req.Properties["depth"].(int); ok {
+				terrainData.Depth = int32(d)
+			}
+			// Обрабатываем масштабы
+			if sx, ok := req.Properties["scale_x"].(float64); ok {
+				terrainData.ScaleX = float32(sx)
+			}
+			if sy, ok := req.Properties["scale_y"].(float64); ok {
+				terrainData.ScaleY = float32(sy)
+			}
+			if sz, ok := req.Properties["scale_z"].(float64); ok {
+				terrainData.ScaleZ = float32(sz)
+			}
+			// Обрабатываем диапазон высот
+			if mh, ok := req.Properties["min_height"].(float32); ok {
+				terrainData.MinHeight = mh
+			}
+			if mh, ok := req.Properties["max_height"].(float32); ok {
+				terrainData.MaxHeight = mh
+			}
+			// Обрабатываем heightmap, если есть
+			if hd, ok := req.Properties["height_data"].([]float32); ok && len(hd) > 0 {
+				terrainData.Heightmap = hd
+			}
+		} else {
+			log.Printf("Внимание: создаётся террейн без свойств, будут использованы значения по умолчанию")
+		}
+
 		shape = &pb.ShapeDescriptor{
 			Type: pb.ShapeDescriptor_TERRAIN,
 			Shape: &pb.ShapeDescriptor_Terrain{
-				Terrain: &pb.TerrainData{},
+				Terrain: terrainData,
 			},
 		}
 	default:

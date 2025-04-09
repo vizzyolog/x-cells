@@ -275,7 +275,7 @@ private:
         std::cout << "Terrain shape created successfully" << std::endl;
         std::cout << "  Local scaling: [" << scaleX << ", " << scaleY << ", " << scaleZ << "]" << std::endl;
         std::cout << "  Margin: 0.5" << std::endl;
-        
+
         return terrainShape;
     }
 
@@ -871,7 +871,7 @@ public:
             response->set_message("Объект с ID " + objectId + " уже существует");
             return Status::OK;
         }
-        
+
         // Проверяем наличие данных о форме
         if (!request->has_shape()) {
             response->set_status("Error");
@@ -910,7 +910,12 @@ public:
             
             shape = new btSphereShape(radius);
         }
-        // Удаляем проверку на capsule, так как его нет в proto-файле
+        else if (shapeData.has_terrain()) {
+            const auto& terrainData = shapeData.terrain();
+            shape = createTerrainShape(terrainData);
+            mass = 0.0f; // Переопределяем массу, даже если она указана в запросе
+            std::cout << "[C++] Создаем террейн из CreateObject" << std::endl;
+        }
         else {
             // Если тип формы не поддерживается, используем сферу по умолчанию
             shape = new btSphereShape(1.0f);
@@ -1068,8 +1073,8 @@ public:
     }
 
     Status ApplyImpulse(ServerContext* context, 
-                      const ApplyImpulseRequest* request,
-                      ApplyImpulseResponse* response) override {
+                        const ApplyImpulseRequest* request,
+                        ApplyImpulseResponse* response) override {
         std::string objectId = request->id();
         
         // Проверяем существование объекта
@@ -1078,7 +1083,7 @@ public:
             response->set_message("Объект с ID " + objectId + " не найден");
             return Status::OK;
         }
-        
+
         btRigidBody* body = objects[objectId];
         
         // Получаем импульс из запроса - всегда должен быть в запросе

@@ -134,20 +134,20 @@ export function stepPhysics(deltaTime) {
     if (!localPhysicsWorld) return;
 
     try {
-        // Проверяем корректность deltaTime
-        if (!deltaTime || isNaN(deltaTime) || deltaTime <= 0 || deltaTime > 1) {
-            deltaTime = 1/60; // Значение по умолчанию
-        }
-        
-        // Ограничиваем максимальный шаг для стабильности
-        const maxStep = 1/60; // Не больше 30мс для одного шага
-        const effectiveStep = Math.min(deltaTime, maxStep);
-        
-        // Используем фиксированный шаг и переменное количество подшагов для точности
-        const fixedStep = 1/120; // 120 Гц внутренние шаги
-        const maxSubSteps = Math.ceil(effectiveStep / fixedStep);
-        
-        // Выполняем шаг симуляции с заданными параметрами
+    // Проверяем корректность deltaTime
+    if (!deltaTime || isNaN(deltaTime) || deltaTime <= 0 || deltaTime > 1) {
+        deltaTime = 1/60; // Значение по умолчанию
+    }
+    
+    // Ограничиваем максимальный шаг для стабильности
+    const maxStep = 1/60; // Не больше 30мс для одного шага
+    const effectiveStep = Math.min(deltaTime, maxStep);
+    
+    // Используем фиксированный шаг и переменное количество подшагов для точности
+    const fixedStep = 1/120; // 120 Гц внутренние шаги
+    const maxSubSteps = Math.ceil(effectiveStep / fixedStep);
+    
+    // Выполняем шаг симуляции с заданными параметрами
         localPhysicsWorld.stepSimulation(effectiveStep, maxSubSteps, fixedStep);
 
         // Применяем ограничения скорости
@@ -577,8 +577,13 @@ function safeValue(value, fallback = 0) {
     return value;
 }
 
+// Функция для проверки, является ли объект новым
+function isNew(id) {
+    return !objectCreationTimes.has(id);
+}
+
 // Функция для обработки обновления объекта от сервера
-function receiveObjectUpdate(data) {
+export function receiveObjectUpdate(data) {
     const id = data.id;
     const obj = objects[id];
 
@@ -586,7 +591,7 @@ function receiveObjectUpdate(data) {
         console.warn(`[Physics] Получено обновление для несуществующего объекта: ${id}`);
         return;
     }
-
+    
     // Проверка на NaN значения во входных данных
     const position = data.position || {};
     const velocity = data.velocity || {};
@@ -635,52 +640,56 @@ function receiveObjectUpdate(data) {
         console.log(`[Physics] Новый объект ${id} создан в позиции:`, positionValid ? position : safePos);
     }
 
-    // Проверка и обновление физического тела
-    if (obj.body) {
+    // Сохраняем серверные данные в объекте для дальнейшего использования
+    obj.serverPos = positionValid ? { ...position } : { ...safePos };
+    obj.serverVelocity = velocityValid ? { ...velocity } : { ...safeVel };
+    
+    // Если у объекта есть mesh, обновляем его напрямую
+    if (obj.mesh) {
+        // Применяем позицию только если она не содержит NaN
+        if (positionValid) {
+            obj.mesh.position.set(position.x, position.y, position.z);
+        } else {
+            console.warn(`[Physics] NaN в позиции объекта ${id}, используем безопасное значение`);
+            obj.mesh.position.set(safePos.x, safePos.y, safePos.z);
+        }
+    }
+    
+    // Обновление физического тела, если оно есть
+    if (obj.body && window.Ammo) {
         // Обновление дополнительных данных
         if (data.active !== undefined) {
             obj.active = data.active;
         }
         
-        if (data.serverFrame !== undefined) {
-            obj.lastServerFrame = data.serverFrame;
-        }
-        
-        if (data.serverTime !== undefined) {
-            obj.lastServerTime = data.serverTime;
-        }
-        
-        const body = obj.body;
-        
-        // Применяем позицию только если она не содержит NaN
-        if (positionValid) {
-            body.position.set(position.x, position.y, position.z);
-            obj.serverPosition.copy(body.position);
-            obj.previousPosition.copy(body.position);
-        } else {
-            // Если позиция содержит NaN, логируем это и используем безопасное значение
-            console.warn(`[Physics] Обнаружены NaN значения в позиции объекта ${id}:`, 
-                {original: position, corrected: safePos});
-                
-            // Используем последнюю безопасную позицию
-            if (obj.lastSafePosition) {
-                body.position.set(safePos.x, safePos.y, safePos.z);
-                obj.serverPosition.copy(body.position);
+        try {
+            // Используем правильный API Ammo.js для обновления позиции
+            const transform = new window.Ammo.btTransform();
+                obj.body.getMotionState().getWorldTransform(transform);
+            
+            if (positionValid) {
+                transform.setOrigin(new window.Ammo.btVector3(position.x, position.y, position.z));
+            } else {
+                transform.setOrigin(new window.Ammo.btVector3(safePos.x, safePos.y, safePos.z));
             }
-        }
-        
-        // Применяем скорость только если она не содержит NaN
-        if (velocityValid) {
-            body.velocity.set(velocity.x, velocity.y, velocity.z);
-            obj.serverVelocity.copy(body.velocity);
-        } else {
-            // Если скорость содержит NaN, логируем это и используем безопасное значение
-            console.warn(`[Physics] Обнаружены NaN значения в скорости объекта ${id}:`, 
-                {original: velocity, corrected: safeVel});
-                
-            // Устанавливаем безопасную скорость
-            body.velocity.set(safeVel.x, safeVel.y, safeVel.z);
-            obj.serverVelocity.copy(body.velocity);
+            
+            obj.body.getMotionState().setWorldTransform(transform);
+            
+            // Для скорости используем setLinearVelocity
+            if (velocityValid) {
+                const vel = new window.Ammo.btVector3(velocity.x, velocity.y, velocity.z);
+                obj.body.setLinearVelocity(vel);
+                window.Ammo.destroy(vel);
+            } else {
+                const vel = new window.Ammo.btVector3(safeVel.x, safeVel.y, safeVel.z);
+                obj.body.setLinearVelocity(vel);
+                window.Ammo.destroy(vel);
+            }
+            
+            // Освобождаем ресурсы Ammo.js
+            window.Ammo.destroy(transform);
+        } catch (error) {
+            console.error(`[Physics] Ошибка при обновлении физического тела ${id}:`, error);
         }
     }
 }
@@ -723,4 +732,49 @@ export function updateObjectPositions(deltaTime) {
             updatePlayerDirection();
         }
     }
+}
+
+export function createTerrain(width, height, widthSegments, heightSegments) {
+    // Проверка входных параметров на NaN и другие недопустимые значения
+    width = isNaN(width) ? 1 : width;
+    height = isNaN(height) ? 1 : height;
+    widthSegments = isNaN(widthSegments) || widthSegments < 1 ? 1 : widthSegments;
+    heightSegments = isNaN(heightSegments) || heightSegments < 1 ? 1 : heightSegments;
+    
+    // Создаем геометрию только с валидными значениями
+    const geometry = new THREE.PlaneGeometry(width, height, widthSegments, heightSegments);
+    
+    // Проверяем, все ли позиции валидны
+    const positions = geometry.attributes.position.array;
+    let hasNaN = false;
+    
+    for (let i = 0; i < positions.length; i++) {
+        if (isNaN(positions[i])) {
+            positions[i] = 0;
+            hasNaN = true;
+        }
+    }
+    
+    if (hasNaN) {
+        console.warn("Обнаружены NaN значения в геометрии плоскости, заменены на 0");
+        geometry.attributes.position.needsUpdate = true;
+        geometry.computeBoundingSphere();
+    }
+    
+    return geometry;
+}
+
+// В функции обновления высот террейна
+export function updateTerrainHeight(terrain, heightData) {
+    const geometry = terrain.geometry;
+    const positions = geometry.attributes.position.array;
+    
+    for (let i = 0, j = 0; i < positions.length; i += 3, j++) {
+        // Проверка и исправление возможных NaN значений
+        const height = isNaN(heightData[j]) ? 0 : heightData[j];
+        positions[i + 1] = height; // Y-компонента
+    }
+    
+    geometry.attributes.position.needsUpdate = true;
+    geometry.computeBoundingSphere();
 }

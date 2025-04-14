@@ -298,7 +298,7 @@ function handleKeyDown(e) {
                 console.log(`[WS] Применяем импульс к сфере ${id} с physicsBy=${obj.physicsBy}`);
                 
                 // Вызываем функцию применения импульса с обновленными параметрами
-                applyImpulseToSphere(cmd, forceX, forceY, forceZ, objects, clientTime);
+                applyImpulseToSphere(id, { x: forceX, y: forceY, z: forceZ }, 1.0);
             }
         }
     } catch (error) {

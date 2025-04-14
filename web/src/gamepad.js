@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { getPhysicsConfig } from './network';
 
 // Константы для настройки поведения
-const DEBUG_MODE = false; // Включает/выключает отладочные элементы (arrowHelper)
+const DEBUG_MODE = true; // Включает/выключает отладочные элементы (arrowHelper)
 const MIN_ARROW_LENGTH = 10;
 const MAX_ARROW_LENGTH = 50;
 const SEND_INTERVAL = 50; // Уменьшаем интервал отправки до 50 мс для лучшей отзывчивости

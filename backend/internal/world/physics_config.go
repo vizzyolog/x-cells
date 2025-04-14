@@ -29,20 +29,20 @@ type PhysicsConfig struct {
 func DefaultPhysicsConfig() *PhysicsConfig {
 	return &PhysicsConfig{
 		// Настройки импульсов
-		BaseImpulse:        2.0, // Увеличено с 5.0 для более мощного движения
-		MaxImpulse:         10.0,
-		DistanceMultiplier: 0.7, // Увеличено с 0.5 для большего влияния дистанции
-		ImpulseMultiplier:  0.5, // Увеличено с 0.3 для усиления импульса
+		BaseImpulse:        1.0, // Увеличено с 5.0 для более мощного движения
+		MaxImpulse:         5.0,
+		DistanceMultiplier: 0.1, // Увеличено с 0.5 для большего влияния дистанции
+		ImpulseMultiplier:  1,   // Увеличено с 0.3 для усиления импульса
 
 		// Ограничения скорости
 		MaxSpeed: 80.0,
 
 		// Массы объектов
-		PlayerMass:     15.0,
+		PlayerMass:     35.0,
 		DefaultBoxMass: 5.0,
 
 		// Физические свойства
-		Restitution: 0.9,
+		Restitution: 0.1,
 		Friction:    0.05,
 
 		// Настройки гравитации

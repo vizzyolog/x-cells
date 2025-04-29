@@ -154,7 +154,7 @@ export function applySpeedLimits() {
             
             // Если скорость превышает максимальную, ограничиваем её
             if (speed > MAX_SPEED) {
-                console.warn("apply speed limit :", speed)
+               // console.warn("apply speed limit :", speed)
                 const scale = MAX_SPEED / speed;
                 const newVelocity = new window.Ammo.btVector3(
                     velocity.x() * scale,
@@ -454,7 +454,7 @@ export function updatePhysicsObjects(objects, deltaTime) {
                                 window.Ammo.destroy(zero);
                             } else if (obj.serverVelocity) {
                                 // Если есть рассчитанная серверная скорость, применяем её
-                                console.warn("apply server velocity :", obj.serverVelocity)
+                                //console.warn("apply server velocity :", obj.serverVelocity)
                                 const serverVel = new window.Ammo.btVector3(
                                     obj.serverVelocity.x,
                                     obj.serverVelocity.y,
@@ -629,7 +629,7 @@ export function receiveObjectUpdate(data) {
             // Стандартный формат с полем objects
             const objectIds = Object.keys(data.objects);
             if (objectIds.length === 0) {
-                console.warn("[Physics] Получен пустой список объектов");
+                console.error("[Physics] Получен пустой список объектов");
                 return;
             }
             
@@ -643,12 +643,12 @@ export function receiveObjectUpdate(data) {
             // Создаем временную структуру для совместимости
             const id = data.id;
             
-            console.log(`[Physics] Исходные данные с сервера для ${id}:`, {
-                id: data.id,
-                position: data.x !== undefined ? { x: data.x, y: data.y, z: data.z } : "не указана",
-                velocity: data.vx !== undefined ? { vx: data.vx, vy: data.vy, vz: data.vz } : "не указана",
-                raw: { ...data } // Копируем все поля объекта для диагностики
-            });
+            // console.log(`[Physics] Исходные данные с сервера для ${id}:`, {
+            //     id: data.id,
+            //     position: data.x !== undefined ? { x: data.x, y: data.y, z: data.z } : "не указана",
+            //     velocity: data.vx !== undefined ? { vx: data.vx, vy: data.vy, vz: data.vz } : "не указана",
+            //     raw: { ...data } // Копируем все поля объекта для диагностики
+            // });
             
             // Преобразуем данные в формат, ожидаемый функцией updateSingleObject
             const objectData = {
@@ -665,12 +665,12 @@ export function receiveObjectUpdate(data) {
             };
             
             // Добавляем отладочную информацию
-            console.log(`[Physics] Обработка данных в альтернативном формате для ${id}:`, data);
+            console.warn(`[Physics] Обработка данных в альтернативном формате для ${id}:`, data);
             
             // Обрабатываем объект
             updateSingleObject(id, objectData);
         } else {
-            console.warn("[Physics] Получены данные в неизвестном формате:", data);
+            console.error("[Physics] Получены данные в неизвестном формате:", data);
         }
     } catch (e) {
         console.error("[Physics] Ошибка при обработке обновления объектов:", e);
@@ -683,7 +683,7 @@ function updateSingleObject(id, objectData) {
     
     // Если объект еще не создан, пропускаем его
     if (!obj) {
-        console.warn(`[Physics] Получено обновление для несуществующего объекта: ${id}`);
+        console.error(`[Physics] Получено обновление для несуществующего объекта: ${id}`);
         return;
     }
     

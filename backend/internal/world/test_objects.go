@@ -143,24 +143,6 @@ func (t *TestObjectsCreator) CreateTestBox(terrainMaxHeight float32) {
 	if err := t.factory.CreateObjectBullet(boxBullet); err != nil {
 		log.Printf("[World] Ошибка при создании тестового куба в Bullet: %v", err)
 	}
-
-	// Создаем тестовый куб с физикой ammo (только на клиенте)
-	boxAmmo := NewBox(
-		"box_ammo_1",
-		Vector3{X: -10, Y: terrainMaxHeight + 50, Z: -10},
-		2.0,
-		2.0,
-		2.0,
-		5.0,
-		"#ffff00",
-	)
-	// Явно устанавливаем тип физики ammo
-	boxAmmo.PhysicsType = PhysicsTypeAmmo
-
-	// Создаем объект в клиентской физике
-	if err := t.factory.CreateObjectInAmmo(boxAmmo); err != nil {
-		log.Printf("[World] Ошибка при создании тестового куба в Ammo: %v", err)
-	}
 }
 
 // Генерация данных террейна с шумом Перлина для гор

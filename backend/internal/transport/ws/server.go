@@ -235,29 +235,13 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 		// Используем настройки из конфигурации физики
 		physicsConfig := world.GetPhysicsConfig()
 
-		// Подбираем силу импульса в зависимости от размера мира и желаемой физики
-		// Базовый импульс с учетом оптимальной динамики
-		minImpulse := physicsConfig.BaseImpulse
-
-		// Рассчитываем дополнительную силу импульса на основе расстояния
-		//distanceMultiplier := physicsConfig.DistanceMultiplier
-		// Увеличиваем множитель для дополнительного импульса и максимальное значение
-		//additionalImpulse := float32(math.Min(float64(direction.Distance), float64(physicsConfig.BaseImpulse)))
-
-		// Итоговая сила импульса
-		impulseStrength := physicsConfig.BaseImpulse
-
-		// Для дополнительного усиления умножаем на коэффициент
-		impulseStrength *= 1.5
-
 		// Создаем импульс в направлении X, Y и Z с учетом полученного вектора
-		impulse.X = direction.X * impulseStrength
-		impulse.Y = direction.Y * impulseStrength // Теперь используем Y составляющую
-		impulse.Z = direction.Z * impulseStrength
+		impulse.X = direction.X * physicsConfig.BaseImpulse
+		impulse.Y = direction.Y * physicsConfig.BaseImpulse
+		impulse.Z = direction.Z * physicsConfig.BaseImpulse
 
 		// Добавляем логирование для отладки
-		log.Printf("[Go] Рассчитанная сила импульса: базовая=%f, , итого=%f",
-			minImpulse, impulseStrength)
+		log.Printf("[Go] Импульсы: X=%f, Y=%f, Z=%f", impulse.X, impulse.Y, impulse.Z)
 
 	default:
 		log.Printf("[Go] Неизвестная команда: %s", cmdMsg.Cmd)

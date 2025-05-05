@@ -122,59 +122,10 @@ export function stepPhysics(deltaTime) {
         // Выполняем шаг симуляции с заданными параметрами
         localPhysicsWorld.stepSimulation(effectiveStep, maxSubSteps, fixedStep);
 
-        // Применяем ограничения скорости
-        applySpeedLimits();
-
         // Обновляем физические объекты
         updatePhysicsObjects(objects, deltaTime);
     } catch (error) {
         console.error('Ошибка при обновлении физики:', error);
-    }
-}
-
-// Функция для ограничения скорости в Ammo.js
-export function applySpeedLimits() {
-    try {
-        if (!objects || !window.Ammo || !window.PHYSICS_CONFIG) return;
-        
-        // Используем максимальную скорость из конфигурации
-        const MAX_SPEED = window.PHYSICS_CONFIG.MaxSpeed || 80.0;
-        
-        for (let id in objects) {
-            const obj = objects[id];
-            if (!obj || !obj.body) continue;
-            
-            // Пропускаем статические объекты или террейн
-            if (obj.object_type === "terrain") continue;
-            
-            // Получаем текущую линейную скорость
-            const velocity = obj.body.getLinearVelocity();
-            const speedSq = velocity.x() * velocity.x() + velocity.y() * velocity.y() + velocity.z() * velocity.z();
-            const speed = Math.sqrt(speedSq);
-            
-            // Если скорость превышает максимальную, ограничиваем её
-            if (speed > MAX_SPEED) {
-               // console.warn("apply speed limit :", speed)
-                const scale = MAX_SPEED / speed;
-                const newVelocity = new window.Ammo.btVector3(
-                    velocity.x() * scale,
-                    velocity.y() * scale,
-                    velocity.z() * scale
-                );
-                obj.body.setLinearVelocity(newVelocity);
-                window.Ammo.destroy(newVelocity);
-            }
-            
-            // Если это игрок, обновляем отображение скорости
-            if (id.startsWith('mainPlayer1')) {
-                const mass = obj.mass || 5.0;
-                updatePlayerSpeedDisplay(speed, MAX_SPEED, mass);
-            }
-            
-            window.Ammo.destroy(velocity);
-        }
-    } catch (e) {
-        console.error("Ошибка при обработке скорости:", e);
     }
 }
 
@@ -230,7 +181,7 @@ export function updatePhysicsObjects(objects, deltaTime) {
                           (Date.now() - objectCreationTimes.get(id) < NEW_OBJECT_TIMEOUT);
         
         // Пропускаем обработку террейна (он статичен)
-        if (obj.object_type === "terrain") continue;
+        if (obj.object_type === "terrain_1") continue;
         
         const currentTime = Date.now();
 
@@ -251,7 +202,9 @@ export function updatePhysicsObjects(objects, deltaTime) {
         switch (obj.physicsBy) {
             case "ammo":
                 // Обновление только по физике Ammo.js
-                if (obj.body && obj.object_type !== "terrain") {
+                console.warn("ammo physics")
+                if (obj.body && obj.object_type !== "terrain_1") {
+                    console.warn("object with ammo physics")
                     const trans = new window.Ammo.btTransform();
                     obj.body.getMotionState().getWorldTransform(trans);
 
@@ -266,11 +219,6 @@ export function updatePhysicsObjects(objects, deltaTime) {
 
                     obj.mesh.position.set(locX, locY, locZ);
                     obj.mesh.quaternion.set(qx, qy, qz, qw);
-                    
-                    // Сохраняем для диагностики
-                    if (id === "ammo_shadow") {
-                        ammoShadowPos = { x: locX, y: locY, z: locZ };
-                    }
                 }
                 break;
                 
@@ -415,7 +363,7 @@ export function updatePhysicsObjects(objects, deltaTime) {
                         
                         // Для больших расхождений или новых объектов применяем телепортацию
                         if (distance > speedBasedError || isNewObject && distance > 5.0) {
-                            console.warn("apply teleportation :", distance)
+                            //console.warn("apply teleportation :", distance)
                             
                             // Телепортируем объект
                             transform.setOrigin(new window.Ammo.btVector3(
@@ -445,7 +393,7 @@ export function updatePhysicsObjects(objects, deltaTime) {
                             // Сбрасываем скорость только при существенных расхождениях
                             if (distance > speedBasedError * 1.5) {
                                 const timeSinceLastUpdate = Date.now() - obj.lastServerUpdate;
-                                console.warn(`[Reset Velocity] Объект ${id}: distance=${distance.toFixed(2)}, threshold=${speedBasedError.toFixed(2)}, timeSinceUpdate=${timeSinceLastUpdate}ms`);
+                                //console.warn(`[Reset Velocity] Объект ${id}: distance=${distance.toFixed(2)}, threshold=${speedBasedError.toFixed(2)}, timeSinceUpdate=${timeSinceLastUpdate}ms`);
                                 
                                 // При очень больших расхождениях полностью сбрасываем скорость
                                 const zero = new window.Ammo.btVector3(0, 0, 0);
@@ -464,7 +412,7 @@ export function updatePhysicsObjects(objects, deltaTime) {
                                 window.Ammo.destroy(serverVel);
                             } else {
                                 // Иначе уменьшаем текущую скорость
-                                console.warn("apply damped velocity :", velocity)
+                               //console.warn("apply damped velocity :", velocity)
                                 const dampedVelocity = new window.Ammo.btVector3(
                                     velocity.x() * 0.5,
                                     velocity.y() * 0.5,
@@ -490,7 +438,7 @@ export function updatePhysicsObjects(objects, deltaTime) {
                             const correctionY = obj.serverPos.y * smoothFactor + currentY * (1 - smoothFactor);
                             const correctionZ = obj.serverPos.z * smoothFactor + currentZ * (1 - smoothFactor);
                             const correctionVector = new window.Ammo.btVector3(correctionX, correctionY, correctionZ);
-                            console.warn("smooth correction", correctionVector)
+                            //console.warn("smooth correction", correctionVector)
                             
                             transform.setOrigin(new window.Ammo.btVector3(correctionX, correctionY, correctionZ));
                             obj.body.getMotionState().setWorldTransform(transform);
@@ -665,7 +613,7 @@ export function receiveObjectUpdate(data) {
             };
             
             // Добавляем отладочную информацию
-            console.warn(`[Physics] Обработка данных в альтернативном формате для ${id}:`, data);
+            //console.warn(`[Physics] Обработка данных в альтернативном формате для ${id}:`, data);
             
             // Обрабатываем объект
             updateSingleObject(id, objectData);
@@ -913,18 +861,18 @@ export function applyPhysicsConfig(config) {
                 
                 if (obj.body) {
                     // Сохраняем текущее состояние движения
-                    // const velocity = obj.body.getLinearVelocity();
+                    const velocity = obj.body.getLinearVelocity();
                     
                     // // Создаем новую информацию о инерции
-                    // const shape = obj.body.getCollisionShape();
-                    // const localInertia = new Ammo.btVector3(0, 0, 0);
-                    // shape.calculateLocalInertia(mass, localInertia);
+                    const shape = obj.body.getCollisionShape();
+                    const localInertia = new Ammo.btVector3(0, 0, 0);
+                    shape.calculateLocalInertia(mass, localInertia);
                     
                     // // Устанавливаем новую массу
-                    // obj.body.setMassProps(mass, localInertia);
+                    obj.body.setMassProps(mass, localInertia);
                     
                     // // Восстанавливаем скорость
-                    // obj.body.setLinearVelocity(velocity);
+                    obj.body.setLinearVelocity(velocity);
                     
                     // Активируем объект для обновления физики
                     obj.body.activate(true);

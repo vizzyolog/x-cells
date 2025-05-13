@@ -122,9 +122,6 @@ export function stepPhysics(deltaTime) {
         // Выполняем шаг симуляции с заданными параметрами
         localPhysicsWorld.stepSimulation(effectiveStep, maxSubSteps, fixedStep);
 
-        // Применяем ограничения скорости
-        applySpeedLimits();
-
         // Обновляем физические объекты
         updatePhysicsObjects(objects, deltaTime);
     } catch (error) {
@@ -138,31 +135,26 @@ export function applySpeedLimits() {
         if (!objects || !window.Ammo) return;
         
         // Только для вывода максимальной скорости в интерфейсе
-        const MAX_DISPLAY_SPEED = 1000.0;
+        
         
         for (let id in objects) {
             const obj = objects[id];
             if (!obj || !obj.body) continue;
             
             // Пропускаем статические объекты или террейн
-            if (obj.object_type === "terrain") continue;
+            if (obj.object_type === "terrain_1") continue;
             
             // Получаем текущую линейную скорость
             const velocity = obj.body.getLinearVelocity();
             const speed = velocity.length();
             
-            // Если это игрок, обновляем отображение скорости
-            if (id.startsWith('mainPlayer')) {
-                // Используем значение массы из данных объекта
-                const mass = obj.mass || 5.0; // Если масса не определена, используем значение по умолчанию
-                updatePlayerSpeedDisplay(speed, MAX_DISPLAY_SPEED, mass);
-            }
-            
-            // Вместо предупреждений просто логируем скорость для объектов с высокой скоростью
-            if (speed > 500 && Math.random() < 0.01) { // Только 1% сообщений для уменьшения спама
-                console.log(`[Physics] Текущая скорость ${id}: ${speed.toFixed(2)} м/с`);
-            }
-            
+            // // Если это игрок, обновляем отображение скорости
+            // if (id.startsWith('mainPlayer')) {
+            //     // Используем значение массы из данных объекта
+            //     const mass = obj.mass || 5.0; // Если масса не определена, используем значение по умолчанию
+            //     
+            // }
+                    
             window.Ammo.destroy(velocity);
         }
     } catch (e) {
@@ -242,11 +234,6 @@ export function updatePhysicsObjects(objects, deltaTime) {
 
                     obj.mesh.position.set(locX, locY, locZ);
                     obj.mesh.quaternion.set(qx, qy, qz, qw);
-                    
-                    // Сохраняем для диагностики
-                    if (id === "ammo_shadow") {
-                        ammoShadowPos = { x: locX, y: locY, z: locZ };
-                    }
                 }
                 break;
                 
@@ -329,31 +316,31 @@ export function updatePhysicsObjects(objects, deltaTime) {
                     const isMovingFast = speedSq > 4.0; // Если скорость больше 2 м/с
                     
                     const dx = obj.serverPos.x - currentX;
-                    const dy = obj.serverPos.y - currentY;
+                    //const dy = obj.serverPos.y - currentY;
                     const dz = obj.serverPos.z - currentZ;
                     
                     // Вычисляем расстояние
-                    const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                    const distance = Math.sqrt(dx*dx + dz*dz);
                     
                       // Экстраполяция
                     if (obj.serverVelocity) {
                         // Вычисляем прогнозируемую позицию на основе серверной скорости
                         const predictedX = obj.serverPos.x + obj.serverVelocity.x * deltaTime;
-                        const predictedY = obj.serverPos.y + obj.serverVelocity.y * deltaTime;
+                        //const predictedY = obj.serverPos.y + obj.serverVelocity.y * deltaTime;
                         const predictedZ = obj.serverPos.z + obj.serverVelocity.z * deltaTime;
 
                         // Вычисляем разницу между прогнозируемой и текущей позициями
                         const dxPredicted = predictedX - currentX;
-                        const dyPredicted = predictedY - currentY;
+                        //const dyPredicted = predictedY - currentY;
                         const dzPredicted = predictedZ - currentZ;
 
                         // Вычисляем расстояние
-                        const distancePredicted = Math.sqrt(dxPredicted*dxPredicted + dyPredicted*dyPredicted + dzPredicted*dzPredicted);
+                        const distancePredicted = Math.sqrt(dxPredicted*dxPredicted + dzPredicted*dzPredicted);
 
                         // Используем прогнозируемую позицию, если она ближе к текущей
                         if (distancePredicted < distance) {
                             obj.serverPos.x = predictedX;
-                            obj.serverPos.y = predictedY;
+                            //obj.serverPos.y = predictedY;
                             obj.serverPos.z = predictedZ;
                         }
                     }
@@ -662,46 +649,6 @@ function updateSingleObject(id, objectData) {
     }
 }
 
-// В файле physics.js добавляем функцию для создания случайной силы при столкновении
-// TODO: Реализация отложена на будущее
-/*
-export function addCollisionBounceEffect() {
-    try {
-        if (typeof Ammo === 'undefined') return;
-        
-        // Добавляем обработчик столкновений, который будет добавлять случайную силу
-        // Эта функция может быть вызвана в начале симуляции
-        window.addEventListener('collisions', (e) => {
-            const { body1, body2 } = e.detail;
-            
-            // Добавляем случайный импульс при столкновении
-            if (body1 && body1.getType() === Ammo.btRigidBody) {
-                const randomImpulse = new Ammo.btVector3(
-                    (Math.random() - 0.5) * 15, // Увеличиваем с 10 до 15
-                    Math.random() * 8,          // Увеличиваем с 5 до 8
-                    (Math.random() - 0.5) * 15  // Увеличиваем с 10 до 15
-                );
-                body1.applyCentralImpulse(randomImpulse);
-                Ammo.destroy(randomImpulse);
-            }
-            
-            if (body2 && body2.getType() === Ammo.btRigidBody) {
-                const randomImpulse = new Ammo.btVector3(
-                    (Math.random() - 0.5) * 15, // Увеличиваем с 10 до 15
-                    Math.random() * 8,          // Увеличиваем с 5 до 8
-                    (Math.random() - 0.5) * 15  // Увеличиваем с 10 до 15
-                );
-                body2.applyCentralImpulse(randomImpulse);
-                Ammo.destroy(randomImpulse);
-            }
-        });
-        
-        console.log("Добавлен эффект отскока при столкновениях");
-    } catch (error) {
-        console.error('Ошибка при добавлении эффекта отскока:', error);
-    }
-}
-*/
 
 // Функция для применения конфигурации физики
 export function applyPhysicsConfig(config) {

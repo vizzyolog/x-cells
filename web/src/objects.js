@@ -22,6 +22,7 @@ export function createMeshAndBodyForObject(data) {
     let mesh = null, body = null;
 
     try {
+        // Создаем меш в любом случае
         switch (type) {
             case "terrain":
                 mesh = createTerrainMesh(data);
@@ -29,14 +30,20 @@ export function createMeshAndBodyForObject(data) {
                 break;
             case "sphere":
                 mesh = createSphereMesh(data);
-                body = createPhysicsBodyForSphere(data);
+                // Создаем физическое тело только если physics_by равен "ammo"
+                if (data.physics_by === "ammo") {
+                    body = createPhysicsBodyForSphere(data);
+                }
                 break;
             case "tree":
                 mesh = createTreeMesh(data);
                 break;
             case "box":
                 mesh = createBoxMesh(data);
-                body = createPhysicsBodyForBox(data);
+                // Создаем физическое тело только если physics_by равен "ammo"
+                if (data.physics_by === "ammo") {
+                    body = createPhysicsBodyForBox(data);
+                }
                 break;
             default:
                 console.warn(`Unknown object type: ${type}`);
@@ -56,7 +63,8 @@ export function createMeshAndBodyForObject(data) {
             mesh, 
             body, 
             object_type: type, 
-            mass: data.mass || 0 // Сохраняем массу из данных сервера
+            mass: data.mass || 0, // Сохраняем массу из данных сервера
+            physicsBy: data.physics_by || "both" // Сохраняем тип физики
         };
         
         return result;
@@ -331,11 +339,13 @@ function createPhysicsBodyForBox(data) {
             return null;
         }
 
-        const radius = data.radius || 1;
+        const width = data.width || 1;
+        const height = data.height || 1;
+        const depth = data.depth || 1;
         const mass = data.mass || 1;
 
         // Создаем все Ammo объекты через window.Ammo
-        const shape = new window.Ammo.btSphereShape(radius);
+        const shape = new window.Ammo.btBoxShape(new window.Ammo.btVector3(width/2, height/2, depth/2));
         const transform = new window.Ammo.btTransform();
         transform.setIdentity();
         transform.setOrigin(new window.Ammo.btVector3(data.x || 0, data.y || 0, data.z || 0));
@@ -352,26 +362,30 @@ function createPhysicsBodyForBox(data) {
         );
         const body = new window.Ammo.btRigidBody(rbInfo);
         
-        // // Настраиваем физические свойства
-        // body.setFriction(0.5);
-        // body.setRollingFriction(0.1);
-        // body.setRestitution(0.2); // Немного уменьшаем упругость для стабильности
-        // body.setDamping(0.01, 0.01); // Небольшое линейное и угловое затухание
+        // Настраиваем физические свойства
+        body.setFriction(0.5);
+        body.setRollingFriction(0.1);
+        body.setRestitution(0.2); // Немного уменьшаем упругость для стабильности
+        body.setDamping(0.01, 0.01); // Небольшое линейное и угловое затухание
         
         // Включаем CCD для предотвращения проваливания сквозь террейн
-        // Для меньшего масштаба (100 вместо 15000) эти значения более оптимальны
-        // body.setCcdMotionThreshold(radius * 0.8); // Увеличиваем порог для активации CCD
-        // body.setCcdSweptSphereRadius(radius * 0.7); // Радиус сферы для CCD
+        const maxDimension = Math.max(width, height, depth);
+        body.setCcdMotionThreshold(maxDimension * 0.8); // Увеличиваем порог для активации CCD
+        body.setCcdSweptSphereRadius(maxDimension * 0.7); // Радиус сферы для CCD
         
         // Отключаем деактивацию
         body.setActivationState(4); // DISABLE_DEACTIVATION
 
         // Добавляем тело в физический мир
-        const SPHERE_GROUP = 2;
-        localPhysicsWorld.addRigidBody(body, SPHERE_GROUP, -1); // Сферы сталкиваются со всеми
+        const BOX_GROUP = 3;
+        localPhysicsWorld.addRigidBody(body, BOX_GROUP, -1); // Коробки сталкиваются со всеми
         
-        console.log("[Sphere] Физическое тело создано:", {
-            radius,
+        console.log("[Box] Физическое тело создано:", {
+            dimensions: {
+                width,
+                height,
+                depth
+            },
             mass,
             position: {
                 x: data.x || 0,
@@ -379,8 +393,8 @@ function createPhysicsBodyForBox(data) {
                 z: data.z || 0
             },
             ccd: {
-                motionThreshold: radius * 0.8,
-                sweptSphereRadius: radius * 0.7
+                motionThreshold: maxDimension * 0.8,
+                sweptSphereRadius: maxDimension * 0.7
             },
             friction: 0.5,
             restitution: 0.2

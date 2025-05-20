@@ -133,7 +133,7 @@ func (f *Factory) CreateObjectBullet(obj *WorldObject) error {
 }
 
 // NewSphere создает новый сферический объект
-func NewSphere(id string, position Vector3, radius, mass float32, color string) *WorldObject {
+func NewSphere(id string, position Vector3, radius, mass float32, color string, physicsType PhysicsType) *WorldObject {
 	return &WorldObject{
 		Object: &Object{
 			ID:       id,
@@ -148,14 +148,14 @@ func NewSphere(id string, position Vector3, radius, mass float32, color string) 
 				},
 			},
 		},
-		PhysicsType: PhysicsTypeBullet,
+		PhysicsType: physicsType,
 		Mass:        mass,
 		Color:       color,
 	}
 }
 
 // NewBox создает новый коробчатый объект
-func NewBox(id string, position Vector3, width, height, depth, mass float32, color string) *WorldObject {
+func NewBox(id string, position Vector3, width, height, depth, mass float32, color string, physicsType PhysicsType) *WorldObject {
 	return &WorldObject{
 		Object: &Object{
 			ID:       id,
@@ -172,7 +172,7 @@ func NewBox(id string, position Vector3, width, height, depth, mass float32, col
 				},
 			},
 		},
-		PhysicsType: PhysicsTypeBullet,
+		PhysicsType: physicsType,
 		Mass:        mass,
 		Color:       color,
 	}

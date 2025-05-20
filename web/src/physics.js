@@ -223,6 +223,14 @@ export function updatePhysicsObjects(objects, deltaTime) {
                     
                     // Освобождаем ресурсы
                     window.Ammo.destroy(trans);
+                } else if (obj.serverPos) {
+                    // Если нет физического тела, но есть серверные данные,
+                    // просто обновляем позицию меша
+                    obj.mesh.position.set(
+                        obj.serverPos.x,
+                        obj.serverPos.y,
+                        obj.serverPos.z
+                    );
                 }
                 break;
                 

@@ -107,6 +107,21 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 		log.Printf("[World] Ошибка при создании тестового шара ammo: %v", err)
 	}
 
+	// Создаем тестовый шар с физикой ammo (обрабатывается только клиентом)
+	sphereAmmo2 := NewSphere(
+		"mainPlayer22",
+		Vector3{X: -20, Y: terrainMaxHeight + 50, Z: 0},
+		1.0,
+		5.0,
+		"#00ffff",
+	)
+	// Явно устанавливаем тип физики ammo
+	sphereAmmo.PhysicsType = PhysicsTypeAmmo
+
+	if err := t.factory.CreateObjectInAmmo(sphereAmmo2); err != nil {
+		log.Printf("[World] Ошибка при создании тестового шара ammo: %v", err)
+	}
+
 	// Создаем тестовый шар с физикой bullet (обрабатывается только сервером)
 	sphereBullet := NewSphere(
 		"mainPlayer3",

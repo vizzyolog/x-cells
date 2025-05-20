@@ -299,7 +299,7 @@ function handleKeyDown(e) {
                 
                 // Вызываем функцию применения импульса с обновленными параметрами
                 applyImpulseToSphere(id, { x: forceX, y: forceY, z: forceZ }, 1.0);
-                //applyImpulseToSphere(cmd, forceX, forceY, forceZ, objects, clientTime);
+               // applyImpulseToSphere(cmd, forceX, forceY, forceZ, objects, clientTime);
             }
         }
     } catch (error) {

@@ -128,7 +128,7 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
                     }
                     
                     // Логируем для отладки
-                    console.log(`[Gamepad] Отправка импульса с клавиатуры: направление (${direction.x.toFixed(2)}, ${direction.y.toFixed(2)}, ${direction.z.toFixed(2)}), сила ${keyForce}`);
+                    //console.log(`[Gamepad] Отправка импульса с клавиатуры: направление (${direction.x.toFixed(2)}, ${direction.y.toFixed(2)}, ${direction.z.toFixed(2)}), сила ${keyForce}`);
                     
                     // Отправляем импульс на сервер
                     sendDirectionToServer(direction, keyForce, socketRef);

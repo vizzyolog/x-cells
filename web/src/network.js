@@ -48,7 +48,7 @@ function updateServerTimeOffset(serverTime) {
     // Обновляем отображение времени
     updateTimeDisplay();
     
-    console.log(`[Time] Синхронизация времени: смещение = ${medianOffset} мс`);
+    //console.log(`[Time] Синхронизация времени: смещение = ${medianOffset} мс`);
 }
 
 // Добавляем функцию для обновления отображения пинга на экране
@@ -96,13 +96,13 @@ function handleMessage(data) {
     try {
         // Если сообщение содержит временную метку сервера, обновляем смещение
         if (data.server_time) {
-            console.log("data.server_time: ", data.server_time)
+            //console.log("data.server_time: ", data.server_time)
             updateServerTimeOffset(data.server_time);
         }
 
         // Обрабатываем конфигурацию физики
         if (data.type === "physics_config") {
-            console.log("[Network] Получена конфигурация физики:", data.config);
+            //console.log("[Network] Получена конфигурация физики:", data.config);
             physicsConfig = data.config;
             
             // Применяем конфигурацию к физике на клиенте
@@ -128,7 +128,7 @@ function handleMessage(data) {
             // Обновляем отображение пинга на экране
             updatePingDisplay(avgPing);
             
-            console.log(`[WS] Получен pong, RTT: ${roundTripTime}ms, Средний RTT: ${avgPing.toFixed(2)}ms`);
+            //console.log(`[WS] Получен pong, RTT: ${roundTripTime}ms, Средний RTT: ${avgPing.toFixed(2)}ms`);
             
             // Обновляем смещение серверного времени с учетом RTT/2 (предполагаем симметричную задержку)
             updateServerTimeOffset(data.server_time + roundTripTime / 2);
@@ -140,8 +140,8 @@ function handleMessage(data) {
             // Проверяем, содержит ли update сообщение данные объекта
             if (data.objects || data.id) {
                 // Отладочная информация
-                console.log('[WS] Получено update сообщение:', 
-                    data.id ? `id: ${data.id}` : `Количество объектов: ${Object.keys(data.objects).length}`);
+                //console.log('[WS] Получено update сообщение:', 
+                //    data.id ? `id: ${data.id}` : `Количество объектов: ${Object.keys(data.objects).length}`);
                 
                 // Передаем данные в функцию обработки обновлений
                 receiveObjectUpdate(data);
@@ -150,9 +150,9 @@ function handleMessage(data) {
             }
         } 
         else if (data.type === "create" && data.id) {
-            console.log("[WS] Получено сообщение о создании объекта:", data.id, "в координатах:", 
-                { x: data.x || 0, y: data.y || 0, z: data.z || 0 },
-                "время сервера:", data.server_time);
+            //console.log("[WS] Получено сообщение о создании объекта:", data.id, "в координатах:", 
+            //    { x: data.x || 0, y: data.y || 0, z: data.z || 0 },
+            //    "время сервера:", data.server_time, "тип физики:", data.physics_by);
             
             // Создаем объект и добавляем его в список объектов
             const obj = createMeshAndBodyForObject(data);
@@ -174,14 +174,14 @@ function handleMessage(data) {
                 // Запоминаем точное время создания объекта для дальнейшей синхронизации
                 obj.createdAt = Date.now();
                 
-                console.log(`[WS] Объект ${data.id} создан с physicsBy: ${obj.physicsBy}`);
+                //console.log(`[WS] Объект ${data.id} создан с physicsBy: ${obj.physicsBy}`);
                 
                 // Если физический мир активен, активируем тело
                 if (obj.body && localPhysicsWorld) {
                     if (!physicsStarted) {
                         // Добавляем в список ожидающих, если физика еще не запущена
                         pendingObjects.push(data.id);
-                        console.log(`[WS] Объект ${data.id} добавлен в список ожидания - физика еще не активна`);
+                        //console.log(`[WS] Объект ${data.id} добавлен в список ожидания - физика еще не активна`);
                     } else {
                         // Активируем тело сразу
                         obj.body.activate(true);
@@ -204,8 +204,8 @@ function handleMessage(data) {
                                 obj.body.getMotionState().setWorldTransform(transform);
                                 obj.mesh.position.set(obj.serverPos.x, obj.serverPos.y, obj.serverPos.z);
                                 
-                                console.log(`[WS] Объект ${data.id} телепортирован в исходные координаты:`, 
-                                    { x: obj.serverPos.x, y: obj.serverPos.y, z: obj.serverPos.z });
+                                //console.log(`[WS] Объект ${data.id} телепортирован в исходные координаты:`, 
+                                //    { x: obj.serverPos.x, y: obj.serverPos.y, z: obj.serverPos.z });
                                 
                                 // Очищаем память
                                 window.Ammo.destroy(transform);
@@ -236,7 +236,7 @@ function handleMessage(data) {
                 // Обновляем отображение пинга на экране
                 updatePingDisplay(avgPing);
                 
-                console.log(`[WS] Подтверждение команды: ${data.cmd}, RTT: ${roundTripTime}ms, Средний RTT: ${avgPing.toFixed(2)}ms`);
+                //console.log(`[WS] Подтверждение команды: ${data.cmd}, RTT: ${roundTripTime}ms, Средний RTT: ${avgPing.toFixed(2)}ms`);
                 
                 // Обновляем смещение серверного времени с учетом RTT/2 (предполагаем симметричную задержку)
                 updateServerTimeOffset(data.server_time + roundTripTime / 2);
@@ -287,7 +287,7 @@ function handleKeyDown(e) {
             client_time: clientTime // Добавляем временную метку клиента
         };
         
-        console.log(`[WS] Отправка команды: ${cmd}, время клиента: ${clientTime}`);
+        //console.log(`[WS] Отправка команды: ${cmd}, время клиента: ${clientTime}`);
         ws.send(JSON.stringify(commandObj));
         
         // Применяем импульс локально ко всем объектам сфер
@@ -295,7 +295,7 @@ function handleKeyDown(e) {
             const obj = objects[id];
             if (obj && obj.body && obj.mesh && obj.mesh.geometry && 
                 obj.mesh.geometry.type === "SphereGeometry") {
-                console.log(`[WS] Применяем импульс к сфере ${id} с physicsBy=${obj.physicsBy}`);
+                //console.log(`[WS] Применяем импульс к сфере ${id} с physicsBy=${obj.physicsBy}`);
                 
                 // Вызываем функцию применения импульса с обновленными параметрами
                 applyImpulseToSphere(id, { x: forceX, y: forceY, z: forceZ }, 1.0);
@@ -411,7 +411,7 @@ function sendPing() {
     
     try {
         ws.send(JSON.stringify(pingObj));
-        console.log(`[WS] Отправлен ping для синхронизации времени, время клиента: ${clientTime}`);
+        //console.log(`[WS] Отправлен ping для синхронизации времени, время клиента: ${clientTime}`);
     } catch (error) {
         console.error("[WS] Ошибка отправки ping:", error);
     }

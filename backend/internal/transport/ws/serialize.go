@@ -70,6 +70,9 @@ func (s *WorldSerializer) SendCreateForAllObjects(wsWriter *SafeWriter) error {
 			log.Printf("[Serialize] Ошибка отправки объекта %s: %v", obj.ID, err)
 			return err
 		}
+		if msg["object_type"] == "sphere" {
+			log.Println("Отправлен объект", msg)
+		}
 	}
 
 	return nil

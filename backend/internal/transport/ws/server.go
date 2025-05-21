@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	DefaultUpdateInterval = 150 * time.Millisecond // Интервал отправки обновлений
+	DefaultUpdateInterval = 300 * time.Millisecond // Интервал отправки обновлений
 	DefaultPingInterval   = 2 * time.Second        // Интервал отправки пингов
 )
 

@@ -30,20 +30,14 @@ export function createMeshAndBodyForObject(data) {
                 break;
             case "sphere":
                 mesh = createSphereMesh(data);
-                // Создаем физическое тело только если physics_by равен "ammo"
-                if (data.physics_by === "ammo") {
-                    body = createPhysicsBodyForSphere(data);
-                }
+                body = createPhysicsBodyForSphere(data);
                 break;
             case "tree":
                 mesh = createTreeMesh(data);
                 break;
             case "box":
                 mesh = createBoxMesh(data);
-                // Создаем физическое тело только если physics_by равен "ammo"
-                if (data.physics_by === "ammo") {
-                    body = createPhysicsBodyForBox(data);
-                }
+                body = createPhysicsBodyForBox(data);
                 break;
             default:
                 console.warn(`Unknown object type: ${type}`);
@@ -64,8 +58,21 @@ export function createMeshAndBodyForObject(data) {
             body, 
             object_type: type, 
             mass: data.mass || 0, // Сохраняем массу из данных сервера
-            physicsBy: data.physics_by || "both" // Сохраняем тип физики
+            physicsBy: data.physics_by
         };
+        
+        console.warn("[Objects] Создан объект:", {
+            id: data.id,
+            type: data.object_type,
+            physics_by: data.physics_by,
+            mass: data.mass,
+            position: { x: data.x, y: data.y, z: data.z },
+            radius: data.radius,
+            color: data.color,
+            server_time: data.server_time,
+            hasBody: !!body,
+            hasMesh: !!mesh
+        });
         
         return result;
     } catch (error) {
@@ -252,9 +259,9 @@ function createPhysicsBodyForSphere(data) {
             return null;
         }
 
-        const radius = data.radius || 1;
-        // Увеличиваем массу в три раза для лучшей физики
-        const mass = data.mass || 15.0; // Увеличиваем с 5.0 до 15.0
+        const radius = data.radius;
+       
+        const mass = data.mass;
 
         // Создаем все Ammo объекты через window.Ammo
         const shape = new window.Ammo.btSphereShape(radius);

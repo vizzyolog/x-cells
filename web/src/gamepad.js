@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { getPhysicsConfig } from './network';
+import { getPhysicsConfig, checkConnectionState } from './network';
+import { applyImpulseToSphere } from './physics';
 
 // Константы для настройки поведения
 const DEBUG_MODE = true; // Включает/выключает отладочные элементы (arrowHelper)
@@ -35,6 +36,10 @@ let terrainMeshRef = null;
 let playerMeshRef = null;
 let cameraRef = null;
 let socketRef = null;
+
+// Добавляем переменные для дебаунса
+let lastLocalImpulseTime = 0;
+const LOCAL_IMPULSE_INTERVAL = 50; // мс, должно соответствовать серверному интервалу
 
 export function getArrowDirection() {
     return lastSentPosition.clone();
@@ -122,9 +127,9 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
                     // Используем множитель импульса из конфигурации, если она доступна
                     let keyForce = KEY_FORCE;
                     if (physicsConfig && physicsConfig.impulse_multiplier) {
-                        keyForce = (physicsConfig.base_impulse || 0.5) * 8.0; // Увеличиваем в 8 раз базовый импульс
+                        keyForce = (physicsConfig.base_impulse); // Увеличиваем в 8 раз базовый импульс
                     } else {
-                        keyForce = KEY_FORCE * 4.0; // Или увеличиваем в 4 раза значение по умолчанию
+                        keyForce = KEY_FORCE; // Или увеличиваем в 4 раза значение по умолчанию
                     }
                     
                     // Логируем для отладки
@@ -224,24 +229,68 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
     }
 
     function sendDirectionToServer(direction, distance, socket) {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            // Для мышиного управления увеличиваем дистанцию, которая используется как сила импульса
-            const enhancedDistance = Math.min(distance * 1.5, 100); // Увеличиваем на 50%, но не больше 100
+        // Проверяем состояние соединения
+        let useServerPhysics = checkConnectionState();
+        
+        // Получаем конфигурацию физики
+        const physicsConfig = getPhysicsConfig();
+        if (!physicsConfig) {
+            console.error('[Gamepad] Конфигурация физики не инициализирована');
+            return;
+        }
+
+        // Для мышиного управления увеличиваем дистанцию, которая используется как сила импульса
+        const enhancedDistance = Math.min(distance * 1.5, 100); // Увеличиваем на 50%, но не больше 100
+        
+        // Вычисляем силу импульса
+        const force = {
+            x: direction.x * enhancedDistance,
+            y: direction.y * enhancedDistance,
+            z: direction.z * enhancedDistance
+        };
+
+        // Отправляем команду на сервер, если соединение активно
+        if (useServerPhysics && socket && socket.readyState === WebSocket.OPEN) {
+            try {
+                socket.send(JSON.stringify({
+                    type: 'cmd',
+                    cmd: 'MOUSE_VECTOR',
+                    data: {
+                        x: direction.x,
+                        y: direction.y,
+                        z: direction.z,
+                        distance: enhancedDistance
+                    },
+                    client_time: Date.now(),
+                    object_id: 'mainPlayer1'
+                }));
+            } catch (error) {
+                console.error('[Gamepad] Ошибка отправки команды на сервер:', error);
+                useServerPhysics = false;
+            }
+        }
+        
+        // Если не используем серверную физику, применяем импульс локально
+        if (!useServerPhysics) {
+            const currentTime = Date.now();
+            const timeSinceLastImpulse = currentTime - lastLocalImpulseTime;
             
-            socket.send(JSON.stringify({
-                type: 'cmd',
-                cmd: 'MOUSE_VECTOR',
-                data: {
-                    x: direction.x,
-                    y: direction.y, // Теперь отправляем реальное значение Y
-                    z: direction.z,
-                    distance: enhancedDistance // Используем увеличенное значение дистанции
-                },
-                client_time: Date.now(),
-                object_id: 'mainPlayer1'
-            }));
-        } else {
-            console.error('WebSocket не подключен');
+            // Применяем импульс только если прошло достаточно времени с последнего применения
+            if (timeSinceLastImpulse >= LOCAL_IMPULSE_INTERVAL) {
+                try {
+                    applyImpulseToSphere('mainPlayer1', force);
+                    console.log('[Gamepad] Применен локальный импульс:', {
+                        direction: { x: direction.x, y: direction.y, z: direction.z },
+                        force: force,
+                        interval: timeSinceLastImpulse
+                    });
+                    
+                    // Обновляем время последнего применения импульса
+                    lastLocalImpulseTime = currentTime;
+                } catch (error) {
+                    console.error('[Gamepad] Ошибка применения локального импульса:', error);
+                }
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -16,8 +17,8 @@ import (
 )
 
 const (
-	DefaultUpdateInterval = 300 * time.Millisecond // Интервал отправки обновлений
-	DefaultPingInterval   = 2 * time.Second        // Интервал отправки пингов
+	DefaultUpdateInterval = 10 * time.Millisecond // Интервал отправки обновлений
+	DefaultPingInterval   = 2 * time.Second       // Интервал отправки пингов
 )
 
 type ObjectManager interface {
@@ -39,6 +40,31 @@ type WSServer struct {
 	connectionHandlers []func(conn *SafeWriter)
 	pingInterval       time.Duration
 	serializer         *WorldSerializer
+	controllerStates   map[string]*ControllerState // id -> controller state
+	impulseInterval    time.Duration               // интервал применения импульса
+	mu                 sync.RWMutex                // мьютекс для безопасного доступа к состояниям
+}
+
+// Структура для хранения данных контроллера
+type ControllerState struct {
+	LastUpdate time.Time
+	Force      struct {
+		X float32
+		Y float32
+		Z float32
+	}
+}
+
+// Структура команды от клиента
+type Command struct {
+	ID         string
+	Type       string
+	ClientTime int64
+	Force      struct {
+		X float32
+		Y float32
+		Z float32
+	}
 }
 
 // NewWSServer создает новый экземпляр WebSocket сервера
@@ -53,6 +79,9 @@ func NewWSServer(objectManager ObjectManager, physics transport.IPhysicsClient, 
 		connectionHandlers: []func(conn *SafeWriter){},
 		pingInterval:       DefaultPingInterval,
 		serializer:         serialaizer,
+		controllerStates:   make(map[string]*ControllerState),
+		impulseInterval:    time.Millisecond * 50, // 50ms = 20 раз в секунду
+		mu:                 sync.RWMutex{},
 	}
 
 	// Регистрируем стандартные обработчики
@@ -196,6 +225,51 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 		return ErrInvalidMessage
 	}
 
+	// Обновляем состояние контроллера
+	s.mu.Lock()
+	if state, exists := s.controllerStates[cmdMsg.ObjectID]; exists {
+		state.LastUpdate = time.Now()
+
+		// Получаем данные о силе из Data
+		if forceData, ok := cmdMsg.Data.(map[string]interface{}); ok {
+			if x, ok := forceData["x"].(float64); ok {
+				state.Force.X = float32(x)
+			}
+			if y, ok := forceData["y"].(float64); ok {
+				state.Force.Y = float32(y)
+			}
+			if z, ok := forceData["z"].(float64); ok {
+				state.Force.Z = float32(z)
+			}
+		}
+	} else {
+		// Создаем новое состояние контроллера
+		state := &ControllerState{
+			LastUpdate: time.Now(),
+			Force: struct {
+				X float32
+				Y float32
+				Z float32
+			}{},
+		}
+
+		// Получаем данные о силе из Data
+		if forceData, ok := cmdMsg.Data.(map[string]interface{}); ok {
+			if x, ok := forceData["x"].(float64); ok {
+				state.Force.X = float32(x)
+			}
+			if y, ok := forceData["y"].(float64); ok {
+				state.Force.Y = float32(y)
+			}
+			if z, ok := forceData["z"].(float64); ok {
+				state.Force.Z = float32(z)
+			}
+		}
+
+		s.controllerStates[cmdMsg.ObjectID] = state
+	}
+	s.mu.Unlock()
+
 	var impulse pb.Vector3
 	switch cmdMsg.Cmd {
 	case "LEFT":
@@ -321,9 +395,17 @@ func (s *WSServer) startClientStreaming(wsWriter *SafeWriter) {
 	ticker := time.NewTicker(DefaultUpdateInterval)
 	defer ticker.Stop()
 
+	// Буфер для накопления обновлений
+	updates := make(map[string]map[string]interface{})
+
 	for range ticker.C {
 		// Получаем список всех объектов из мира
 		worldObjects := s.objectManager.GetAllWorldObjects()
+
+		// Очищаем буфер обновлений
+		for k := range updates {
+			delete(updates, k)
+		}
 
 		// Для каждого объекта с физикой bullet или both получаем состояние
 		for _, obj := range worldObjects {
@@ -344,6 +426,13 @@ func (s *WSServer) startClientStreaming(wsWriter *SafeWriter) {
 
 			// Проверяем, что получен ответ с состоянием
 			if resp.Status != "OK" || resp.State == nil {
+				log.Printf("[Go] Пропускаем объект %s: нет состояния", obj.ID)
+				continue
+			}
+
+			// Проверяем наличие всех необходимых данных
+			if resp.State.Position == nil || resp.State.Rotation == nil || resp.State.LinearVelocity == nil {
+				log.Printf("[Go] Пропускаем объект %s: неполные данные", obj.ID)
 				continue
 			}
 
@@ -361,44 +450,46 @@ func (s *WSServer) startClientStreaming(wsWriter *SafeWriter) {
 				W: resp.State.Rotation.W,
 			}
 
-			// Отправляем обновление позиции и вращения клиенту
-			if err := s.serializer.SendUpdateForObject(wsWriter, obj.ID, position, rotation); err != nil {
-				log.Printf("[Go] Ошибка отправки обновления для %s: %v", obj.ID, err)
+			// Создаем единое сообщение с позицией, вращением и скоростью
+			update := map[string]interface{}{
+				"type":        "update",
+				"id":          obj.ID,
+				"hasPosition": true,
+				"hasVelocity": true,
+				"position": map[string]float32{
+					"x": position.X,
+					"y": position.Y,
+					"z": position.Z,
+				},
+				"rotation": map[string]float32{
+					"x": rotation.X,
+					"y": rotation.Y,
+					"z": rotation.Z,
+					"w": rotation.W,
+				},
+				"velocity": map[string]float32{
+					"x": resp.State.LinearVelocity.X,
+					"y": resp.State.LinearVelocity.Y,
+					"z": resp.State.LinearVelocity.Z,
+				},
 			}
 
-			// Дополнительно отправляем скорость, если она есть в ответе от сервера
-			if resp.State.LinearVelocity != nil {
-				velocity := map[string]interface{}{
-					"type":             "update",
-					"id":               obj.ID,
-					"server_time":      GetCurrentServerTime(),
-					"server_send_time": time.Now().UnixMilli(),
-					"objects": map[string]interface{}{
-						obj.ID: map[string]interface{}{
-							"velocity": map[string]float32{
-								"x": resp.State.LinearVelocity.X,
-								"y": resp.State.LinearVelocity.Y,
-								"z": resp.State.LinearVelocity.Z,
-							},
-						},
-					},
-				}
+			// Добавляем обновление в буфер
+			updates[obj.ID] = update
+		}
 
-				// Вычисляем общую скорость для логирования
-				speed := float32(math.Sqrt(float64(
-					resp.State.LinearVelocity.X*resp.State.LinearVelocity.X +
-						resp.State.LinearVelocity.Y*resp.State.LinearVelocity.Y +
-						resp.State.LinearVelocity.Z*resp.State.LinearVelocity.Z)))
+		// Отправляем все накопленные обновления одним сообщением
+		if len(updates) > 0 {
+			batchUpdate := map[string]interface{}{
+				"type":    "batch_update",
+				"updates": updates,
+				"time":    time.Now().UnixNano() / 1e6, // текущее время в миллисекундах
+			}
 
-				// Логируем отправку скорости только для основного игрока (чтобы не загрязнять лог)
-				if obj.ID == "mainPlayer1" {
-					log.Printf("[Go] Отправка данных о скорости %s: (%f, %f, %f), скорость: %f м/с",
-						obj.ID, resp.State.LinearVelocity.X, resp.State.LinearVelocity.Y, resp.State.LinearVelocity.Z, speed)
-				}
-
-				if err := wsWriter.WriteJSON(velocity); err != nil {
-					log.Printf("[Go] Ошибка отправки скорости для %s: %v", obj.ID, err)
-				}
+			if err := wsWriter.WriteJSON(batchUpdate); err != nil {
+				log.Printf("[Go] Ошибка отправки пакетного обновления: %v", err)
+			} else {
+				log.Printf("[Go] Отправлено пакетное обновление для %d объектов", len(updates))
 			}
 		}
 	}
@@ -417,5 +508,45 @@ func (s *WSServer) sendPhysicsConfig(conn *SafeWriter) {
 		log.Printf("[Go] Ошибка отправки конфигурации физики: %v", err)
 	} else {
 		log.Printf("[Go] Конфигурация физики отправлена клиенту")
+	}
+}
+
+// Запуск сервера
+func (s *WSServer) Start() {
+	// Запускаем горутину для регулярного применения импульсов
+	go s.applyImpulses()
+
+	// Запускаем HTTP сервер
+	http.HandleFunc("/ws", s.HandleWS)
+	log.Printf("[Go] WebSocket сервер запущен на /ws")
+}
+
+// Регулярное применение импульсов
+func (s *WSServer) applyImpulses() {
+	ticker := time.NewTicker(s.impulseInterval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		s.mu.RLock()
+		for id, state := range s.controllerStates {
+			// Вычисляем силу импульса с учетом интервала
+			impulseForce := float32(s.impulseInterval.Milliseconds()) / 1000.0 // конвертируем в секунды
+
+			// Создаем запрос на применение импульса
+			req := &pb.ApplyImpulseRequest{
+				Id: id,
+				Impulse: &pb.Vector3{
+					X: state.Force.X * impulseForce,
+					Y: state.Force.Y * impulseForce,
+					Z: state.Force.Z * impulseForce,
+				},
+			}
+
+			// Применяем импульс
+			if _, err := s.physics.ApplyImpulse(context.Background(), req); err != nil {
+				log.Printf("[Go] Ошибка применения импульса к объекту %s: %v", id, err)
+			}
+		}
+		s.mu.RUnlock()
 	}
 }

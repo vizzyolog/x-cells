@@ -65,4 +65,18 @@
             display: flex;
             flex-direction: column;
             gap: 5px;
-        }</style><script src="https://cdn.jsdelivr.net/npm/ammo.js@latest/builds/ammo.wasm.js"></script></head><body><div id="ping-display">Пинг: -- мс</div><div id="network-info"><div id="server-time">Время сервера: --</div><div id="time-offset">Смещение: -- мс</div></div><div id="player-info"><div id="player-speed">Скорость: -- м/с</div><div id="player-max-speed">Макс. скорость: -- м/с</div><div id="player-mass">Масса: -- кг</div></div><script defer="defer" src="bundle.c8895d9de70ff3625408.js"></script><script defer="defer" src="bundle.8eca96851dfb80385831.js"></script></body></html>
+        }
+        /* Стили для индикатора физики */
+        #physics-mode-display {
+            position: absolute;
+            top: 10px;
+            left: 690px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 1000;
+            transition: background-color 0.3s ease;
+        }</style><script src="https://cdn.jsdelivr.net/npm/ammo.js@latest/builds/ammo.wasm.js"></script></head><body><div id="ping-display">Пинг: -- мс</div><div id="network-info"><div id="server-time">Время сервера: --</div><div id="time-offset">Смещение: -- мс</div></div><div id="player-info"><div id="player-speed">Скорость: -- м/с</div><div id="player-max-speed">Макс. скорость: -- м/с</div><div id="player-mass">Масса: -- кг</div></div><div id="physics-mode-display">Физика: --</div><script defer="defer" src="bundle.c8895d9de70ff3625408.js"></script><script defer="defer" src="bundle.73b322c68955c85006b1.js"></script></body></html>

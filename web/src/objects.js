@@ -1,7 +1,13 @@
 // objects.js
 import * as THREE from 'three';
 import { scene } from './scene';
-import { localPhysicsWorld } from './physics';
+import { 
+    getPhysicsWorld,
+    applyPhysicsConfig,
+    receiveObjectUpdate,
+    stepPhysics,
+    updatePhysicsObjects
+} from './physics';
 import { gameStateManager } from './gamestatemanager';
 import { EventEmitter } from 'events';
 
@@ -86,13 +92,14 @@ export function createMeshAndBodyForObject(data) {
 }
 
 function createPhysicsBodyForTerrain(data) {
-    if (typeof Ammo === 'undefined') {
-        console.error('Ammo.js не инициализирован');
+    const physicsWorld = getPhysicsWorld();
+    if (!physicsWorld) {
+        console.error("[Objects] Физический мир не инициализирован");
         return null;
     }
 
-    if (!localPhysicsWorld) {
-        console.error('Физический мир не инициализирован');
+    if (typeof Ammo === 'undefined') {
+        console.error('Ammo.js не инициализирован');
         return null;
     }
 
@@ -148,7 +155,7 @@ function createPhysicsBodyForTerrain(data) {
 
     // Добавляем тело в физический мир
     const TERRAIN_GROUP = 1;
-    localPhysicsWorld.addRigidBody(body, TERRAIN_GROUP, -1); // Террейн сталкивается со всеми
+    physicsWorld.addRigidBody(body, TERRAIN_GROUP, -1); // Террейн сталкивается со всеми
 
     // Очистка памяти
     Ammo.destroy(rbInfo);
@@ -242,13 +249,19 @@ function createBoxMesh(data) {
 }
 
 function createPhysicsBodyForSphere(data) {
+    const physicsWorld = getPhysicsWorld();
+    if (!physicsWorld) {
+        console.error("[Objects] Физический мир не инициализирован");
+        return null;
+    }
+
     try {
         if (typeof Ammo === 'undefined') {
             console.error('Ammo.js не инициализирован');
             return null;
         }
 
-        if (!localPhysicsWorld) {
+        if (!physicsWorld) {
             console.error('Физический мир не инициализирован');
             return null;
         }
@@ -305,7 +318,7 @@ function createPhysicsBodyForSphere(data) {
 
         // Добавляем тело в физический мир
         const SPHERE_GROUP = 2;
-        localPhysicsWorld.addRigidBody(body, SPHERE_GROUP, -1); // Сферы сталкиваются со всеми
+        physicsWorld.addRigidBody(body, SPHERE_GROUP, -1); // Сферы сталкиваются со всеми
         
         console.log("[Sphere] Физическое тело создано:", {
             radius,
@@ -335,13 +348,19 @@ function createPhysicsBodyForSphere(data) {
 }
 
 function createPhysicsBodyForBox(data) {
+    const physicsWorld = getPhysicsWorld();
+    if (!physicsWorld) {
+        console.error("[Objects] Физический мир не инициализирован");
+        return null;
+    }
+
     try {
         if (typeof Ammo === 'undefined') {
             console.error('Ammo.js не инициализирован');
             return null;
         }
 
-        if (!localPhysicsWorld) {
+        if (!physicsWorld) {
             console.error('Физический мир не инициализирован');
             return null;
         }
@@ -385,7 +404,7 @@ function createPhysicsBodyForBox(data) {
 
         // Добавляем тело в физический мир
         const BOX_GROUP = 3;
-        localPhysicsWorld.addRigidBody(body, BOX_GROUP, -1); // Коробки сталкиваются со всеми
+        physicsWorld.addRigidBody(body, BOX_GROUP, -1); // Коробки сталкиваются со всеми
         
         console.log("[Box] Физическое тело создано:", {
             dimensions: {
@@ -473,7 +492,8 @@ export function createTestSphere() {
 
     // Добавляем тело в физический мир
     const SPHERE_GROUP = 2;
-    localPhysicsWorld.addRigidBody(body, SPHERE_GROUP, -1); // Тестовая сфера сталкивается со всеми
+    const physicsWorld = getPhysicsWorld();
+    physicsWorld.addRigidBody(body, SPHERE_GROUP, -1); // Тестовая сфера сталкивается со всеми
 
     // Очистка памяти
     Ammo.destroy(rbInfo);

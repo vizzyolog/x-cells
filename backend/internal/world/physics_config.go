@@ -29,9 +29,9 @@ type PhysicsConfig struct {
 func DefaultPhysicsConfig() *PhysicsConfig {
 	return &PhysicsConfig{
 		// Настройки импульсов
-		BaseImpulse:        10.0,
-		MaxImpulse:         5.0,
-		DistanceMultiplier: 0.5,
+		BaseImpulse:        30.0,
+		MaxImpulse:         60.0,
+		DistanceMultiplier: 1,
 		ImpulseMultiplier:  1,
 
 		// Ограничения скорости

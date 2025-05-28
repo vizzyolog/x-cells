@@ -6,10 +6,11 @@ import { applyImpulseToSphere } from './physics';
 const DEBUG_MODE = true; // Включает/выключает отладочные элементы (arrowHelper)
 const MIN_ARROW_LENGTH = 10;
 const MAX_ARROW_LENGTH = 50;
-const SEND_INTERVAL = 50; // Уменьшаем интервал отправки до 50 мс для лучшей отзывчивости
+const SEND_INTERVAL = 50; // Синхронизируем с серверным интервалом
 const ARROW_HEIGHT_OFFSET = 2; // Смещение стрелки по высоте над игроком
-const RAY_UPDATE_INTERVAL = 50; // Интервал обновления луча при движении камеры (мс)
+const RAY_UPDATE_INTERVAL = 50; // Синхронизируем с серверным интервалом
 const KEY_FORCE = 2.0; // Значительно увеличиваем силу импульса для клавиатурного управления
+const DEADZONE = 0.1; // Мертвая зона для аналоговых стиков
 
 let arrowHelper;
 let lastSentPosition = new THREE.Vector3();
@@ -39,7 +40,7 @@ let socketRef = null;
 
 // Добавляем переменные для дебаунса
 let lastLocalImpulseTime = 0;
-const LOCAL_IMPULSE_INTERVAL = 50; // мс, должно соответствовать серверному интервалу
+const LOCAL_IMPULSE_INTERVAL = 50; // Синхронизируем с серверным интервалом
 
 export function getArrowDirection() {
     return lastSentPosition.clone();

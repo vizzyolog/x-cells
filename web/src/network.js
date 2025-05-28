@@ -28,11 +28,11 @@ let currentPing = 0;
 
 // Добавляем переменную для отслеживания времени последнего обновления
 let lastUpdateTime = Date.now();
-const UPDATE_TIMEOUT = 50; 
+const UPDATE_TIMEOUT = 100; // Синхронизируем с сервером (2x server interval)
 
 // Добавляем переменные для дебаунса
 let lastKeyboardImpulseTime = 0;
-const KEYBOARD_IMPULSE_INTERVAL = 10; // мс, должно соответствовать серверному интервалу
+const KEYBOARD_IMPULSE_INTERVAL = 50; // Синхронизируем с серверным интервалом
 
 // Добавляем переменную для отслеживания состояния вкладки
 let isTabActive = true;
@@ -89,8 +89,19 @@ function updatePingDisplay(pingValue) {
             pingDisplay.style.backgroundColor = 'rgba(0, 128, 0, 0.5)'; // Зеленый - хороший пинг
         } else if (pingValue < 100) {
             pingDisplay.style.backgroundColor = 'rgba(255, 165, 0, 0.5)'; // Оранжевый - средний пинг
+        } else if (pingValue < 200) {
+            pingDisplay.style.backgroundColor = 'rgba(255, 69, 0, 0.5)'; // Красно-оранжевый - плохой пинг
         } else {
-            pingDisplay.style.backgroundColor = 'rgba(255, 0, 0, 0.5)'; // Красный - плохой пинг
+            pingDisplay.style.backgroundColor = 'rgba(255, 0, 0, 0.5)'; // Красный - очень плохой пинг
+        }
+        
+        // Добавляем индикацию высокой задержки
+        if (pingValue > 150) {
+            pingDisplay.style.border = '2px solid red';
+            pingDisplay.style.animation = 'blink 1s infinite';
+        } else {
+            pingDisplay.style.border = 'none';
+            pingDisplay.style.animation = 'none';
         }
     }
 }
@@ -124,6 +135,11 @@ export function checkConnectionState() {
     const currentTime = Date.now();
     const timeSinceLastUpdate = currentTime - lastUpdateTime;
     
+    // Проверяем состояние WebSocket соединения
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return false;
+    }
+    
     // Если прошло больше UPDATE_TIMEOUT мс с последнего обновления, переключаемся на локальную физику
     if (timeSinceLastUpdate > UPDATE_TIMEOUT) {
         // Логируем только если это не связано с неактивной вкладкой
@@ -133,15 +149,10 @@ export function checkConnectionState() {
         return false;
     }
     
-    // Проверяем состояние WebSocket соединения
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-        console.log("[WS] Соединение с сервером отсутствует, используем локальную физику");
-        return false;
-    }
-    
     return true;
 }
 
+// Обработка сообщений с сервера
 function handleMessage(data) {      
     try {
         // Если сообщение содержит временную метку сервера, обновляем смещение
@@ -174,11 +185,14 @@ function handleMessage(data) {
             return;
         }
 
+        // Обновляем время последнего обновления для всех типов обновлений объектов
+        if (data.type === "batch_update" || data.type === "update" || 
+            (data.id && data.position) || (data.id && data.velocity)) {
+            lastUpdateTime = Date.now();
+        }
+        
         // Обрабатываем пакетные обновления
         if (data.type === "batch_update") {
-            // Обновляем время последнего обновления
-            lastUpdateTime = Date.now();
-            
             // Проверяем наличие обновлений
             if (!data.updates || typeof data.updates !== 'object') {
                 console.warn('[WS] Получен пустой пакет обновлений');
@@ -188,13 +202,11 @@ function handleMessage(data) {
             // Обрабатываем каждое обновление в пакете
             for (const [id, update] of Object.entries(data.updates)) {
                 if (!update || typeof update !== 'object') {
-                    console.warn(`[WS] Пропускаем некорректное обновление для ${id}`);
                     continue;
                 }
 
                 // Проверяем наличие необходимых данных
-                if (!update.position || !update.velocity) {
-                    console.warn(`[WS] Пропускаем неполное обновление для ${id}`);
+                if (!update.position && !update.velocity) {
                     continue;
                 }
 
@@ -209,23 +221,12 @@ function handleMessage(data) {
         }
 
         if (data.type === "update") {
-            // Обновляем время последнего обновления
-            lastUpdateTime = Date.now();
-            
             // Проверяем, содержит ли update сообщение данные объекта
             if (data.objects || data.id) {
-                console.log('[WS] Получено update сообщение:', 
-                   data.id ? `id: ${data.id}` : `Количество объектов: ${Object.keys(data.objects).length}`);
                 receiveObjectUpdate(data);
-            } else {
-                console.warn('[WS] Получено update сообщение без объектов:', data);
             }
         } 
         else if (data.type === "create" && data.id) {
-            //console.log("[WS] Получено сообщение о создании объекта:", data.id, "в координатах:", 
-            //    { x: data.x || 0, y: data.y || 0, z: data.z || 0 },
-            //    "время сервера:", data.server_time, "тип физики:", data.physics_by);
-            
             // Создаем объект и добавляем его в список объектов
             const obj = createMeshAndBodyForObject(data);
             
@@ -246,8 +247,7 @@ function handleMessage(data) {
                 
                 // Запоминаем точное время создания объекта для дальнейшей синхронизации
                 obj.createdAt = Date.now();
-                
-                console.log(`[WS] Объект ${data.id} создан с physicsBy: ${obj.physicsBy}`);
+                obj.lastServerUpdate = Date.now(); // Инициализируем время последнего обновления
                 
                 // Если физический мир активен, активируем тело
                 const physicsWorld = getPhysicsWorld();
@@ -255,7 +255,6 @@ function handleMessage(data) {
                     if (!physicsStarted) {
                         // Добавляем в список ожидающих, если физика еще не запущена
                         pendingObjects.push(data.id);
-                        //console.log(`[WS] Объект ${data.id} добавлен в список ожидания - физика еще не активна`);
                     } else {
                         // Активируем тело сразу
                         obj.body.activate(true);
@@ -277,9 +276,6 @@ function handleMessage(data) {
                                 ));
                                 obj.body.getMotionState().setWorldTransform(transform);
                                 obj.mesh.position.set(obj.serverPos.x, obj.serverPos.y, obj.serverPos.z);
-                                
-                                //console.log(`[WS] Объект ${data.id} телепортирован в исходные координаты:`, 
-                                //    { x: obj.serverPos.x, y: obj.serverPos.y, z: obj.serverPos.z });
                                 
                                 // Очищаем память
                                 window.Ammo.destroy(transform);
@@ -309,8 +305,7 @@ function handleMessage(data) {
                 
                 // Обновляем отображение пинга на экране
                 updatePingDisplay(avgPing);
-                
-                //console.log(`[WS] Подтверждение команды: ${data.cmd}, RTT: ${roundTripTime}ms, Средний RTT: ${avgPing.toFixed(2)}ms`);
+                currentPing = avgPing;
                 
                 // Обновляем смещение серверного времени с учетом RTT/2 (предполагаем симметричную задержку)
                 updateServerTimeOffset(data.server_time + roundTripTime / 2);

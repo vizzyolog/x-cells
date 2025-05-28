@@ -11,20 +11,20 @@ const PHYSICS_SETTINGS = {
     },
     INTERPOLATION: {
         DEAD_ZONE: 0.05,          // Меньшая зона нечувствительности для малых корректировок
-        CORRECTION_STRENGTH: 3.0, // Снижаем силу коррекции для уменьшения дрожания
-        BLEND_FACTOR: 0.15,       // Уменьшаем фактор смешивания для более плавного движения
-        BASE_BLEND_FACTOR: 0.15,   // Уменьшаем базовое значение для смешивания
-        MIN_BLEND_FACTOR: 0.05     // Уменьшаем для более плавного движения при высоком пинге
+        CORRECTION_STRENGTH: 5.0, // Увеличиваем силу коррекции для более точного следования серверу
+        BLEND_FACTOR: 0.3,       // Увеличиваем фактор смешивания для более быстрого соответствия серверу
+        BASE_BLEND_FACTOR: 0.3,   // Увеличиваем базовое значение для смешивания
+        MIN_BLEND_FACTOR: 0.15     // Минимальное значение для плавности при высоком пинге
     },
     NETWORK: {
-        TIMEOUT: 150,           // Таймаут для переключения на локальную физику
-        UPDATE_INTERVAL: 300,   // Интервал обновления серверный
+        TIMEOUT: 150,           // Таймаут для переключения на локальную физику (3x server interval)
+        UPDATE_INTERVAL: 50,    // Синхронизируем с сервером (50ms = 20 FPS)
         SERVER_TRUST_WINDOW: 500, // Окно доверия серверу
         MAX_PING: 300           // Максимальный пинг для адаптации параметров
     },
     BUFFER: {
-        SIZE: 5,                // Увеличиваем размер буфера для лучшего сглаживания
-        MIN_UPDATES: 2          // Требуем больше обновлений для применения сглаживания
+        SIZE: 3,                // Уменьшаем размер буфера для более актуальных данных
+        MIN_UPDATES: 1          // Используем обновления сразу при получении
     }
 };
 
@@ -132,6 +132,54 @@ export function stepPhysics(deltaTime) {
         
         // Обновляем индикатор режима физики
         updatePhysicsModeDisplay(useServerPhysics);
+
+        // Для всех объектов с гибридной физикой, применяем кинематический контроль
+        // при использовании серверной физики
+        if (useServerPhysics) {
+            for (const id in objects) {
+                const obj = objects[id];
+                if (!obj || !obj.body || obj.physicsBy !== "both") continue;
+                
+                // Если у объекта есть серверная позиция, устанавливаем для него серверную позицию
+                if (obj.serverPos) {
+                    // Продвигаем объект к серверной позиции с учетом прошедшего времени
+                    // Чем больше времени прошло с последнего обновления, тем ближе к серверной позиции
+                    const currentTime = Date.now();
+                    const timeSinceUpdate = obj.lastServerUpdate ? currentTime - obj.lastServerUpdate : Infinity;
+                    
+                    // Если прошло слишком много времени, телепортируем объект
+                    if (timeSinceUpdate > PHYSICS_SETTINGS.NETWORK.TIMEOUT) {
+                        continue; // Пропускаем, будет обработано в updateHybridPhysics
+                    }
+                    
+                    // Получаем текущую позицию
+                    const trans = new window.Ammo.btTransform();
+                    obj.body.getMotionState().getWorldTransform(trans);
+                    
+                    const currentPos = {
+                        x: trans.getOrigin().x(),
+                        y: trans.getOrigin().y(),
+                        z: trans.getOrigin().z()
+                    };
+                    
+                    // Обновляем позицию физического тела для более точного следования серверу
+                    const updateInterval = PHYSICS_SETTINGS.NETWORK.UPDATE_INTERVAL;
+                    const progress = Math.min(timeSinceUpdate / updateInterval, 1.0);
+                    
+                    const newPos = {
+                        x: currentPos.x + (obj.serverPos.x - currentPos.x) * progress * 0.5,
+                        y: currentPos.y + (obj.serverPos.y - currentPos.y) * progress * 0.5,
+                        z: currentPos.z + (obj.serverPos.z - currentPos.z) * progress * 0.5
+                    };
+                    
+                    // Применяем новую позицию
+                    trans.setOrigin(new window.Ammo.btVector3(newPos.x, newPos.y, newPos.z));
+                    obj.body.getMotionState().setWorldTransform(trans);
+                    
+                    window.Ammo.destroy(trans);
+                }
+            }
+        }
 
         // Симулируем физику с фиксированным шагом
         const fixedStep = 1/120; // 120 Hz
@@ -307,28 +355,8 @@ function getSmoothPositionFromBuffer(id) {
         return null;
     }
 
-    // Если буфер содержит только одну позицию, вернем её
-    if (positions.length === 1) {
-        return positions[0];
-    }
-
-    // Вычисляем среднюю позицию с большим весом для более новых позиций
-    // Используем квадратичную зависимость для весов, чтобы новые обновления имели ещё больший вес
-    let totalWeight = 0;
-    for (let i = 0; i < positions.length; i++) {
-        totalWeight += Math.pow(i + 1, 2); // квадратичная зависимость
-    }
-
-    const smoothPosition = {x: 0, y: 0, z: 0};
-    
-    positions.forEach((pos, index) => {
-        const weight = Math.pow(index + 1, 2) / totalWeight;
-        smoothPosition.x += pos.x * weight;
-        smoothPosition.y += pos.y * weight;
-        smoothPosition.z += pos.z * weight;
-    });
-
-    return smoothPosition;
+    // Для авторитарного сервера всегда возвращаем последнюю позицию
+    return positions[positions.length - 1];
 }
 
 // Функция для получения сглаженной скорости из буфера
@@ -338,27 +366,11 @@ function getSmoothVelocityFromBuffer(id) {
         return null;
     }
 
-    // Если буфер содержит только одну скорость, вернем её
-    if (velocities.length === 1) {
-        return velocities[0];
-    }
-
-    // Для скоростей используем менее агрессивное сглаживание
-    // Новейшие значения имеют больший вес, но линейная зависимость
-    const totalWeight = velocities.reduce((sum, _, index) => sum + (index + 1), 0);
-    const smoothVelocity = {x: 0, y: 0, z: 0};
-    
-    velocities.forEach((vel, index) => {
-        const weight = (index + 1) / totalWeight;
-        smoothVelocity.x += vel.x * weight;
-        smoothVelocity.y += vel.y * weight;
-        smoothVelocity.z += vel.z * weight;
-    });
-
-    return smoothVelocity;
+    // Для авторитарного сервера всегда возвращаем последнюю скорость
+    return velocities[velocities.length - 1];
 }
 
-// Функция для адаптации параметров сглаживания в зависимости от пинга
+// Функция для адаптации параметров сглаживания в зависимости от пинга и интервала обновления
 function getAdaptiveInterpolationParams() {
     const ping = getCurrentPing();
     const params = {
@@ -366,6 +378,17 @@ function getAdaptiveInterpolationParams() {
         correctionStrength: PHYSICS_SETTINGS.INTERPOLATION.CORRECTION_STRENGTH,
         teleportThreshold: PHYSICS_SETTINGS.PREDICTION.TELEPORT_THRESHOLD
     };
+    
+    // Учитываем интервал обновления сервера в адаптации параметров
+    const updateInterval = PHYSICS_SETTINGS.NETWORK.UPDATE_INTERVAL;
+    
+    // Корректируем параметры в зависимости от интервала обновления
+    if (updateInterval > 100) {
+        // При больших интервалах увеличиваем силу коррекции и уменьшаем фактор смешивания
+        const intervalFactor = Math.min(updateInterval / 100, 3.0);
+        params.correctionStrength *= intervalFactor;
+        params.blendFactor = Math.max(params.blendFactor / intervalFactor, 0.1);
+    }
     
     // Если пинг превышает максимальный, используем максимальные настройки
     if (ping > PHYSICS_SETTINGS.NETWORK.MAX_PING) {
@@ -405,8 +428,6 @@ function updateHybridPhysics(obj) {
 
     // Если нет соединения с сервером или данные сильно устарели, переключаемся на локальную физику
     if (!useServerPhysics || !obj.serverPos || timeSinceUpdate > PHYSICS_SETTINGS.NETWORK.TIMEOUT) {
-        console.warn(`[Physics] Использую локальную физику для ${obj.id}, timeSinceUpdate=${timeSinceUpdate}ms`);
-        
         // Обновляем меш из физики
         obj.mesh.position.set(currentPos.x, currentPos.y, currentPos.z);
         
@@ -446,11 +467,6 @@ function updateHybridPhysics(obj) {
 
     // Если расстояние слишком большое, немедленно телепортируем объект
     if (distance > adaptiveParams.teleportThreshold) {
-        console.warn(`[Physics] Телепортация ${obj.id} из-за большого расхождения (${distance.toFixed(2)}): 
-            Локальная (${currentPos.x.toFixed(2)}, ${currentPos.y.toFixed(2)}, ${currentPos.z.toFixed(2)}) → 
-            Серверная (${serverPos.x.toFixed(2)}, ${serverPos.y.toFixed(2)}, ${serverPos.z.toFixed(2)})
-            Пинг: ${getCurrentPing().toFixed(0)}мс`);
-        
         // Телепортируем физическое тело
         const newTransform = new window.Ammo.btTransform();
         newTransform.setIdentity();
@@ -475,30 +491,48 @@ function updateHybridPhysics(obj) {
     } 
     // Проверяем, находимся ли мы в "мертвой зоне" (очень малое расхождение)
     else if (distance < PHYSICS_SETTINGS.INTERPOLATION.DEAD_ZONE) {
-        // Если расхождение минимальное, просто используем локальную позицию
-        // Это предотвращает микро-дрожание
-        obj.mesh.position.set(currentPos.x, currentPos.y, currentPos.z);
+        // Даже при малом расхождении, используем серверную позицию
+        // Это критично для авторитарного сервера
+        obj.mesh.position.set(serverPos.x, serverPos.y, serverPos.z);
+        
+        // Мягко корректируем физическое тело
+        const correction = {
+            x: (serverPos.x - currentPos.x) * 0.5,
+            y: (serverPos.y - currentPos.y) * 0.5,
+            z: (serverPos.z - currentPos.z) * 0.5
+        };
+
+        const force = new window.Ammo.btVector3(correction.x, correction.y, correction.z);
+        obj.body.applyCentralForce(force);
+        window.Ammo.destroy(force);
     }
-    // Для промежуточных расхождений используем плавную коррекцию
+    // Для промежуточных расхождений используем линейную интерполяцию к серверной позиции
     else {
-        // Для плавности интерполируем между текущей и серверной позицией
+        // При авторитарном сервере мы всегда должны показывать серверную позицию,
+        // но для плавности движения интерполируем меш на пути к серверной позиции
+        
+        // Рассчитываем интервал между обновлениями (по умолчанию используем UPDATE_INTERVAL)
+        const updateInterval = PHYSICS_SETTINGS.NETWORK.UPDATE_INTERVAL;
+        
+        // Рассчитываем, какую часть пути к серверной позиции мы должны пройти
+        // Чем больше времени прошло с последнего обновления, тем ближе мы к серверной позиции
+        const progress = Math.min(timeSinceUpdate / updateInterval, 1.0);
+        
+        // Линейная интерполяция от текущей позиции к серверной
         const lerpPos = {
-            x: currentPos.x + (serverPos.x - currentPos.x) * adaptiveParams.blendFactor,
-            y: currentPos.y + (serverPos.y - currentPos.y) * adaptiveParams.blendFactor,
-            z: currentPos.z + (serverPos.z - currentPos.z) * adaptiveParams.blendFactor
+            x: currentPos.x + (serverPos.x - currentPos.x) * progress,
+            y: currentPos.y + (serverPos.y - currentPos.y) * progress,
+            z: currentPos.z + (serverPos.z - currentPos.z) * progress
         };
         
         // Устанавливаем интерполированную позицию для меша
         obj.mesh.position.set(lerpPos.x, lerpPos.y, lerpPos.z);
         
-        // Применяем мягкую коррекцию физического тела - сильнее для больших расхождений, мягче для малых
-        const correctionFactor = Math.min(1.0, distance / adaptiveParams.teleportThreshold);
-        const adaptedCorrectionStrength = adaptiveParams.correctionStrength * correctionFactor;
-        
+        // Применяем сильную коррекцию физического тела для авторитарного сервера
         const correction = {
-            x: (serverPos.x - currentPos.x) * adaptedCorrectionStrength,
-            y: (serverPos.y - currentPos.y) * adaptedCorrectionStrength,
-            z: (serverPos.z - currentPos.z) * adaptedCorrectionStrength
+            x: (serverPos.x - currentPos.x) * adaptiveParams.correctionStrength,
+            y: (serverPos.y - currentPos.y) * adaptiveParams.correctionStrength,
+            z: (serverPos.z - currentPos.z) * adaptiveParams.correctionStrength
         };
 
         const force = new window.Ammo.btVector3(correction.x, correction.y, correction.z);
@@ -526,7 +560,6 @@ export function receiveObjectUpdate(data) {
 
         // Пропускаем обработку серверных данных для объектов с physicsBy: "ammo"
         if (obj.physicsBy === "ammo") {
-            console.log(`[Physics] Пропускаем серверное обновление для объекта ${data.id} (physicsBy: ammo)`);
             return;
         }
 
@@ -536,15 +569,8 @@ export function receiveObjectUpdate(data) {
         const hasVelocity = data.velocity !== undefined || data.vx !== undefined;
 
         if (!hasPosition && !hasVelocity) {
-            console.log(`[Physics] Пропускаем пустое обновление для объекта ${data.id}`);
             return;
         }
-
-        console.log(`[Physics] Получено обновление для объекта ${data.id}:`, {
-            position: data.position || (data.x !== undefined ? { x: data.x, y: data.y, z: data.z } : undefined),
-            velocity: data.velocity || (data.vx !== undefined ? { x: data.vx, y: data.vy, z: data.vz } : undefined),
-            physicsBy: obj.physicsBy
-        });
 
         // Преобразуем данные в единый формат
         const objectData = {
@@ -568,42 +594,72 @@ export function receiveObjectUpdate(data) {
 
 // Обновление объекта данными с сервера
 function updateObjectFromServer(obj, data) {
-    if (!data) {
-        console.error("[Physics] Получены пустые данные для обновления");
-        return;
-    }
-
-    if (!obj.id) {
-        console.error("[Physics] Объект не имеет id");
+    if (!data || !obj.id) {
         return;
     }
 
     const currentTime = Date.now();
     
-    // Добавляем обновление в буфер, даже если не используем серверную физику
-    // (это позволит иметь плавный переход, когда связь восстановится)
+    // Для авторитарного сервера - всегда добавляем обновление в буфер
     if (data.position || data.velocity) {
         addUpdateToBuffer(obj.id, data.position, data.velocity, currentTime);
     }
 
     // Обновляем данные объекта
     if (data.position) {
+        // Для авторитарного сервера - всегда обновляем серверную позицию
         obj.serverPos = data.position;
         obj.lastServerUpdate = currentTime;
         
-        console.log(`[Physics] Получено обновление позиции для ${obj.id}:`, {
-            position: data.position,
-            time: currentTime
-        });
+        // Если объект использует гибридную физику и у него есть физическое тело,
+        // немедленно применяем коррекцию к физическому телу
+        if (obj.physicsBy === "both" && obj.body) {
+            // Получаем текущую позицию
+            const trans = new window.Ammo.btTransform();
+            obj.body.getMotionState().getWorldTransform(trans);
+            
+            const currentPos = {
+                x: trans.getOrigin().x(),
+                y: trans.getOrigin().y(),
+                z: trans.getOrigin().z()
+            };
+            
+            // Рассчитываем расстояние между текущей и серверной позицией
+            const distance = Math.sqrt(
+                Math.pow(currentPos.x - data.position.x, 2) +
+                Math.pow(currentPos.y - data.position.y, 2) +
+                Math.pow(currentPos.z - data.position.z, 2)
+            );
+            
+            // Если расстояние большое, телепортируем
+            if (distance > PHYSICS_SETTINGS.PREDICTION.TELEPORT_THRESHOLD) {
+                // Телепортируем физическое тело
+                trans.setOrigin(new window.Ammo.btVector3(
+                    data.position.x,
+                    data.position.y,
+                    data.position.z
+                ));
+                obj.body.getMotionState().setWorldTransform(trans);
+                
+                // Немедленно обновляем позицию меша
+                obj.mesh.position.set(data.position.x, data.position.y, data.position.z);
+            }
+            
+            window.Ammo.destroy(trans);
+        }
+        // Для объектов с серверной физикой (bullet) просто устанавливаем позицию
+        else if (obj.physicsBy === "bullet") {
+            obj.mesh.position.set(data.position.x, data.position.y, data.position.z);
+        }
     }
 
+    // Обновляем скорость, если она есть
     if (data.velocity && obj.body) {
         // Сохраняем серверную скорость
         obj.serverVelocity = data.velocity;
         
-        // Применяем скорость только если у нас свежее обновление
-        const timeSinceUpdate = obj.lastServerUpdate ? currentTime - obj.lastServerUpdate : Infinity;
-        if (timeSinceUpdate <= PHYSICS_SETTINGS.NETWORK.SERVER_TRUST_WINDOW) {
+        // Для гибридной физики применяем скорость к телу
+        if (obj.physicsBy === "both") {
             try {
                 const velocity = new window.Ammo.btVector3(
                     data.velocity.x,
@@ -611,13 +667,8 @@ function updateObjectFromServer(obj, data) {
                     data.velocity.z
                 );
                 obj.body.setLinearVelocity(velocity);
-                obj.body.activate(true); // Активируем тело при получении новой скорости
+                obj.body.activate(true);
                 window.Ammo.destroy(velocity);
-                
-                console.log(`[Physics] Применена скорость к ${obj.id}:`, {
-                    velocity: data.velocity,
-                    time: currentTime
-                });
             } catch (error) {
                 console.error(`[Physics] Ошибка обновления скорости ${obj.id}:`, error);
             }

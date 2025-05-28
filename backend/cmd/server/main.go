@@ -33,7 +33,7 @@ func main() {
 
 	// Создаем тестовые объекты
 	testObjectsCreator := world.NewTestObjectsCreator(factory)
-	testObjectsCreator.CreateAll(0.0) // Используем максимальную высоту 50.0
+	testObjectsCreator.CreateAll(50.0)
 
 	// Сервер для WS
 	wsServer := ws.NewWSServer(worldManager, physicsClient, serializer)

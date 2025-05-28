@@ -91,6 +91,8 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 		log.Printf("[World] Ошибка при создании игрока mainPlayer1 в Bullet: %v", err)
 	}
 
+	// Примечание: Дополнительные игроки создаются динамически при подключении клиентов
+
 	// // Создаем тестовый шар с физикой ammo (обрабатывается только клиентом)
 	// sphereAmmo := NewSphere(
 	// 	"mainPlayer2",

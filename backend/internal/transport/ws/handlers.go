@@ -39,9 +39,26 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 		return ErrInvalidMessage
 	}
 
+	var objectID string
+
+	// Специальная логика для mainPlayer1 - используем ObjectID из сообщения
+	if cmdMsg.ObjectID == "mainPlayer1" {
+		objectID = "mainPlayer1"
+		log.Printf("[Go] Команда для mainPlayer1 от клиента")
+	} else {
+		// Для остальных случаев получаем игрока по соединению
+		player := s.getPlayerByConnection(conn)
+		if player == nil {
+			log.Printf("[Go] Игрок не найден для соединения")
+			return nil
+		}
+		objectID = player.ObjectID
+		log.Printf("[Go] Команда для игрока %s", objectID)
+	}
+
 	// Обновляем состояние контроллера
 	s.mu.Lock()
-	if state, exists := s.controllerStates[cmdMsg.ObjectID]; exists {
+	if state, exists := s.controllerStates[objectID]; exists {
 		state.LastUpdate = time.Now()
 
 		// Получаем данные о силе из Data
@@ -80,7 +97,7 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 			}
 		}
 
-		s.controllerStates[cmdMsg.ObjectID] = state
+		s.controllerStates[objectID] = state
 	}
 	s.mu.Unlock()
 
@@ -117,8 +134,8 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 			return nil
 		}
 
-		log.Printf("[Go] Получен вектор направления: (%f, %f, %f), расстояние: %f",
-			direction.X, direction.Y, direction.Z, direction.Distance)
+		log.Printf("[Go] Получен вектор направления для %s: (%f, %f, %f), расстояние: %f",
+			objectID, direction.X, direction.Y, direction.Z, direction.Distance)
 
 		// Используем настройки из конфигурации физики
 		physicsConfig := world.GetPhysicsConfig()
@@ -129,47 +146,39 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 		impulse.Z = direction.Z * physicsConfig.BaseImpulse
 
 		// Добавляем логирование для отладки
-		log.Printf("[Go] Импульсы: X=%f, Y=%f, Z=%f", impulse.X, impulse.Y, impulse.Z)
+		log.Printf("[Go] Импульсы для %s: X=%f, Y=%f, Z=%f", objectID, impulse.X, impulse.Y, impulse.Z)
 
 	default:
 		log.Printf("[Go] Неизвестная команда: %s", cmdMsg.Cmd)
 		return nil
 	}
 
-	// Получаем все объекты из менеджера мира
-	worldObjects := s.objectManager.GetAllWorldObjects()
-
-	// Счетчик успешно обработанных объектов
-	successCount := 0
-
-	// Применяем импульс ко всем объектам, кроме типа ammo
-	for _, obj := range worldObjects {
-		// Пропускаем объекты, которые обрабатываются только на клиенте
-		if obj.PhysicsType == world.PhysicsTypeAmmo {
-			continue
-		}
-
-		if obj.ID == "terrain_1" {
-			continue
-		}
-
-		// Применяем импульс к объекту через Bullet Physics
-		_, err := s.physics.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
-			Id:      obj.ID,
-			Impulse: &impulse,
-		})
-
-		if err != nil {
-			log.Printf("[Go] Ошибка применения импульса к %s: %v", obj.ID, err)
-			continue
-		}
-
-		successCount++
-		log.Printf("[Go] Применен импульс к %s: (%f, %f, %f)",
-			obj.ID, impulse.X, impulse.Y, impulse.Z)
+	// Проверяем, что объект игрока существует
+	obj, exists := s.objectManager.GetObject(objectID)
+	if !exists {
+		log.Printf("[Go] Объект игрока %s не найден", objectID)
+		return nil
 	}
 
-	log.Printf("[Go] Применен импульс к %d объектам с типами физики bullet и both", successCount)
+	// Пропускаем объекты, которые обрабатываются только на клиенте
+	if obj.PhysicsType == world.PhysicsTypeAmmo {
+		log.Printf("[Go] Объект %s имеет тип физики ammo, пропускаем", objectID)
+		return nil
+	}
+
+	// Применяем импульс к объекту игрока через Bullet Physics
+	_, err := s.physics.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
+		Id:      objectID,
+		Impulse: &impulse,
+	})
+
+	if err != nil {
+		log.Printf("[Go] Ошибка применения импульса к объекту игрока %s: %v", objectID, err)
+		return err
+	}
+
+	log.Printf("[Go] Применен импульс к объекту игрока %s: (%f, %f, %f)",
+		objectID, impulse.X, impulse.Y, impulse.Z)
 
 	// Отправляем подтверждение обработки команды с временными метками
 	ackMsg := NewAckMessage(cmdMsg.Cmd, cmdMsg.ClientTime)

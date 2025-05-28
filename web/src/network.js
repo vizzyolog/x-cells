@@ -80,28 +80,85 @@ function updateServerTimeOffset(serverTime) {
 
 // Добавляем функцию для обновления отображения пинга на экране
 function updatePingDisplay(pingValue) {
-    const pingDisplay = document.getElementById('ping-display');
-    if (pingDisplay) {
-        pingDisplay.textContent = `Пинг: ${pingValue.toFixed(0)} мс`;
-        
-        // Меняем цвет в зависимости от качества соединения
+    const pingElement = document.getElementById('ping-display');
+    const jitterElement = document.getElementById('jitter-display');
+    const strategyElement = document.getElementById('strategy-display');
+    const adaptationElement = document.getElementById('adaptation-display');
+    
+    if (pingElement) {
+        // Обновляем отображение пинга с цветовой индикацией
         if (pingValue < 50) {
-            pingDisplay.style.backgroundColor = 'rgba(0, 128, 0, 0.5)'; // Зеленый - хороший пинг
-        } else if (pingValue < 100) {
-            pingDisplay.style.backgroundColor = 'rgba(255, 165, 0, 0.5)'; // Оранжевый - средний пинг
-        } else if (pingValue < 200) {
-            pingDisplay.style.backgroundColor = 'rgba(255, 69, 0, 0.5)'; // Красно-оранжевый - плохой пинг
+            pingElement.style.color = '#4CAF50'; // Зеленый для хорошего пинга
+        } else if (pingValue < 150) {
+            pingElement.style.color = '#FF9800'; // Оранжевый для среднего пинга
         } else {
-            pingDisplay.style.backgroundColor = 'rgba(255, 0, 0, 0.5)'; // Красный - очень плохой пинг
+            pingElement.style.color = '#F44336'; // Красный для высокого пинга
+            // Добавляем мигание для очень высокого пинга
+            if (pingValue > 300) {
+                pingElement.style.animation = 'blink 1s infinite';
+            } else {
+                pingElement.style.animation = 'none';
+            }
         }
-        
-        // Добавляем индикацию высокой задержки
-        if (pingValue > 150) {
-            pingDisplay.style.border = '2px solid red';
-            pingDisplay.style.animation = 'blink 1s infinite';
+        pingElement.textContent = `Пинг: ${Math.round(pingValue)} мс`;
+    }
+    
+    // Получаем информацию о джиттере и адаптации из физики
+    if (typeof getSmoothedJitter === 'function') {
+        const jitter = getSmoothedJitter();
+        if (jitterElement) {
+            if (jitter < 10) {
+                jitterElement.style.color = '#4CAF50'; // Зеленый для низкого джиттера
+            } else if (jitter < 30) {
+                jitterElement.style.color = '#FF9800'; // Оранжевый для среднего джиттера
+            } else {
+                jitterElement.style.color = '#F44336'; // Красный для высокого джиттера
+            }
+            jitterElement.textContent = `Джиттер: ${jitter.toFixed(1)} мс`;
+        }
+    }
+    
+    // Получаем информацию о стратегии интерполяции
+    if (typeof getInterpolationStrategy === 'function') {
+        const strategy = getInterpolationStrategy(pingValue);
+        if (strategyElement) {
+            let strategyText = '';
+            let strategyColor = '';
+            
+            switch (strategy) {
+                case 'linear':
+                    strategyText = 'Линейная';
+                    strategyColor = '#4CAF50';
+                    break;
+                case 'hermite':
+                    strategyText = 'Hermite';
+                    strategyColor = '#FF9800';
+                    break;
+                case 'extrapolation':
+                    strategyText = 'Экстраполяция';
+                    strategyColor = '#F44336';
+                    break;
+                default:
+                    strategyText = 'Неизвестно';
+                    strategyColor = '#9E9E9E';
+            }
+            
+            strategyElement.style.color = strategyColor;
+            strategyElement.textContent = `Стратегия: ${strategyText}`;
+        }
+    }
+    
+    // Получаем информацию о состоянии адаптации
+    if (typeof networkMonitor !== 'undefined' && adaptationElement) {
+        const isAdapting = networkMonitor.adaptationState.isAdapting;
+        if (isAdapting) {
+            adaptationElement.style.color = '#FF9800';
+            adaptationElement.textContent = 'Адаптация: ⚡ Активна';
+            adaptationElement.style.animation = 'blink 0.5s infinite';
         } else {
-            pingDisplay.style.border = 'none';
-            pingDisplay.style.animation = 'none';
+            adaptationElement.style.color = '#4CAF50';
+            adaptationElement.textContent = 'Адаптация: ✓ Стабильно';
+            adaptationElement.style.animation = 'none';
         }
     }
 }

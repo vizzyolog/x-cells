@@ -8,6 +8,7 @@ import {
     stepPhysics,
     updatePhysicsObjects
 } from './physics';
+import gameStateManager from './gamestatemanager';
 
 let ws = null;
 let physicsStarted = false;
@@ -221,6 +222,24 @@ function handleMessage(data) {
         if (data.type === "physics_config") {
             physicsConfig = data.config;
             applyPhysicsConfig(physicsConfig);
+            return;
+        }
+
+        // Обрабатываем сообщение с player ID
+        if (data.type === "player_id") {
+            if (data.player_id && data.object_id) {
+                gameStateManager.setPlayerID(data.player_id, data.object_id);
+                console.log(`[Network] Получен player ID: ${data.player_id}, object ID: ${data.object_id}`);
+                
+                // Проверяем, есть ли уже созданный объект игрока и устанавливаем playerMesh
+                const playerObject = objects[data.object_id];
+                if (playerObject && playerObject.mesh) {
+                    gameStateManager.setPlayerMesh(playerObject.mesh);
+                    console.log(`[Network] Установлен playerMesh для существующего объекта ${data.object_id}`);
+                }
+            } else {
+                console.error('[Network] Получено некорректное сообщение player_id:', data);
+            }
             return;
         }
 

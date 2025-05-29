@@ -80,11 +80,6 @@ async function start() {
         speedDiv.textContent = 'Скорость: -- м/с';
         playerInfoElement.appendChild(speedDiv);
         
-        const maxSpeedDiv = document.createElement('div');
-        maxSpeedDiv.id = 'player-max-speed';
-        maxSpeedDiv.textContent = 'Макс. скорость: -- м/с';
-        playerInfoElement.appendChild(maxSpeedDiv);
-        
         const massDiv = document.createElement('div');
         massDiv.id = 'player-mass';
         massDiv.textContent = 'Масса: -- кг';

@@ -76,9 +76,18 @@ extern GetObjectStateResponseDefaultTypeInternal _GetObjectStateResponse_default
 class ObjectState;
 struct ObjectStateDefaultTypeInternal;
 extern ObjectStateDefaultTypeInternal _ObjectState_default_instance_;
+class PhysicsConfig;
+struct PhysicsConfigDefaultTypeInternal;
+extern PhysicsConfigDefaultTypeInternal _PhysicsConfig_default_instance_;
 class Quaternion;
 struct QuaternionDefaultTypeInternal;
 extern QuaternionDefaultTypeInternal _Quaternion_default_instance_;
+class SetPhysicsConfigRequest;
+struct SetPhysicsConfigRequestDefaultTypeInternal;
+extern SetPhysicsConfigRequestDefaultTypeInternal _SetPhysicsConfigRequest_default_instance_;
+class SetPhysicsConfigResponse;
+struct SetPhysicsConfigResponseDefaultTypeInternal;
+extern SetPhysicsConfigResponseDefaultTypeInternal _SetPhysicsConfigResponse_default_instance_;
 class ShapeDescriptor;
 struct ShapeDescriptorDefaultTypeInternal;
 extern ShapeDescriptorDefaultTypeInternal _ShapeDescriptor_default_instance_;
@@ -109,7 +118,10 @@ template<> ::physics::CreateObjectResponse* Arena::CreateMaybeMessage<::physics:
 template<> ::physics::GetObjectStateRequest* Arena::CreateMaybeMessage<::physics::GetObjectStateRequest>(Arena*);
 template<> ::physics::GetObjectStateResponse* Arena::CreateMaybeMessage<::physics::GetObjectStateResponse>(Arena*);
 template<> ::physics::ObjectState* Arena::CreateMaybeMessage<::physics::ObjectState>(Arena*);
+template<> ::physics::PhysicsConfig* Arena::CreateMaybeMessage<::physics::PhysicsConfig>(Arena*);
 template<> ::physics::Quaternion* Arena::CreateMaybeMessage<::physics::Quaternion>(Arena*);
+template<> ::physics::SetPhysicsConfigRequest* Arena::CreateMaybeMessage<::physics::SetPhysicsConfigRequest>(Arena*);
+template<> ::physics::SetPhysicsConfigResponse* Arena::CreateMaybeMessage<::physics::SetPhysicsConfigResponse>(Arena*);
 template<> ::physics::ShapeDescriptor* Arena::CreateMaybeMessage<::physics::ShapeDescriptor>(Arena*);
 template<> ::physics::SphereData* Arena::CreateMaybeMessage<::physics::SphereData>(Arena*);
 template<> ::physics::TerrainData* Arena::CreateMaybeMessage<::physics::TerrainData>(Arena*);
@@ -3248,6 +3260,574 @@ class UpdateObjectMassResponse final :
   union { Impl_ _impl_; };
   friend struct ::TableStruct_physics_2eproto;
 };
+// -------------------------------------------------------------------
+
+class PhysicsConfig final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:physics.PhysicsConfig) */ {
+ public:
+  inline PhysicsConfig() : PhysicsConfig(nullptr) {}
+  ~PhysicsConfig() override;
+  explicit PROTOBUF_CONSTEXPR PhysicsConfig(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  PhysicsConfig(const PhysicsConfig& from);
+  PhysicsConfig(PhysicsConfig&& from) noexcept
+    : PhysicsConfig() {
+    *this = ::std::move(from);
+  }
+
+  inline PhysicsConfig& operator=(const PhysicsConfig& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline PhysicsConfig& operator=(PhysicsConfig&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const PhysicsConfig& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const PhysicsConfig* internal_default_instance() {
+    return reinterpret_cast<const PhysicsConfig*>(
+               &_PhysicsConfig_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    17;
+
+  friend void swap(PhysicsConfig& a, PhysicsConfig& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(PhysicsConfig* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(PhysicsConfig* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  PhysicsConfig* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<PhysicsConfig>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const PhysicsConfig& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const PhysicsConfig& from) {
+    PhysicsConfig::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(PhysicsConfig* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "physics.PhysicsConfig";
+  }
+  protected:
+  explicit PhysicsConfig(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kBaseImpulseFieldNumber = 1,
+    kMaxImpulseFieldNumber = 2,
+    kDistanceMultiplierFieldNumber = 3,
+    kImpulseMultiplierFieldNumber = 4,
+    kPlayerMassFieldNumber = 5,
+    kDefaultBoxMassFieldNumber = 6,
+    kRestitutionFieldNumber = 7,
+    kFrictionFieldNumber = 8,
+    kGravityXFieldNumber = 9,
+    kGravityYFieldNumber = 10,
+    kGravityZFieldNumber = 11,
+  };
+  // float base_impulse = 1;
+  void clear_base_impulse();
+  float base_impulse() const;
+  void set_base_impulse(float value);
+  private:
+  float _internal_base_impulse() const;
+  void _internal_set_base_impulse(float value);
+  public:
+
+  // float max_impulse = 2;
+  void clear_max_impulse();
+  float max_impulse() const;
+  void set_max_impulse(float value);
+  private:
+  float _internal_max_impulse() const;
+  void _internal_set_max_impulse(float value);
+  public:
+
+  // float distance_multiplier = 3;
+  void clear_distance_multiplier();
+  float distance_multiplier() const;
+  void set_distance_multiplier(float value);
+  private:
+  float _internal_distance_multiplier() const;
+  void _internal_set_distance_multiplier(float value);
+  public:
+
+  // float impulse_multiplier = 4;
+  void clear_impulse_multiplier();
+  float impulse_multiplier() const;
+  void set_impulse_multiplier(float value);
+  private:
+  float _internal_impulse_multiplier() const;
+  void _internal_set_impulse_multiplier(float value);
+  public:
+
+  // float player_mass = 5;
+  void clear_player_mass();
+  float player_mass() const;
+  void set_player_mass(float value);
+  private:
+  float _internal_player_mass() const;
+  void _internal_set_player_mass(float value);
+  public:
+
+  // float default_box_mass = 6;
+  void clear_default_box_mass();
+  float default_box_mass() const;
+  void set_default_box_mass(float value);
+  private:
+  float _internal_default_box_mass() const;
+  void _internal_set_default_box_mass(float value);
+  public:
+
+  // float restitution = 7;
+  void clear_restitution();
+  float restitution() const;
+  void set_restitution(float value);
+  private:
+  float _internal_restitution() const;
+  void _internal_set_restitution(float value);
+  public:
+
+  // float friction = 8;
+  void clear_friction();
+  float friction() const;
+  void set_friction(float value);
+  private:
+  float _internal_friction() const;
+  void _internal_set_friction(float value);
+  public:
+
+  // float gravity_x = 9;
+  void clear_gravity_x();
+  float gravity_x() const;
+  void set_gravity_x(float value);
+  private:
+  float _internal_gravity_x() const;
+  void _internal_set_gravity_x(float value);
+  public:
+
+  // float gravity_y = 10;
+  void clear_gravity_y();
+  float gravity_y() const;
+  void set_gravity_y(float value);
+  private:
+  float _internal_gravity_y() const;
+  void _internal_set_gravity_y(float value);
+  public:
+
+  // float gravity_z = 11;
+  void clear_gravity_z();
+  float gravity_z() const;
+  void set_gravity_z(float value);
+  private:
+  float _internal_gravity_z() const;
+  void _internal_set_gravity_z(float value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:physics.PhysicsConfig)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    float base_impulse_;
+    float max_impulse_;
+    float distance_multiplier_;
+    float impulse_multiplier_;
+    float player_mass_;
+    float default_box_mass_;
+    float restitution_;
+    float friction_;
+    float gravity_x_;
+    float gravity_y_;
+    float gravity_z_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_physics_2eproto;
+};
+// -------------------------------------------------------------------
+
+class SetPhysicsConfigRequest final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:physics.SetPhysicsConfigRequest) */ {
+ public:
+  inline SetPhysicsConfigRequest() : SetPhysicsConfigRequest(nullptr) {}
+  ~SetPhysicsConfigRequest() override;
+  explicit PROTOBUF_CONSTEXPR SetPhysicsConfigRequest(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  SetPhysicsConfigRequest(const SetPhysicsConfigRequest& from);
+  SetPhysicsConfigRequest(SetPhysicsConfigRequest&& from) noexcept
+    : SetPhysicsConfigRequest() {
+    *this = ::std::move(from);
+  }
+
+  inline SetPhysicsConfigRequest& operator=(const SetPhysicsConfigRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SetPhysicsConfigRequest& operator=(SetPhysicsConfigRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const SetPhysicsConfigRequest& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const SetPhysicsConfigRequest* internal_default_instance() {
+    return reinterpret_cast<const SetPhysicsConfigRequest*>(
+               &_SetPhysicsConfigRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    18;
+
+  friend void swap(SetPhysicsConfigRequest& a, SetPhysicsConfigRequest& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(SetPhysicsConfigRequest* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SetPhysicsConfigRequest* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SetPhysicsConfigRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<SetPhysicsConfigRequest>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const SetPhysicsConfigRequest& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const SetPhysicsConfigRequest& from) {
+    SetPhysicsConfigRequest::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(SetPhysicsConfigRequest* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "physics.SetPhysicsConfigRequest";
+  }
+  protected:
+  explicit SetPhysicsConfigRequest(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kConfigFieldNumber = 1,
+  };
+  // .physics.PhysicsConfig config = 1;
+  bool has_config() const;
+  private:
+  bool _internal_has_config() const;
+  public:
+  void clear_config();
+  const ::physics::PhysicsConfig& config() const;
+  PROTOBUF_NODISCARD ::physics::PhysicsConfig* release_config();
+  ::physics::PhysicsConfig* mutable_config();
+  void set_allocated_config(::physics::PhysicsConfig* config);
+  private:
+  const ::physics::PhysicsConfig& _internal_config() const;
+  ::physics::PhysicsConfig* _internal_mutable_config();
+  public:
+  void unsafe_arena_set_allocated_config(
+      ::physics::PhysicsConfig* config);
+  ::physics::PhysicsConfig* unsafe_arena_release_config();
+
+  // @@protoc_insertion_point(class_scope:physics.SetPhysicsConfigRequest)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::physics::PhysicsConfig* config_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_physics_2eproto;
+};
+// -------------------------------------------------------------------
+
+class SetPhysicsConfigResponse final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:physics.SetPhysicsConfigResponse) */ {
+ public:
+  inline SetPhysicsConfigResponse() : SetPhysicsConfigResponse(nullptr) {}
+  ~SetPhysicsConfigResponse() override;
+  explicit PROTOBUF_CONSTEXPR SetPhysicsConfigResponse(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  SetPhysicsConfigResponse(const SetPhysicsConfigResponse& from);
+  SetPhysicsConfigResponse(SetPhysicsConfigResponse&& from) noexcept
+    : SetPhysicsConfigResponse() {
+    *this = ::std::move(from);
+  }
+
+  inline SetPhysicsConfigResponse& operator=(const SetPhysicsConfigResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SetPhysicsConfigResponse& operator=(SetPhysicsConfigResponse&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const SetPhysicsConfigResponse& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const SetPhysicsConfigResponse* internal_default_instance() {
+    return reinterpret_cast<const SetPhysicsConfigResponse*>(
+               &_SetPhysicsConfigResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    19;
+
+  friend void swap(SetPhysicsConfigResponse& a, SetPhysicsConfigResponse& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(SetPhysicsConfigResponse* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SetPhysicsConfigResponse* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SetPhysicsConfigResponse* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<SetPhysicsConfigResponse>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const SetPhysicsConfigResponse& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const SetPhysicsConfigResponse& from) {
+    SetPhysicsConfigResponse::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(SetPhysicsConfigResponse* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "physics.SetPhysicsConfigResponse";
+  }
+  protected:
+  explicit SetPhysicsConfigResponse(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kStatusFieldNumber = 1,
+  };
+  // string status = 1;
+  void clear_status();
+  const std::string& status() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_status(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_status();
+  PROTOBUF_NODISCARD std::string* release_status();
+  void set_allocated_status(std::string* status);
+  private:
+  const std::string& _internal_status() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_status(const std::string& value);
+  std::string* _internal_mutable_status();
+  public:
+
+  // @@protoc_insertion_point(class_scope:physics.SetPhysicsConfigResponse)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr status_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_physics_2eproto;
+};
 // ===================================================================
 
 
@@ -5541,9 +6121,387 @@ inline void UpdateObjectMassResponse::set_allocated_status(std::string* status) 
   // @@protoc_insertion_point(field_set_allocated:physics.UpdateObjectMassResponse.status)
 }
 
+// -------------------------------------------------------------------
+
+// PhysicsConfig
+
+// float base_impulse = 1;
+inline void PhysicsConfig::clear_base_impulse() {
+  _impl_.base_impulse_ = 0;
+}
+inline float PhysicsConfig::_internal_base_impulse() const {
+  return _impl_.base_impulse_;
+}
+inline float PhysicsConfig::base_impulse() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.base_impulse)
+  return _internal_base_impulse();
+}
+inline void PhysicsConfig::_internal_set_base_impulse(float value) {
+  
+  _impl_.base_impulse_ = value;
+}
+inline void PhysicsConfig::set_base_impulse(float value) {
+  _internal_set_base_impulse(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.base_impulse)
+}
+
+// float max_impulse = 2;
+inline void PhysicsConfig::clear_max_impulse() {
+  _impl_.max_impulse_ = 0;
+}
+inline float PhysicsConfig::_internal_max_impulse() const {
+  return _impl_.max_impulse_;
+}
+inline float PhysicsConfig::max_impulse() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.max_impulse)
+  return _internal_max_impulse();
+}
+inline void PhysicsConfig::_internal_set_max_impulse(float value) {
+  
+  _impl_.max_impulse_ = value;
+}
+inline void PhysicsConfig::set_max_impulse(float value) {
+  _internal_set_max_impulse(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.max_impulse)
+}
+
+// float distance_multiplier = 3;
+inline void PhysicsConfig::clear_distance_multiplier() {
+  _impl_.distance_multiplier_ = 0;
+}
+inline float PhysicsConfig::_internal_distance_multiplier() const {
+  return _impl_.distance_multiplier_;
+}
+inline float PhysicsConfig::distance_multiplier() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.distance_multiplier)
+  return _internal_distance_multiplier();
+}
+inline void PhysicsConfig::_internal_set_distance_multiplier(float value) {
+  
+  _impl_.distance_multiplier_ = value;
+}
+inline void PhysicsConfig::set_distance_multiplier(float value) {
+  _internal_set_distance_multiplier(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.distance_multiplier)
+}
+
+// float impulse_multiplier = 4;
+inline void PhysicsConfig::clear_impulse_multiplier() {
+  _impl_.impulse_multiplier_ = 0;
+}
+inline float PhysicsConfig::_internal_impulse_multiplier() const {
+  return _impl_.impulse_multiplier_;
+}
+inline float PhysicsConfig::impulse_multiplier() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.impulse_multiplier)
+  return _internal_impulse_multiplier();
+}
+inline void PhysicsConfig::_internal_set_impulse_multiplier(float value) {
+  
+  _impl_.impulse_multiplier_ = value;
+}
+inline void PhysicsConfig::set_impulse_multiplier(float value) {
+  _internal_set_impulse_multiplier(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.impulse_multiplier)
+}
+
+// float player_mass = 5;
+inline void PhysicsConfig::clear_player_mass() {
+  _impl_.player_mass_ = 0;
+}
+inline float PhysicsConfig::_internal_player_mass() const {
+  return _impl_.player_mass_;
+}
+inline float PhysicsConfig::player_mass() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.player_mass)
+  return _internal_player_mass();
+}
+inline void PhysicsConfig::_internal_set_player_mass(float value) {
+  
+  _impl_.player_mass_ = value;
+}
+inline void PhysicsConfig::set_player_mass(float value) {
+  _internal_set_player_mass(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.player_mass)
+}
+
+// float default_box_mass = 6;
+inline void PhysicsConfig::clear_default_box_mass() {
+  _impl_.default_box_mass_ = 0;
+}
+inline float PhysicsConfig::_internal_default_box_mass() const {
+  return _impl_.default_box_mass_;
+}
+inline float PhysicsConfig::default_box_mass() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.default_box_mass)
+  return _internal_default_box_mass();
+}
+inline void PhysicsConfig::_internal_set_default_box_mass(float value) {
+  
+  _impl_.default_box_mass_ = value;
+}
+inline void PhysicsConfig::set_default_box_mass(float value) {
+  _internal_set_default_box_mass(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.default_box_mass)
+}
+
+// float restitution = 7;
+inline void PhysicsConfig::clear_restitution() {
+  _impl_.restitution_ = 0;
+}
+inline float PhysicsConfig::_internal_restitution() const {
+  return _impl_.restitution_;
+}
+inline float PhysicsConfig::restitution() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.restitution)
+  return _internal_restitution();
+}
+inline void PhysicsConfig::_internal_set_restitution(float value) {
+  
+  _impl_.restitution_ = value;
+}
+inline void PhysicsConfig::set_restitution(float value) {
+  _internal_set_restitution(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.restitution)
+}
+
+// float friction = 8;
+inline void PhysicsConfig::clear_friction() {
+  _impl_.friction_ = 0;
+}
+inline float PhysicsConfig::_internal_friction() const {
+  return _impl_.friction_;
+}
+inline float PhysicsConfig::friction() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.friction)
+  return _internal_friction();
+}
+inline void PhysicsConfig::_internal_set_friction(float value) {
+  
+  _impl_.friction_ = value;
+}
+inline void PhysicsConfig::set_friction(float value) {
+  _internal_set_friction(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.friction)
+}
+
+// float gravity_x = 9;
+inline void PhysicsConfig::clear_gravity_x() {
+  _impl_.gravity_x_ = 0;
+}
+inline float PhysicsConfig::_internal_gravity_x() const {
+  return _impl_.gravity_x_;
+}
+inline float PhysicsConfig::gravity_x() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.gravity_x)
+  return _internal_gravity_x();
+}
+inline void PhysicsConfig::_internal_set_gravity_x(float value) {
+  
+  _impl_.gravity_x_ = value;
+}
+inline void PhysicsConfig::set_gravity_x(float value) {
+  _internal_set_gravity_x(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.gravity_x)
+}
+
+// float gravity_y = 10;
+inline void PhysicsConfig::clear_gravity_y() {
+  _impl_.gravity_y_ = 0;
+}
+inline float PhysicsConfig::_internal_gravity_y() const {
+  return _impl_.gravity_y_;
+}
+inline float PhysicsConfig::gravity_y() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.gravity_y)
+  return _internal_gravity_y();
+}
+inline void PhysicsConfig::_internal_set_gravity_y(float value) {
+  
+  _impl_.gravity_y_ = value;
+}
+inline void PhysicsConfig::set_gravity_y(float value) {
+  _internal_set_gravity_y(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.gravity_y)
+}
+
+// float gravity_z = 11;
+inline void PhysicsConfig::clear_gravity_z() {
+  _impl_.gravity_z_ = 0;
+}
+inline float PhysicsConfig::_internal_gravity_z() const {
+  return _impl_.gravity_z_;
+}
+inline float PhysicsConfig::gravity_z() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.gravity_z)
+  return _internal_gravity_z();
+}
+inline void PhysicsConfig::_internal_set_gravity_z(float value) {
+  
+  _impl_.gravity_z_ = value;
+}
+inline void PhysicsConfig::set_gravity_z(float value) {
+  _internal_set_gravity_z(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.gravity_z)
+}
+
+// -------------------------------------------------------------------
+
+// SetPhysicsConfigRequest
+
+// .physics.PhysicsConfig config = 1;
+inline bool SetPhysicsConfigRequest::_internal_has_config() const {
+  return this != internal_default_instance() && _impl_.config_ != nullptr;
+}
+inline bool SetPhysicsConfigRequest::has_config() const {
+  return _internal_has_config();
+}
+inline void SetPhysicsConfigRequest::clear_config() {
+  if (GetArenaForAllocation() == nullptr && _impl_.config_ != nullptr) {
+    delete _impl_.config_;
+  }
+  _impl_.config_ = nullptr;
+}
+inline const ::physics::PhysicsConfig& SetPhysicsConfigRequest::_internal_config() const {
+  const ::physics::PhysicsConfig* p = _impl_.config_;
+  return p != nullptr ? *p : reinterpret_cast<const ::physics::PhysicsConfig&>(
+      ::physics::_PhysicsConfig_default_instance_);
+}
+inline const ::physics::PhysicsConfig& SetPhysicsConfigRequest::config() const {
+  // @@protoc_insertion_point(field_get:physics.SetPhysicsConfigRequest.config)
+  return _internal_config();
+}
+inline void SetPhysicsConfigRequest::unsafe_arena_set_allocated_config(
+    ::physics::PhysicsConfig* config) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.config_);
+  }
+  _impl_.config_ = config;
+  if (config) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:physics.SetPhysicsConfigRequest.config)
+}
+inline ::physics::PhysicsConfig* SetPhysicsConfigRequest::release_config() {
+  
+  ::physics::PhysicsConfig* temp = _impl_.config_;
+  _impl_.config_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::physics::PhysicsConfig* SetPhysicsConfigRequest::unsafe_arena_release_config() {
+  // @@protoc_insertion_point(field_release:physics.SetPhysicsConfigRequest.config)
+  
+  ::physics::PhysicsConfig* temp = _impl_.config_;
+  _impl_.config_ = nullptr;
+  return temp;
+}
+inline ::physics::PhysicsConfig* SetPhysicsConfigRequest::_internal_mutable_config() {
+  
+  if (_impl_.config_ == nullptr) {
+    auto* p = CreateMaybeMessage<::physics::PhysicsConfig>(GetArenaForAllocation());
+    _impl_.config_ = p;
+  }
+  return _impl_.config_;
+}
+inline ::physics::PhysicsConfig* SetPhysicsConfigRequest::mutable_config() {
+  ::physics::PhysicsConfig* _msg = _internal_mutable_config();
+  // @@protoc_insertion_point(field_mutable:physics.SetPhysicsConfigRequest.config)
+  return _msg;
+}
+inline void SetPhysicsConfigRequest::set_allocated_config(::physics::PhysicsConfig* config) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete _impl_.config_;
+  }
+  if (config) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(config);
+    if (message_arena != submessage_arena) {
+      config = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, config, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.config_ = config;
+  // @@protoc_insertion_point(field_set_allocated:physics.SetPhysicsConfigRequest.config)
+}
+
+// -------------------------------------------------------------------
+
+// SetPhysicsConfigResponse
+
+// string status = 1;
+inline void SetPhysicsConfigResponse::clear_status() {
+  _impl_.status_.ClearToEmpty();
+}
+inline const std::string& SetPhysicsConfigResponse::status() const {
+  // @@protoc_insertion_point(field_get:physics.SetPhysicsConfigResponse.status)
+  return _internal_status();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void SetPhysicsConfigResponse::set_status(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.status_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:physics.SetPhysicsConfigResponse.status)
+}
+inline std::string* SetPhysicsConfigResponse::mutable_status() {
+  std::string* _s = _internal_mutable_status();
+  // @@protoc_insertion_point(field_mutable:physics.SetPhysicsConfigResponse.status)
+  return _s;
+}
+inline const std::string& SetPhysicsConfigResponse::_internal_status() const {
+  return _impl_.status_.Get();
+}
+inline void SetPhysicsConfigResponse::_internal_set_status(const std::string& value) {
+  
+  _impl_.status_.Set(value, GetArenaForAllocation());
+}
+inline std::string* SetPhysicsConfigResponse::_internal_mutable_status() {
+  
+  return _impl_.status_.Mutable(GetArenaForAllocation());
+}
+inline std::string* SetPhysicsConfigResponse::release_status() {
+  // @@protoc_insertion_point(field_release:physics.SetPhysicsConfigResponse.status)
+  return _impl_.status_.Release();
+}
+inline void SetPhysicsConfigResponse::set_allocated_status(std::string* status) {
+  if (status != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.status_.SetAllocated(status, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.status_.IsDefault()) {
+    _impl_.status_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:physics.SetPhysicsConfigResponse.status)
+}
+
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

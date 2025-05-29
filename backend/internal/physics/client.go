@@ -5,11 +5,11 @@ import (
 	"log"
 	"time"
 
-	pb "x-cells/backend/internal/physics/generated"
-	"x-cells/backend/internal/world"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	pb "x-cells/backend/internal/physics/generated"
+	"x-cells/backend/internal/world"
 )
 
 type PhysicsClient struct {
@@ -126,4 +126,9 @@ func (c *PhysicsClient) GetObjectState(ctx context.Context, req *pb.GetObjectSta
 // Добавляем новый метод для обновления массы (необходимо также добавить в protobuf)
 func (c *PhysicsClient) UpdateObjectMass(ctx context.Context, req *pb.UpdateObjectMassRequest) (*pb.UpdateObjectMassResponse, error) {
 	return c.client.UpdateObjectMass(ctx, req)
+}
+
+// Добавляем метод для установки конфигурации физики
+func (c *PhysicsClient) SetPhysicsConfig(ctx context.Context, req *pb.SetPhysicsConfigRequest) (*pb.SetPhysicsConfigResponse, error) {
+	return c.client.SetPhysicsConfig(ctx, req)
 }

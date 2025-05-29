@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { getPhysicsConfig, checkConnectionState } from './network';
 import { applyImpulseToSphere } from './physics';
+import gameStateManager from './gamestatemanager';
 
 // Константы для настройки поведения
 const DEBUG_MODE = true; // Включает/выключает отладочные элементы (arrowHelper)
@@ -240,6 +241,13 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
             return;
         }
 
+        // Получаем ID объекта игрока
+        const playerObjectID = gameStateManager.getPlayerObjectID();
+        if (!playerObjectID) {
+            console.warn('[Gamepad] Player ID еще не получен от сервера, команда не отправлена');
+            return;
+        }
+
         // Для мышиного управления увеличиваем дистанцию, которая используется как сила импульса
         const enhancedDistance = Math.min(distance * 1.5, 100); // Увеличиваем на 50%, но не больше 100
         
@@ -263,7 +271,7 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
                         distance: enhancedDistance
                     },
                     client_time: Date.now(),
-                    object_id: 'mainPlayer1'
+                    object_id: playerObjectID // Используем динамический player ID
                 }));
             } catch (error) {
                 console.error('[Gamepad] Ошибка отправки команды на сервер:', error);
@@ -279,11 +287,12 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
             // Применяем импульс только если прошло достаточно времени с последнего применения
             if (timeSinceLastImpulse >= LOCAL_IMPULSE_INTERVAL) {
                 try {
-                    applyImpulseToSphere('mainPlayer1', force);
+                    applyImpulseToSphere(playerObjectID, force); // Используем динамический player ID
                     console.log('[Gamepad] Применен локальный импульс:', {
                         direction: { x: direction.x, y: direction.y, z: direction.z },
                         force: force,
-                        interval: timeSinceLastImpulse
+                        interval: timeSinceLastImpulse,
+                        playerID: playerObjectID
                     });
                     
                     // Обновляем время последнего применения импульса

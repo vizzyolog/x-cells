@@ -114,6 +114,7 @@ service Physics {
   rpc ApplyTorque(ApplyTorqueRequest) returns (ApplyTorqueResponse);
   rpc GetObjectState(GetObjectStateRequest) returns (GetObjectStateResponse);
   rpc UpdateObjectMass(UpdateObjectMassRequest) returns (UpdateObjectMassResponse);
+  rpc SetPhysicsConfig(SetPhysicsConfigRequest) returns (SetPhysicsConfigResponse);
 }
 
 // Запрос для обновления массы объекта
@@ -124,5 +125,37 @@ message UpdateObjectMassRequest {
 
 // Ответ на запрос обновления массы
 message UpdateObjectMassResponse {
+  string status = 1;
+}
+
+// Конфигурация физики
+message PhysicsConfig {
+  // Настройки импульсов и движения
+  float base_impulse = 1;
+  float max_impulse = 2;
+  float distance_multiplier = 3;
+  float impulse_multiplier = 4;
+
+  // Массы объектов
+  float player_mass = 5;
+  float default_box_mass = 6;
+
+  // Физические свойства
+  float restitution = 7;
+  float friction = 8;
+
+  // Настройки гравитации
+  float gravity_x = 9;
+  float gravity_y = 10;
+  float gravity_z = 11;
+}
+
+// Запрос для установки конфигурации физики
+message SetPhysicsConfigRequest {
+  PhysicsConfig config = 1;
+}
+
+// Ответ на запрос установки конфигурации физики
+message SetPhysicsConfigResponse {
   string status = 1;
 }

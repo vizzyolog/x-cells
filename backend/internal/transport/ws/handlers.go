@@ -39,22 +39,16 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 		return ErrInvalidMessage
 	}
 
-	var objectID string
-
-	// Специальная логика для mainPlayer1 - используем ObjectID из сообщения
-	if cmdMsg.ObjectID == "mainPlayer1" {
-		objectID = "mainPlayer1"
-		log.Printf("[Go] Команда для mainPlayer1 от клиента")
-	} else {
-		// Для остальных случаев получаем игрока по соединению
-		player := s.getPlayerByConnection(conn)
-		if player == nil {
-			log.Printf("[Go] Игрок не найден для соединения")
-			return nil
-		}
-		objectID = player.ObjectID
-		log.Printf("[Go] Команда для игрока %s", objectID)
+	// Получаем игрока по соединению
+	player := s.getPlayerByConnection(conn)
+	if player == nil {
+		log.Printf("[Go] Игрок не найден для соединения")
+		return nil
 	}
+
+	// Используем ObjectID игрока из соединения
+	objectID := player.ObjectID
+	log.Printf("[Go] Команда для игрока %s", objectID)
 
 	// Обновляем состояние контроллера
 	s.mu.Lock()

@@ -8,7 +8,7 @@ import {
     stepPhysics,
     updatePhysicsObjects
 } from './physics';
-import { gameStateManager } from './gamestatemanager';
+import gameStateManager from './gamestatemanager';
 import { EventEmitter } from 'events';
 
 export const terrainCreated = new EventEmitter();
@@ -228,9 +228,15 @@ export function createSphereMesh(data) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         
-        if (data.id === "mainPlayer1") {
-            playerMesh = mesh
+        // Проверяем, является ли этот объект игроком текущего клиента
+        const playerObjectID = gameStateManager.getPlayerObjectID();
+        if (playerObjectID && data.id === playerObjectID) {
+            playerMesh = mesh;
             gameStateManager.setPlayerMesh(playerMesh);
+            console.log(`[Objects] Установлен playerMesh для объекта ${data.id}`);
+        } else {
+            // Если player ID еще не получен, объект может быть установлен позже в network.js
+            console.log(`[Objects] Создан объект ${data.id}, player ID: ${playerObjectID || 'не получен'}`);
         }
 
         return mesh;

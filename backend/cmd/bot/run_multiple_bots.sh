@@ -1,79 +1,81 @@
 #!/bin/bash
 
 # Скрипт для запуска нескольких ботов одновременно
-# Использование: ./run_multiple_bots.sh [количество_ботов] [длительность]
+# Использование: ./run_multiple_bots.sh [количество_ботов] [задержка_между_запусками_в_секундах]
 
-# Параметры по умолчанию
-NUM_BOTS=${1:-3}
-DURATION=${2:-"60s"}
+# Количество ботов (по умолчанию 5)
+NUM_BOTS=${1:-10}
+
+# Задержка между запусками в секундах (по умолчанию 0.5 секунды)
+DELAY=${2:-0.5}
+
+# URL сервера
 SERVER_URL="ws://localhost:8080/ws"
 
-echo "Запуск $NUM_BOTS ботов на $DURATION"
-echo "Сервер: $SERVER_URL"
-echo "================================"
+# Длительность работы каждого бота
+DURATION="60s"
 
-# Массив паттернов движения
+# Частота отправки команд
+RATE="100ms"
+
+# Паттерны движения
 PATTERNS=("random" "circle" "linear")
 
-# Функция для остановки всех ботов
+echo "Запуск $NUM_BOTS ботов с задержкой $DELAY секунд между запусками..."
+echo "Сервер: $SERVER_URL"
+echo "Длительность: $DURATION"
+echo "Частота команд: $RATE"
+echo "================================"
+
+# Массив для хранения PID процессов
+PIDS=()
+
+# Функция для завершения всех ботов
 cleanup() {
     echo ""
-    echo "Остановка всех ботов..."
-    jobs -p | xargs -r kill
+    echo "Завершение всех ботов..."
+    for pid in "${PIDS[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid"
+        fi
+    done
     wait
-    echo "Все боты остановлены"
+    echo "Все боты завершены."
     exit 0
 }
 
 # Обработка сигнала прерывания
 trap cleanup SIGINT SIGTERM
 
-# Проверяем, что бот собран
-if [ ! -f "./bot" ]; then
-    echo "Бот не найден. Собираем..."
-    go build -o bot main.go
-    if [ $? -ne 0 ]; then
-        echo "Ошибка сборки бота"
-        exit 1
-    fi
-fi
-
-# Запускаем ботов
+# Запуск ботов
 for i in $(seq 1 $NUM_BOTS); do
     # Выбираем паттерн движения циклически
-    pattern_index=$(( (i - 1) % ${#PATTERNS[@]} ))
+    pattern_index=$((($i - 1) % ${#PATTERNS[@]}))
     pattern=${PATTERNS[$pattern_index]}
     
-    # Генерируем уникальный object_id для каждого бота
-    if [ $i -eq 1 ]; then
-        object_id="mainPlayerBot"  # Первый бот управляет основным объектом
-    else
-        object_id="bot_object_$i"  # Остальные боты управляют виртуальными объектами
-    fi
-    
-    bot_id="bot_$i"
-    
-    echo "Запуск бота $bot_id с паттерном $pattern (объект: $object_id)"
+    echo "Запуск бота $i с паттерном $pattern..."
     
     # Запускаем бота в фоне
-    ./bot \
-        -server="$SERVER_URL" \
-        -bot-id="$bot_id" \
-        -object-id="$object_id" \
+    go run main.go \
+        -id="bot$i" \
+        -url="$SERVER_URL" \
         -pattern="$pattern" \
-        -speed="15" \
-        -duration="$DURATION" &
+        -duration="$DURATION" \
+        -rate="$RATE" &
     
-    # Небольшая задержка между запусками
-    sleep 0.5
+    # Сохраняем PID процесса
+    PIDS+=($!)
+    
+    # Задержка перед запуском следующего бота (кроме последнего)
+    if [ $i -lt $NUM_BOTS ]; then
+        sleep $DELAY
+    fi
 done
 
-echo ""
-echo "Все боты запущены. Нажмите Ctrl+C для остановки всех ботов."
-echo "Боты будут работать $DURATION, затем автоматически остановятся."
+echo "================================"
+echo "Все $NUM_BOTS ботов запущены!"
+echo "Нажмите Ctrl+C для завершения всех ботов"
+echo "================================"
 
-# Ждем завершения всех фоновых процессов
-wait
-
-echo ""
-echo "Все боты завершили работу" 
+# Ждем завершения всех процессов
+wait 

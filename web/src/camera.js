@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { objects } from './objects';
 import { getArrowDirection } from './gamepad';
+import gameStateManager from './gamestatemanager';
 
 // Объявляем камеру
 export let camera;
@@ -22,8 +23,6 @@ const QUADRATIC_FACTOR = 0.9;       // Коэффициент квадратич
 
 // Внутренняя переменная для хранения текущего значения коэффициента
 let currentQuadraticFactor = QUADRATIC_FACTOR;
-
-const PLAYER_ID = "mainPlayer1"; // Жестко закрепляем ID игрока
 
 // Сохраняем последнюю известную позицию и направление игрока
 let lastKnownPosition = new THREE.Vector3(0, 0, 0);
@@ -106,7 +105,14 @@ function calculateAdaptiveRotationFactor(angle, distance) {
 export function updateCamera() {
     if (!camera) return;
     
-    const player = objects[PLAYER_ID];
+    // Получаем ID объекта игрока от GameStateManager
+    const playerObjectID = gameStateManager.getPlayerObjectID();
+    if (!playerObjectID) {
+        // Если player ID еще не получен, используем последнюю известную позицию
+        return;
+    }
+    
+    const player = objects[playerObjectID];
     
     if (player && player.mesh) {
         const currentPlayerPosition = player.mesh.position.clone();
@@ -176,10 +182,15 @@ export function logCameraStatus() {
     // console.log(`[Camera] Adaptive Factor: ${calculateAdaptiveRotationFactor(lastMeasuredAngle, lastMeasuredDistance).toFixed(3)}`);
     
     // Проверяем наличие игрока
-    const player = objects[PLAYER_ID];
-    if (player && player.mesh) {
-       // console.log(`[Camera] Player found at: (${player.mesh.position.x.toFixed(2)}, ${player.mesh.position.y.toFixed(2)}, ${player.mesh.position.z.toFixed(2)})`);
+    const playerObjectID = gameStateManager.getPlayerObjectID();
+    if (playerObjectID) {
+        const player = objects[playerObjectID];
+        if (player && player.mesh) {
+           // console.log(`[Camera] Player found at: (${player.mesh.position.x.toFixed(2)}, ${player.mesh.position.y.toFixed(2)}, ${player.mesh.position.z.toFixed(2)})`);
+        } else {
+           // console.log(`[Camera] Player object with ID "${playerObjectID}" not found in objects!`);
+        }
     } else {
-       // console.log(`[Camera] Player with ID "${PLAYER_ID}" not found!`);
+        // console.log(`[Camera] Player ID not yet received from server`);
     }
 } 

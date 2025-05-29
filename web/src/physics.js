@@ -1,5 +1,6 @@
 // physics.js
 import { objects } from './objects';
+import gameStateManager from './gamestatemanager';
 import { startPhysicsSimulation, checkConnectionState, getCurrentPing } from './network';
 
 // Обновляем константы для настройки физики
@@ -345,33 +346,27 @@ export function stepPhysics(deltaTime) {
 }
 
 // Функция для обновления отображения скорости игрока
-function updatePlayerSpeedDisplay(speed, maxSpeed, mass) {
+function updatePlayerSpeedDisplay(speed, mass) {
     const speedDisplay = document.getElementById('player-speed');
-    const maxSpeedDisplay = document.getElementById('player-max-speed');
     const massDisplay = document.getElementById('player-mass');
     
-    if (!speedDisplay || !maxSpeedDisplay || !massDisplay) {
+    if (!speedDisplay || !massDisplay) {
         console.error('[Physics] Элементы интерфейса не найдены');
         return;
     }
 
     // Форматируем значения до 2 знаков после запятой
     const formattedSpeed = speed.toFixed(2);
-    const formattedMaxSpeed = maxSpeed.toFixed(2);
     const formattedMass = mass.toFixed(2);
-    
-    // Вычисляем процент от максимальной скорости
-    const speedPercentage = Math.min((speed / maxSpeed) * 100, 100);
     
     // Обновляем текст
     speedDisplay.textContent = `Скорость: ${formattedSpeed} м/с`;
-    maxSpeedDisplay.textContent = `Макс. скорость: ${formattedMaxSpeed} м/с`;
     massDisplay.textContent = `Масса: ${formattedMass} кг`;
     
-    // Обновляем цвет в зависимости от скорости
-    if (speedPercentage < 30) {
+    // Обновляем цвет в зависимости от скорости (без ограничений)
+    if (speed < 20) {
         speedDisplay.style.backgroundColor = 'rgba(0, 128, 0, 0.5)'; // Зеленый - низкая скорость
-    } else if (speedPercentage < 70) {
+    } else if (speed < 50) {
         speedDisplay.style.backgroundColor = 'rgba(255, 165, 0, 0.5)'; // Оранжевый - средняя скорость
     } else {
         speedDisplay.style.backgroundColor = 'rgba(255, 0, 0, 0.5)'; // Красный - высокая скорость
@@ -399,7 +394,8 @@ export function updatePhysicsObjects(useServerPhysics) {
         }
 
         // Обновляем отображение скорости для основного игрока
-        if (id === 'mainPlayer1' && obj.body) {
+        const playerObjectID = gameStateManager.getPlayerObjectID();
+        if (playerObjectID && id === playerObjectID && obj.body) {
             const velocity = obj.body.getLinearVelocity();
             const speed = Math.sqrt(
                 velocity.x() * velocity.x() +
@@ -407,22 +403,8 @@ export function updatePhysicsObjects(useServerPhysics) {
                 velocity.z() * velocity.z()
             );
 
-            // Получаем конфигурацию физики
-            const physicsConfig = window.PHYSICS_CONFIG;
-            if (!physicsConfig) {
-                console.error('[Physics] Конфигурация физики не инициализирована');
-                window.Ammo.destroy(velocity);
-                return;
-            }
-
-            if (typeof physicsConfig.max_speed !== 'number') {
-                console.error('[Physics] max_speed не определен в конфигурации физики');
-                window.Ammo.destroy(velocity);
-                return;
-            }
-
             // Обновляем отображение скорости
-            updatePlayerSpeedDisplay(speed, physicsConfig.max_speed, obj.mass);
+            updatePlayerSpeedDisplay(speed, obj.mass);
 
             // Обновляем индикатор физики
             updatePhysicsModeDisplay(useServerPhysics);

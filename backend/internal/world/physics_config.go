@@ -8,9 +8,6 @@ type PhysicsConfig struct {
 	DistanceMultiplier float32 `json:"distance_multiplier"` // Множитель дистанции для импульса
 	ImpulseMultiplier  float32 `json:"impulse_multiplier"`  // Множитель импульса в физических движках
 
-	// Ограничения скорости
-	MaxSpeed float32 `json:"max_speed"` // Максимальная скорость объектов
-
 	// Массы объектов
 	PlayerMass     float32 `json:"player_mass"`      // Масса игрока
 	DefaultBoxMass float32 `json:"default_box_mass"` // Масса коробки по умолчанию
@@ -33,9 +30,6 @@ func DefaultPhysicsConfig() *PhysicsConfig {
 		MaxImpulse:         60.0,
 		DistanceMultiplier: 1,
 		ImpulseMultiplier:  1,
-
-		// Ограничения скорости
-		MaxSpeed: 80.0,
 
 		// Массы объектов
 		PlayerMass:     35.0,

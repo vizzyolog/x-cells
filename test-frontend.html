@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Frontend - Dynamic Player ID</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+        .info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .status {
+            margin: 5px 0;
+        }
+        .ready {
+            color: #4CAF50;
+        }
+        .waiting {
+            color: #FF9800;
+        }
+        .error {
+            color: #F44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <div class="status" id="connection-status">Подключение...</div>
+        <div class="status" id="player-status">Ожидание player ID...</div>
+        <div class="status" id="object-status">Объект не создан</div>
+    </div>
+
+    <script>
+        // Простой тест WebSocket подключения и получения player ID
+        let ws = null;
+        let playerID = null;
+        let objectID = null;
+
+        function updateStatus(elementId, text, className) {
+            const element = document.getElementById(elementId);
+            element.textContent = text;
+            element.className = 'status ' + className;
+        }
+
+        function connectToServer() {
+            try {
+                ws = new WebSocket('ws://localhost:8080/ws');
+                
+                ws.onopen = function() {
+                    updateStatus('connection-status', 'Подключен к серверу', 'ready');
+                };
+
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('Получено сообщение:', data);
+
+                        switch(data.type) {
+                            case 'info':
+                                console.log('INFO:', data.message);
+                                break;
+
+                            case 'player_id':
+                                playerID = data.player_id;
+                                objectID = data.object_id;
+                                updateStatus('player-status', `Player ID: ${playerID}`, 'ready');
+                                updateStatus('object-status', `Object ID: ${objectID}`, 'ready');
+                                console.log(`Получен player ID: ${playerID}, object ID: ${objectID}`);
+                                break;
+
+                            case 'create':
+                                if (data.id === objectID) {
+                                    updateStatus('object-status', `Объект ${objectID} создан`, 'ready');
+                                    console.log('Объект игрока создан:', data);
+                                }
+                                break;
+
+                            default:
+                                console.log('Другое сообщение:', data.type);
+                        }
+                    } catch (error) {
+                        console.error('Ошибка разбора сообщения:', error);
+                    }
+                };
+
+                ws.onerror = function(error) {
+                    updateStatus('connection-status', 'Ошибка подключения', 'error');
+                    console.error('WebSocket ошибка:', error);
+                };
+
+                ws.onclose = function() {
+                    updateStatus('connection-status', 'Соединение закрыто', 'waiting');
+                    console.log('WebSocket соединение закрыто');
+                };
+
+            } catch (error) {
+                updateStatus('connection-status', 'Ошибка создания WebSocket', 'error');
+                console.error('Ошибка создания WebSocket:', error);
+            }
+        }
+
+        // Подключаемся при загрузке страницы
+        window.addEventListener('load', connectToServer);
+
+        // Добавляем возможность отправки тестовой команды
+        window.addEventListener('keydown', function(event) {
+            if (event.key === ' ' && ws && ws.readyState === WebSocket.OPEN && objectID) {
+                const command = {
+                    type: 'cmd',
+                    cmd: 'MOUSE_VECTOR',
+                    data: {
+                        x: Math.random() * 2 - 1,
+                        y: 0.1,
+                        z: Math.random() * 2 - 1,
+                        distance: 50
+                    },
+                    client_time: Date.now(),
+                    object_id: objectID
+                };
+                
+                ws.send(JSON.stringify(command));
+                console.log('Отправлена команда:', command);
+            }
+        });
+
+        console.log('Тестовая страница загружена. Нажмите пробел для отправки тестовой команды.');
+    </script>
+</body>
+</html> 

@@ -54,7 +54,10 @@ type Bot struct {
 	Duration        time.Duration
 	CommandRate     time.Duration
 	mu              sync.RWMutex
+	writeMu         sync.Mutex // Мьютекс для синхронизации записи в WebSocket
 	lastCommandTime time.Time
+	playerID        string // ID игрока, полученный от сервера
+	objectID        string // ID объекта игрока в мире
 }
 
 // BotStats содержит статистику работы бота
@@ -89,7 +92,14 @@ func (b *Bot) Connect() error {
 
 	log.Printf("[Bot %s] Подключение к %s", b.ID, u.String())
 
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	// Настройки для уменьшения использования файловых дескрипторов
+	dialer := websocket.Dialer{
+		HandshakeTimeout: 10 * time.Second,
+		ReadBufferSize:   1024,
+		WriteBufferSize:  1024,
+	}
+
+	conn, _, err := dialer.Dial(u.String(), nil)
 	if err != nil {
 		return fmt.Errorf("ошибка подключения: %v", err)
 	}
@@ -187,6 +197,21 @@ func (b *Bot) generateLinearVector() MouseVectorData {
 
 // sendMouseVectorCommand отправляет команду MOUSE_VECTOR
 func (b *Bot) sendMouseVectorCommand() error {
+	// Проверяем, получен ли object ID от сервера
+	b.mu.RLock()
+	objectID := b.objectID
+	conn := b.Conn
+	b.mu.RUnlock()
+
+	if objectID == "" {
+		// Если object ID еще не получен, пропускаем отправку команды
+		return nil
+	}
+
+	if conn == nil {
+		return fmt.Errorf("соединение не установлено")
+	}
+
 	vector := b.generateMouseVector()
 
 	cmd := CommandMessage{
@@ -194,16 +219,11 @@ func (b *Bot) sendMouseVectorCommand() error {
 		Cmd:        "MOUSE_VECTOR",
 		ClientTime: time.Now().UnixMilli(),
 		Data:       vector,
-		ObjectID:   "mainPlayer1", // Используем тот же ID что и в gamepad.js
+		ObjectID:   objectID, // Используем динамический object ID
 	}
 
-	b.mu.RLock()
-	conn := b.Conn
-	b.mu.RUnlock()
-
-	if conn == nil {
-		return fmt.Errorf("соединение не установлено")
-	}
+	b.writeMu.Lock()
+	defer b.writeMu.Unlock()
 
 	if err := conn.WriteJSON(cmd); err != nil {
 		b.Stats.mu.Lock()
@@ -238,6 +258,9 @@ func (b *Bot) sendPing() error {
 		return fmt.Errorf("соединение не установлено")
 	}
 
+	b.writeMu.Lock()
+	defer b.writeMu.Unlock()
+
 	return conn.WriteJSON(ping)
 }
 
@@ -260,7 +283,7 @@ func (b *Bot) handleMessage(messageType int, data []byte) {
 	}
 
 	switch msgType {
-	case "ack":
+	case "ack", "cmd_ack":
 		b.Stats.mu.Lock()
 		b.Stats.ResponsesReceived++
 		b.Stats.mu.Unlock()
@@ -272,6 +295,17 @@ func (b *Bot) handleMessage(messageType int, data []byte) {
 	case "info":
 		if message, ok := msg["message"].(string); ok {
 			log.Printf("[Bot %s] Информация: %s", b.ID, message)
+		}
+
+	case "player_id":
+		if playerID, ok := msg["player_id"].(string); ok {
+			if objectID, ok := msg["object_id"].(string); ok {
+				b.mu.Lock()
+				b.playerID = playerID
+				b.objectID = objectID
+				b.mu.Unlock()
+				log.Printf("[Bot %s] Получен player ID: %s, object ID: %s", b.ID, playerID, objectID)
+			}
 		}
 
 	case "create":
@@ -286,6 +320,9 @@ func (b *Bot) handleMessage(messageType int, data []byte) {
 	case "batch_update":
 		// Пакетные обновления - обрабатываем молча
 		break
+
+	case "physics_config":
+		log.Printf("[Bot %s] Получена конфигурация физики", b.ID)
 
 	default:
 		log.Printf("[Bot %s] Неизвестный тип сообщения: %s", b.ID, msgType)
@@ -322,11 +359,9 @@ func (b *Bot) Run() error {
 		defer pingTicker.Stop()
 
 		for b.Running {
-			select {
-			case <-pingTicker.C:
-				if err := b.sendPing(); err != nil {
-					log.Printf("[Bot %s] Ошибка отправки ping: %v", b.ID, err)
-				}
+			<-pingTicker.C
+			if err := b.sendPing(); err != nil {
+				log.Printf("[Bot %s] Ошибка отправки ping: %v", b.ID, err)
 			}
 		}
 	}()
@@ -338,14 +373,12 @@ func (b *Bot) Run() error {
 	endTime := time.Now().Add(b.Duration)
 
 	for b.Running && time.Now().Before(endTime) {
-		select {
-		case <-commandTicker.C:
-			if err := b.sendMouseVectorCommand(); err != nil {
-				log.Printf("[Bot %s] Ошибка отправки команды: %v", b.ID, err)
-				b.Stats.mu.Lock()
-				b.Stats.Errors++
-				b.Stats.mu.Unlock()
-			}
+		<-commandTicker.C
+		if err := b.sendMouseVectorCommand(); err != nil {
+			log.Printf("[Bot %s] Ошибка отправки команды: %v", b.ID, err)
+			b.Stats.mu.Lock()
+			b.Stats.Errors++
+			b.Stats.mu.Unlock()
 		}
 	}
 

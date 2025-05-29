@@ -50,13 +50,19 @@ func (s *WSServer) createPlayerObject(playerID, objectID string) error {
 	terrainMaxHeight := float32(30.0) // Используем константу из test_objects.go
 
 	// Все игроки появляются в случайных позициях
-	spawnX := float32(rand.IntN(40) - 20) // от -20 до 20
-	spawnZ := float32(rand.IntN(40) - 20) // от -20 до 20
+	spawnX := float32(rand.IntN(200) - 100) // от -100 до 100
+	spawnZ := float32(rand.IntN(200) - 100) // от -100 до 100
 	spawnY := terrainMaxHeight + 50
 
-	// Генерируем случайный радиус (2.0 - 20)
-	radius := float32(2.0 + rand.Float64()*20)
-	massa := float32(10.0 + rand.Float64()*100)
+	// Генерируем случайный радиус (2.0 - 20.0)
+	radius := float32(2.0 + rand.Float64()*18.0)
+
+	// Адаптивная масса: базовая масса + коэффициент на объем сферы
+	// Объем сферы = (4/3) * π * r³, но используем упрощенную формулу
+	volumeCoeff := radius * radius * radius * 0.1 // упрощенный коэффициент объема
+	baseMass := float32(50.0)                     // базовая масса для маленьких сфер
+	mass := baseMass + volumeCoeff                // итоговая масса
+
 	// Генерируем случайный цвет для игрока
 	colors := []string{"#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff", "#ffa500", "#800080"}
 	color := colors[rand.IntN(len(colors))]
@@ -66,7 +72,7 @@ func (s *WSServer) createPlayerObject(playerID, objectID string) error {
 		objectID,
 		world.Vector3{X: spawnX, Y: spawnY, Z: spawnZ},
 		radius, // Случайный радиус
-		massa,  // Масса
+		mass,   // Масса
 		color,
 		world.PhysicsTypeBoth, // Физика и на клиенте, и на сервере
 	)
@@ -83,8 +89,8 @@ func (s *WSServer) createPlayerObject(playerID, objectID string) error {
 		return err
 	}
 
-	log.Printf("[WSServer] Создан объект игрока %s для игрока %s в позиции (%.2f, %.2f, %.2f) с радиусом %.2f",
-		objectID, playerID, spawnX, spawnY, spawnZ, radius)
+	log.Printf("[WSServer] Создан объект игрока %s для игрока %s в позиции (%.2f, %.2f, %.2f) с радиусом %.2f и массой %.2f",
+		objectID, playerID, spawnX, spawnY, spawnZ, radius, mass)
 
 	return nil
 }

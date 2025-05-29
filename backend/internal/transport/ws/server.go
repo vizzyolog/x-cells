@@ -57,28 +57,6 @@ type WSServer struct {
 	simMu           sync.RWMutex // мьютекс для настроек симуляции
 }
 
-// Структура для хранения данных контроллера
-type ControllerState struct {
-	LastUpdate time.Time
-	Force      struct {
-		X float32
-		Y float32
-		Z float32
-	}
-}
-
-// Структура команды от клиента
-type Command struct {
-	ID         string
-	Type       string
-	ClientTime int64
-	Force      struct {
-		X float32
-		Y float32
-		Z float32
-	}
-}
-
 // NewWSServer создает новый экземпляр WebSocket сервера
 func NewWSServer(objectManager ObjectManager, physics transport.IPhysicsClient, serialaizer *WorldSerializer) *WSServer {
 	server := &WSServer{

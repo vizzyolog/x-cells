@@ -275,71 +275,23 @@ function updatePhysicsModeDisplay(useServerPhysics) {
 export function stepPhysics(deltaTime) {
     try {
         if (!localPhysicsWorld) {
-            console.error("[Physics] Физический мир не инициализирован");
+            console.warn("[Physics] Физический мир не инициализирован");
             return;
         }
 
         // Проверяем состояние соединения
         const useServerPhysics = checkConnectionState();
-        
-        // Обновляем индикатор режима физики
-        updatePhysicsModeDisplay(useServerPhysics);
 
-        // Для всех объектов с гибридной физикой, применяем кинематический контроль
-        // при использовании серверной физики
-        if (useServerPhysics) {
-            for (const id in objects) {
-                const obj = objects[id];
-                if (!obj || !obj.body || obj.physicsBy !== "both") continue;
-                
-                // Если у объекта есть серверная позиция, устанавливаем для него серверную позицию
-                if (obj.serverPos) {
-                    // Продвигаем объект к серверной позиции с учетом прошедшего времени
-                    // Чем больше времени прошло с последнего обновления, тем ближе к серверной позиции
-                    const currentTime = Date.now();
-                    const timeSinceUpdate = obj.lastServerUpdate ? currentTime - obj.lastServerUpdate : Infinity;
-                    
-                    // Если прошло слишком много времени, телепортируем объект
-                    if (timeSinceUpdate > PHYSICS_SETTINGS.NETWORK.TIMEOUT) {
-                        continue; // Пропускаем, будет обработано в updateHybridPhysics
-                    }
-                    
-                    // Получаем текущую позицию
-                    const trans = new window.Ammo.btTransform();
-                    obj.body.getMotionState().getWorldTransform(trans);
-                    
-                    const currentPos = {
-                        x: trans.getOrigin().x(),
-                        y: trans.getOrigin().y(),
-                        z: trans.getOrigin().z()
-                    };
-                    
-                    // Обновляем позицию физического тела для более точного следования серверу
-                    const updateInterval = PHYSICS_SETTINGS.NETWORK.UPDATE_INTERVAL;
-                    const progress = Math.min(timeSinceUpdate / updateInterval, 1.0);
-                    
-                    const newPos = {
-                        x: currentPos.x + (obj.serverPos.x - currentPos.x) * progress * 0.5,
-                        y: currentPos.y + (obj.serverPos.y - currentPos.y) * progress * 0.5,
-                        z: currentPos.z + (obj.serverPos.z - currentPos.z) * progress * 0.5
-                    };
-                    
-                    // Применяем новую позицию
-                    trans.setOrigin(new window.Ammo.btVector3(newPos.x, newPos.y, newPos.z));
-                    obj.body.getMotionState().setWorldTransform(trans);
-                    
-                    window.Ammo.destroy(trans);
-                }
-            }
-        }
-
-        // Симулируем физику с фиксированным шагом
-        const fixedStep = 1/120; // 120 Hz
-        const maxSubSteps = Math.ceil(Math.min(deltaTime, 1/60) / fixedStep);
-        localPhysicsWorld.stepSimulation(deltaTime, maxSubSteps, fixedStep);
+        // Шаг симуляции физики
+        localPhysicsWorld.stepSimulation(deltaTime);
         
         // Обновляем положение объектов
         updatePhysicsObjects(useServerPhysics);
+        
+        // Принудительно обновляем приборы каждые 60 кадров (~1 секунда при 60 FPS)
+        if (Date.now() % 1000 < 50) { // Примерно раз в секунду
+            forceUpdateInstruments();
+        }
     } catch (error) {
         console.error("[Physics] Ошибка в цикле физики:", error);
     }
@@ -349,6 +301,8 @@ export function stepPhysics(deltaTime) {
 function updatePlayerSpeedDisplay(speed, mass) {
     const speedDisplay = document.getElementById('player-speed');
     const massDisplay = document.getElementById('player-mass');
+    const statusDisplay = document.getElementById('player-status');
+    const objectsDisplay = document.getElementById('world-objects');
     
     if (!speedDisplay || !massDisplay) {
         console.error('[Physics] Элементы интерфейса не найдены');
@@ -360,10 +314,28 @@ function updatePlayerSpeedDisplay(speed, mass) {
     const formattedMass = mass.toFixed(2);
     
     // Обновляем текст
-    speedDisplay.textContent = `Скорость: ${formattedSpeed} м/с`;
-    massDisplay.textContent = `Масса: ${formattedMass} кг`;
+    speedDisplay.textContent = `⚡ ${formattedSpeed} м/с`;
+    massDisplay.textContent = `⚖️ ${formattedMass} кг`;
     
-    // Обновляем цвет в зависимости от скорости (без ограничений)
+    // Обновляем статус игрока
+    if (statusDisplay) {
+        const playerObjectID = gameStateManager.getPlayerObjectID();
+        if (playerObjectID) {
+            statusDisplay.textContent = `🎮 ID:${playerObjectID}`;
+            statusDisplay.style.backgroundColor = 'rgba(0, 128, 0, 0.3)';
+        } else {
+            statusDisplay.textContent = '🎮 Поиск...';
+            statusDisplay.style.backgroundColor = 'rgba(128, 0, 0, 0.3)';
+        }
+    }
+    
+    // Обновляем количество объектов
+    if (objectsDisplay) {
+        const objectCount = Object.keys(objects).length;
+        objectsDisplay.textContent = `🌍 ${objectCount}`;
+    }
+    
+    // Обновляем цвет скорости в зависимости от значения
     if (speed < 20) {
         speedDisplay.style.backgroundColor = 'rgba(0, 128, 0, 0.5)'; // Зеленый - низкая скорость
     } else if (speed < 50) {
@@ -371,11 +343,23 @@ function updatePlayerSpeedDisplay(speed, mass) {
     } else {
         speedDisplay.style.backgroundColor = 'rgba(255, 0, 0, 0.5)'; // Красный - высокая скорость
     }
+    
+    // Обновляем цвет массы в зависимости от значения
+    if (mass < 10) {
+        massDisplay.style.backgroundColor = 'rgba(0, 255, 255, 0.5)'; // Голубой - легкая
+    } else if (mass < 20) {
+        massDisplay.style.backgroundColor = 'rgba(128, 128, 0, 0.5)'; // Желтый - средняя
+    } else {
+        massDisplay.style.backgroundColor = 'rgba(255, 0, 255, 0.5)'; // Фиолетовый - тяжелая
+    }
 }
 
 // Обновляем функцию updatePhysicsObjects для отображения скорости
 export function updatePhysicsObjects(useServerPhysics) {
     if (!localPhysicsWorld) return;
+
+    let playerFound = false;
+    let debugInfo = {};
 
     for (const id in objects) {
         const obj = objects[id];
@@ -395,13 +379,33 @@ export function updatePhysicsObjects(useServerPhysics) {
 
         // Обновляем отображение скорости для основного игрока
         const playerObjectID = gameStateManager.getPlayerObjectID();
+        
+        // Отладочная информация
+        if (!playerFound) {
+            debugInfo = {
+                playerObjectID: playerObjectID,
+                currentId: id,
+                hasBody: !!obj.body,
+                objectType: obj.object_type,
+                totalObjects: Object.keys(objects).length
+            };
+        }
+
         if (playerObjectID && id === playerObjectID && obj.body) {
+            playerFound = true;
             const velocity = obj.body.getLinearVelocity();
             const speed = Math.sqrt(
                 velocity.x() * velocity.x() +
                 velocity.y() * velocity.y() +
                 velocity.z() * velocity.z()
             );
+
+            // Проверяем наличие массы и логируем ошибку если её нет
+            if (obj.mass === undefined || obj.mass === null) {
+                console.error(`[Physics] Масса объекта игрока ${id} не определена! obj.mass:`, obj.mass);
+                window.Ammo.destroy(velocity);
+                return;
+            }
 
             // Обновляем отображение скорости
             updatePlayerSpeedDisplay(speed, obj.mass);
@@ -410,6 +414,40 @@ export function updatePhysicsObjects(useServerPhysics) {
             updatePhysicsModeDisplay(useServerPhysics);
 
             window.Ammo.destroy(velocity);
+        }
+    }
+
+    // Если игрока не найдено, но есть объекты - попробуем найти первый объект типа "sphere"
+    if (!playerFound && Object.keys(objects).length > 0) {
+        for (const id in objects) {
+            const obj = objects[id];
+            if (obj.object_type === "sphere" && obj.body) {
+                console.log(`[Physics] Используем sphere ${id} для обновления приборов (playerObjectID: ${debugInfo.playerObjectID})`);
+                
+                const velocity = obj.body.getLinearVelocity();
+                const speed = Math.sqrt(
+                    velocity.x() * velocity.x() +
+                    velocity.y() * velocity.y() +
+                    velocity.z() * velocity.z()
+                );
+
+                // Проверяем наличие массы
+                if (obj.mass === undefined || obj.mass === null) {
+                    console.error(`[Physics] Масса резервной сферы ${id} не определена! obj.mass:`, obj.mass);
+                    window.Ammo.destroy(velocity);
+                    continue; // Попробуем следующую сферу
+                }
+
+                updatePlayerSpeedDisplay(speed, obj.mass);
+                updatePhysicsModeDisplay(useServerPhysics);
+                window.Ammo.destroy(velocity);
+                break;
+            }
+        }
+        
+        // Выводим отладочную информацию только если есть объекты
+        if (Math.random() < 0.01) { // Выводим раз в 100 кадров чтобы не засорять консоль
+            console.log('[Physics] Отладка приборов:', debugInfo);
         }
     }
 }
@@ -1359,6 +1397,77 @@ function resetObjectState(obj) {
 window.getSmoothedJitter = getSmoothedJitter;
 window.getInterpolationStrategy = getInterpolationStrategy;
 window.networkMonitor = networkMonitor;
+
+// Функция для принудительного обновления приборов
+function forceUpdateInstruments() {
+    const playerObjectID = gameStateManager.getPlayerObjectID();
+    let foundPlayer = false;
+    
+    // Пытаемся найти игрока
+    if (playerObjectID && objects[playerObjectID] && objects[playerObjectID].body) {
+        const obj = objects[playerObjectID];
+        const velocity = obj.body.getLinearVelocity();
+        const speed = Math.sqrt(
+            velocity.x() * velocity.x() +
+            velocity.y() * velocity.y() +
+            velocity.z() * velocity.z()
+        );
+        
+        // Проверяем наличие массы
+        if (obj.mass === undefined || obj.mass === null) {
+            console.error(`[Physics] Масса объекта игрока ${playerObjectID} не определена в forceUpdateInstruments! obj.mass:`, obj.mass);
+            window.Ammo.destroy(velocity);
+            // Не устанавливаем foundPlayer = true, чтобы попробовать найти другую сферу
+        } else {
+            updatePlayerSpeedDisplay(speed, obj.mass);
+            window.Ammo.destroy(velocity);
+            foundPlayer = true;
+        }
+    }
+    
+    // Если игрока не найдено, ищем любую сферу
+    if (!foundPlayer) {
+        for (const id in objects) {
+            const obj = objects[id];
+            if (obj.object_type === "sphere" && obj.body) {
+                const velocity = obj.body.getLinearVelocity();
+                const speed = Math.sqrt(
+                    velocity.x() * velocity.x() +
+                    velocity.y() * velocity.y() +
+                    velocity.z() * velocity.z()
+                );
+                
+                // Проверяем наличие массы
+                if (obj.mass === undefined || obj.mass === null) {
+                    console.error(`[Physics] Масса резервной сферы ${id} не определена в forceUpdateInstruments! obj.mass:`, obj.mass);
+                    window.Ammo.destroy(velocity);
+                    continue; // Попробуем следующую сферу
+                }
+                
+                updatePlayerSpeedDisplay(speed, obj.mass);
+                window.Ammo.destroy(velocity);
+                foundPlayer = true;
+                break;
+            }
+        }
+    }
+    
+    // Если ничего не найдено, показываем базовую информацию
+    if (!foundPlayer) {
+        const statusDisplay = document.getElementById('player-status');
+        const objectsDisplay = document.getElementById('world-objects');
+        
+        if (statusDisplay) {
+            statusDisplay.textContent = '🎮 Статус: Нет объектов';
+            statusDisplay.style.backgroundColor = 'rgba(128, 0, 0, 0.3)';
+        }
+        
+        if (objectsDisplay) {
+            const objectCount = Object.keys(objects).length;
+            objectsDisplay.textContent = `🌍 ${objectCount}`;
+        }
+    }
+}
 
 // РЕКОМЕНДАЦИИ ДЛЯ ЭКСПЕРИМЕНТОВ И НАСТРОЙКИ
 // ==========================================

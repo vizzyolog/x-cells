@@ -6,7 +6,6 @@ type PhysicsConfig struct {
 	BaseImpulse        float32 `json:"base_impulse"`        // Базовый импульс для движения объектов
 	MaxImpulse         float32 `json:"max_impulse"`         // Максимальная величина импульса
 	DistanceMultiplier float32 `json:"distance_multiplier"` // Множитель дистанции для импульса
-	ImpulseMultiplier  float32 `json:"impulse_multiplier"`  // Множитель импульса в физических движках
 
 	// Массы объектов
 	PlayerMass     float32 `json:"player_mass"`      // Масса игрока
@@ -25,19 +24,18 @@ type PhysicsConfig struct {
 // DefaultPhysicsConfig возвращает стандартные настройки физики
 func DefaultPhysicsConfig() *PhysicsConfig {
 	return &PhysicsConfig{
-		// Настройки импульсов
-		BaseImpulse:        30.0,
-		MaxImpulse:         60.0,
-		DistanceMultiplier: 1,
-		ImpulseMultiplier:  1,
+		// Настройки импульсов - увеличены для более отзывчивого управления
+		BaseImpulse:        300.0, // было 30.0
+		MaxImpulse:         800.0, // было 160.0
+		DistanceMultiplier: 2,     // увеличиваем влияние расстояния
 
-		// Массы объектов
-		PlayerMass:     35.0,
-		DefaultBoxMass: 5.0,
+		// Массы объектов - уменьшены для лучшей отзывчивости
+		PlayerMass:     35,  // было 35.0
+		DefaultBoxMass: 3.0, // было 5.0
 
-		// Физические свойства
-		Restitution: 0.1,
-		Friction:    0.05,
+		// Физические свойства - настроены для более плавного движения
+		Restitution: 0.2,  // увеличена упругость
+		Friction:    0.02, // уменьшено трение
 
 		// Настройки гравитации
 		GravityX: 0.0,

@@ -1,5 +1,5 @@
 // network.js
-import { objects, createMeshAndBodyForObject } from './objects';
+import { objects, createMeshAndBodyForObject, updatePlayerSpeedDisplay, updatePhysicsModeDisplay, players, getServerPlayerCount } from './objects';
 import { 
     getPhysicsWorld,
     applyImpulseToSphere,
@@ -8,7 +8,9 @@ import {
     stepPhysics,
     updatePhysicsObjects
 } from './physics';
-import gameStateManager from './gamestatemanager';
+import gameStateManager from './gamestatemanager.js';
+import { logError } from './throttledlog.js';
+import { addEyesToSphere } from './eyes.js'; // Импортируем систему глаз
 
 let ws = null;
 let physicsStarted = false;
@@ -235,7 +237,13 @@ function handleMessage(data) {
                 const playerObject = objects[data.object_id];
                 if (playerObject && playerObject.mesh) {
                     gameStateManager.setPlayerMesh(playerObject.mesh);
-                    console.log(`[Network] Установлен playerMesh для существующего объекта ${data.object_id}`);
+                    
+                    // Добавляем глаза к сфере игрока, если это сфера
+                    if (playerObject.object_type === "sphere") {
+                        addEyesToSphere(playerObject.mesh);
+                    }
+                    
+                    console.log(`[Network] Установлен playerMesh для существующего объекта ${data.object_id} с глазами`);
                 }
             } else {
                 console.error('[Network] Получено некорректное сообщение player_id:', data);

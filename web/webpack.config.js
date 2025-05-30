@@ -66,6 +66,12 @@ module.exports = {
                     to: outputPath,
                     globOptions: { ignore: ['**/index.html'] }
                 },
+                // Копируем тестовый файл из корневой директории
+                {
+                    from: '../test-eyes.html',
+                    to: path.join(outputPath, 'test-eyes.html'),
+                    noErrorOnMissing: true
+                },
                 // Добавляем копирование Ammo.js из CDN или локальной папки
                 {
                     from: 'node_modules/ammo.js/builds/ammo.wasm.js',

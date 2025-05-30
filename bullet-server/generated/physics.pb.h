@@ -898,6 +898,11 @@ class SphereData final :
     kColorFieldNumber = 3,
     kRadiusFieldNumber = 1,
     kMassFieldNumber = 2,
+    kRestitutionFieldNumber = 4,
+    kFrictionFieldNumber = 5,
+    kRollingFrictionFieldNumber = 6,
+    kLinearDampingFieldNumber = 7,
+    kAngularDampingFieldNumber = 8,
   };
   // string color = 3;
   void clear_color();
@@ -931,6 +936,51 @@ class SphereData final :
   void _internal_set_mass(float value);
   public:
 
+  // float restitution = 4;
+  void clear_restitution();
+  float restitution() const;
+  void set_restitution(float value);
+  private:
+  float _internal_restitution() const;
+  void _internal_set_restitution(float value);
+  public:
+
+  // float friction = 5;
+  void clear_friction();
+  float friction() const;
+  void set_friction(float value);
+  private:
+  float _internal_friction() const;
+  void _internal_set_friction(float value);
+  public:
+
+  // float rolling_friction = 6;
+  void clear_rolling_friction();
+  float rolling_friction() const;
+  void set_rolling_friction(float value);
+  private:
+  float _internal_rolling_friction() const;
+  void _internal_set_rolling_friction(float value);
+  public:
+
+  // float linear_damping = 7;
+  void clear_linear_damping();
+  float linear_damping() const;
+  void set_linear_damping(float value);
+  private:
+  float _internal_linear_damping() const;
+  void _internal_set_linear_damping(float value);
+  public:
+
+  // float angular_damping = 8;
+  void clear_angular_damping();
+  float angular_damping() const;
+  void set_angular_damping(float value);
+  private:
+  float _internal_angular_damping() const;
+  void _internal_set_angular_damping(float value);
+  public:
+
   // @@protoc_insertion_point(class_scope:physics.SphereData)
  private:
   class _Internal;
@@ -942,6 +992,11 @@ class SphereData final :
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr color_;
     float radius_;
     float mass_;
+    float restitution_;
+    float friction_;
+    float rolling_friction_;
+    float linear_damping_;
+    float angular_damping_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1075,6 +1130,11 @@ class BoxData final :
     kHeightFieldNumber = 2,
     kDepthFieldNumber = 3,
     kMassFieldNumber = 4,
+    kRestitutionFieldNumber = 6,
+    kFrictionFieldNumber = 7,
+    kRollingFrictionFieldNumber = 8,
+    kLinearDampingFieldNumber = 9,
+    kAngularDampingFieldNumber = 10,
   };
   // string color = 5;
   void clear_color();
@@ -1126,6 +1186,51 @@ class BoxData final :
   void _internal_set_mass(float value);
   public:
 
+  // float restitution = 6;
+  void clear_restitution();
+  float restitution() const;
+  void set_restitution(float value);
+  private:
+  float _internal_restitution() const;
+  void _internal_set_restitution(float value);
+  public:
+
+  // float friction = 7;
+  void clear_friction();
+  float friction() const;
+  void set_friction(float value);
+  private:
+  float _internal_friction() const;
+  void _internal_set_friction(float value);
+  public:
+
+  // float rolling_friction = 8;
+  void clear_rolling_friction();
+  float rolling_friction() const;
+  void set_rolling_friction(float value);
+  private:
+  float _internal_rolling_friction() const;
+  void _internal_set_rolling_friction(float value);
+  public:
+
+  // float linear_damping = 9;
+  void clear_linear_damping();
+  float linear_damping() const;
+  void set_linear_damping(float value);
+  private:
+  float _internal_linear_damping() const;
+  void _internal_set_linear_damping(float value);
+  public:
+
+  // float angular_damping = 10;
+  void clear_angular_damping();
+  float angular_damping() const;
+  void set_angular_damping(float value);
+  private:
+  float _internal_angular_damping() const;
+  void _internal_set_angular_damping(float value);
+  public:
+
   // @@protoc_insertion_point(class_scope:physics.BoxData)
  private:
   class _Internal;
@@ -1139,6 +1244,11 @@ class BoxData final :
     float height_;
     float depth_;
     float mass_;
+    float restitution_;
+    float friction_;
+    float rolling_friction_;
+    float linear_damping_;
+    float angular_damping_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1509,6 +1619,7 @@ class CreateObjectRequest final :
     kPositionFieldNumber = 2,
     kRotationFieldNumber = 3,
     kShapeFieldNumber = 4,
+    kPhysicsConfigFieldNumber = 5,
   };
   // string id = 1;
   void clear_id();
@@ -1578,6 +1689,24 @@ class CreateObjectRequest final :
       ::physics::ShapeDescriptor* shape);
   ::physics::ShapeDescriptor* unsafe_arena_release_shape();
 
+  // .physics.PhysicsConfig physics_config = 5;
+  bool has_physics_config() const;
+  private:
+  bool _internal_has_physics_config() const;
+  public:
+  void clear_physics_config();
+  const ::physics::PhysicsConfig& physics_config() const;
+  PROTOBUF_NODISCARD ::physics::PhysicsConfig* release_physics_config();
+  ::physics::PhysicsConfig* mutable_physics_config();
+  void set_allocated_physics_config(::physics::PhysicsConfig* physics_config);
+  private:
+  const ::physics::PhysicsConfig& _internal_physics_config() const;
+  ::physics::PhysicsConfig* _internal_mutable_physics_config();
+  public:
+  void unsafe_arena_set_allocated_physics_config(
+      ::physics::PhysicsConfig* physics_config);
+  ::physics::PhysicsConfig* unsafe_arena_release_physics_config();
+
   // @@protoc_insertion_point(class_scope:physics.CreateObjectRequest)
  private:
   class _Internal;
@@ -1590,6 +1719,7 @@ class CreateObjectRequest final :
     ::physics::Vector3* position_;
     ::physics::Quaternion* rotation_;
     ::physics::ShapeDescriptor* shape_;
+    ::physics::PhysicsConfig* physics_config_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -3388,12 +3518,14 @@ class PhysicsConfig final :
     kDistanceMultiplierFieldNumber = 3,
     kImpulseMultiplierFieldNumber = 4,
     kPlayerMassFieldNumber = 5,
-    kDefaultBoxMassFieldNumber = 6,
     kRestitutionFieldNumber = 7,
     kFrictionFieldNumber = 8,
-    kGravityXFieldNumber = 9,
-    kGravityYFieldNumber = 10,
-    kGravityZFieldNumber = 11,
+    kRollingFrictionFieldNumber = 9,
+    kLinearDampingFieldNumber = 10,
+    kAngularDampingFieldNumber = 11,
+    kGravityXFieldNumber = 12,
+    kGravityYFieldNumber = 13,
+    kGravityZFieldNumber = 14,
   };
   // float base_impulse = 1;
   void clear_base_impulse();
@@ -3440,15 +3572,6 @@ class PhysicsConfig final :
   void _internal_set_player_mass(float value);
   public:
 
-  // float default_box_mass = 6;
-  void clear_default_box_mass();
-  float default_box_mass() const;
-  void set_default_box_mass(float value);
-  private:
-  float _internal_default_box_mass() const;
-  void _internal_set_default_box_mass(float value);
-  public:
-
   // float restitution = 7;
   void clear_restitution();
   float restitution() const;
@@ -3467,7 +3590,34 @@ class PhysicsConfig final :
   void _internal_set_friction(float value);
   public:
 
-  // float gravity_x = 9;
+  // float rolling_friction = 9;
+  void clear_rolling_friction();
+  float rolling_friction() const;
+  void set_rolling_friction(float value);
+  private:
+  float _internal_rolling_friction() const;
+  void _internal_set_rolling_friction(float value);
+  public:
+
+  // float linear_damping = 10;
+  void clear_linear_damping();
+  float linear_damping() const;
+  void set_linear_damping(float value);
+  private:
+  float _internal_linear_damping() const;
+  void _internal_set_linear_damping(float value);
+  public:
+
+  // float angular_damping = 11;
+  void clear_angular_damping();
+  float angular_damping() const;
+  void set_angular_damping(float value);
+  private:
+  float _internal_angular_damping() const;
+  void _internal_set_angular_damping(float value);
+  public:
+
+  // float gravity_x = 12;
   void clear_gravity_x();
   float gravity_x() const;
   void set_gravity_x(float value);
@@ -3476,7 +3626,7 @@ class PhysicsConfig final :
   void _internal_set_gravity_x(float value);
   public:
 
-  // float gravity_y = 10;
+  // float gravity_y = 13;
   void clear_gravity_y();
   float gravity_y() const;
   void set_gravity_y(float value);
@@ -3485,7 +3635,7 @@ class PhysicsConfig final :
   void _internal_set_gravity_y(float value);
   public:
 
-  // float gravity_z = 11;
+  // float gravity_z = 14;
   void clear_gravity_z();
   float gravity_z() const;
   void set_gravity_z(float value);
@@ -3507,9 +3657,11 @@ class PhysicsConfig final :
     float distance_multiplier_;
     float impulse_multiplier_;
     float player_mass_;
-    float default_box_mass_;
     float restitution_;
     float friction_;
+    float rolling_friction_;
+    float linear_damping_;
+    float angular_damping_;
     float gravity_x_;
     float gravity_y_;
     float gravity_z_;
@@ -4332,6 +4484,106 @@ inline void SphereData::set_allocated_color(std::string* color) {
   // @@protoc_insertion_point(field_set_allocated:physics.SphereData.color)
 }
 
+// float restitution = 4;
+inline void SphereData::clear_restitution() {
+  _impl_.restitution_ = 0;
+}
+inline float SphereData::_internal_restitution() const {
+  return _impl_.restitution_;
+}
+inline float SphereData::restitution() const {
+  // @@protoc_insertion_point(field_get:physics.SphereData.restitution)
+  return _internal_restitution();
+}
+inline void SphereData::_internal_set_restitution(float value) {
+  
+  _impl_.restitution_ = value;
+}
+inline void SphereData::set_restitution(float value) {
+  _internal_set_restitution(value);
+  // @@protoc_insertion_point(field_set:physics.SphereData.restitution)
+}
+
+// float friction = 5;
+inline void SphereData::clear_friction() {
+  _impl_.friction_ = 0;
+}
+inline float SphereData::_internal_friction() const {
+  return _impl_.friction_;
+}
+inline float SphereData::friction() const {
+  // @@protoc_insertion_point(field_get:physics.SphereData.friction)
+  return _internal_friction();
+}
+inline void SphereData::_internal_set_friction(float value) {
+  
+  _impl_.friction_ = value;
+}
+inline void SphereData::set_friction(float value) {
+  _internal_set_friction(value);
+  // @@protoc_insertion_point(field_set:physics.SphereData.friction)
+}
+
+// float rolling_friction = 6;
+inline void SphereData::clear_rolling_friction() {
+  _impl_.rolling_friction_ = 0;
+}
+inline float SphereData::_internal_rolling_friction() const {
+  return _impl_.rolling_friction_;
+}
+inline float SphereData::rolling_friction() const {
+  // @@protoc_insertion_point(field_get:physics.SphereData.rolling_friction)
+  return _internal_rolling_friction();
+}
+inline void SphereData::_internal_set_rolling_friction(float value) {
+  
+  _impl_.rolling_friction_ = value;
+}
+inline void SphereData::set_rolling_friction(float value) {
+  _internal_set_rolling_friction(value);
+  // @@protoc_insertion_point(field_set:physics.SphereData.rolling_friction)
+}
+
+// float linear_damping = 7;
+inline void SphereData::clear_linear_damping() {
+  _impl_.linear_damping_ = 0;
+}
+inline float SphereData::_internal_linear_damping() const {
+  return _impl_.linear_damping_;
+}
+inline float SphereData::linear_damping() const {
+  // @@protoc_insertion_point(field_get:physics.SphereData.linear_damping)
+  return _internal_linear_damping();
+}
+inline void SphereData::_internal_set_linear_damping(float value) {
+  
+  _impl_.linear_damping_ = value;
+}
+inline void SphereData::set_linear_damping(float value) {
+  _internal_set_linear_damping(value);
+  // @@protoc_insertion_point(field_set:physics.SphereData.linear_damping)
+}
+
+// float angular_damping = 8;
+inline void SphereData::clear_angular_damping() {
+  _impl_.angular_damping_ = 0;
+}
+inline float SphereData::_internal_angular_damping() const {
+  return _impl_.angular_damping_;
+}
+inline float SphereData::angular_damping() const {
+  // @@protoc_insertion_point(field_get:physics.SphereData.angular_damping)
+  return _internal_angular_damping();
+}
+inline void SphereData::_internal_set_angular_damping(float value) {
+  
+  _impl_.angular_damping_ = value;
+}
+inline void SphereData::set_angular_damping(float value) {
+  _internal_set_angular_damping(value);
+  // @@protoc_insertion_point(field_set:physics.SphereData.angular_damping)
+}
+
 // -------------------------------------------------------------------
 
 // BoxData
@@ -4464,6 +4716,106 @@ inline void BoxData::set_allocated_color(std::string* color) {
   }
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:physics.BoxData.color)
+}
+
+// float restitution = 6;
+inline void BoxData::clear_restitution() {
+  _impl_.restitution_ = 0;
+}
+inline float BoxData::_internal_restitution() const {
+  return _impl_.restitution_;
+}
+inline float BoxData::restitution() const {
+  // @@protoc_insertion_point(field_get:physics.BoxData.restitution)
+  return _internal_restitution();
+}
+inline void BoxData::_internal_set_restitution(float value) {
+  
+  _impl_.restitution_ = value;
+}
+inline void BoxData::set_restitution(float value) {
+  _internal_set_restitution(value);
+  // @@protoc_insertion_point(field_set:physics.BoxData.restitution)
+}
+
+// float friction = 7;
+inline void BoxData::clear_friction() {
+  _impl_.friction_ = 0;
+}
+inline float BoxData::_internal_friction() const {
+  return _impl_.friction_;
+}
+inline float BoxData::friction() const {
+  // @@protoc_insertion_point(field_get:physics.BoxData.friction)
+  return _internal_friction();
+}
+inline void BoxData::_internal_set_friction(float value) {
+  
+  _impl_.friction_ = value;
+}
+inline void BoxData::set_friction(float value) {
+  _internal_set_friction(value);
+  // @@protoc_insertion_point(field_set:physics.BoxData.friction)
+}
+
+// float rolling_friction = 8;
+inline void BoxData::clear_rolling_friction() {
+  _impl_.rolling_friction_ = 0;
+}
+inline float BoxData::_internal_rolling_friction() const {
+  return _impl_.rolling_friction_;
+}
+inline float BoxData::rolling_friction() const {
+  // @@protoc_insertion_point(field_get:physics.BoxData.rolling_friction)
+  return _internal_rolling_friction();
+}
+inline void BoxData::_internal_set_rolling_friction(float value) {
+  
+  _impl_.rolling_friction_ = value;
+}
+inline void BoxData::set_rolling_friction(float value) {
+  _internal_set_rolling_friction(value);
+  // @@protoc_insertion_point(field_set:physics.BoxData.rolling_friction)
+}
+
+// float linear_damping = 9;
+inline void BoxData::clear_linear_damping() {
+  _impl_.linear_damping_ = 0;
+}
+inline float BoxData::_internal_linear_damping() const {
+  return _impl_.linear_damping_;
+}
+inline float BoxData::linear_damping() const {
+  // @@protoc_insertion_point(field_get:physics.BoxData.linear_damping)
+  return _internal_linear_damping();
+}
+inline void BoxData::_internal_set_linear_damping(float value) {
+  
+  _impl_.linear_damping_ = value;
+}
+inline void BoxData::set_linear_damping(float value) {
+  _internal_set_linear_damping(value);
+  // @@protoc_insertion_point(field_set:physics.BoxData.linear_damping)
+}
+
+// float angular_damping = 10;
+inline void BoxData::clear_angular_damping() {
+  _impl_.angular_damping_ = 0;
+}
+inline float BoxData::_internal_angular_damping() const {
+  return _impl_.angular_damping_;
+}
+inline float BoxData::angular_damping() const {
+  // @@protoc_insertion_point(field_get:physics.BoxData.angular_damping)
+  return _internal_angular_damping();
+}
+inline void BoxData::_internal_set_angular_damping(float value) {
+  
+  _impl_.angular_damping_ = value;
+}
+inline void BoxData::set_angular_damping(float value) {
+  _internal_set_angular_damping(value);
+  // @@protoc_insertion_point(field_set:physics.BoxData.angular_damping)
 }
 
 // -------------------------------------------------------------------
@@ -4979,6 +5331,96 @@ inline void CreateObjectRequest::set_allocated_shape(::physics::ShapeDescriptor*
   }
   _impl_.shape_ = shape;
   // @@protoc_insertion_point(field_set_allocated:physics.CreateObjectRequest.shape)
+}
+
+// .physics.PhysicsConfig physics_config = 5;
+inline bool CreateObjectRequest::_internal_has_physics_config() const {
+  return this != internal_default_instance() && _impl_.physics_config_ != nullptr;
+}
+inline bool CreateObjectRequest::has_physics_config() const {
+  return _internal_has_physics_config();
+}
+inline void CreateObjectRequest::clear_physics_config() {
+  if (GetArenaForAllocation() == nullptr && _impl_.physics_config_ != nullptr) {
+    delete _impl_.physics_config_;
+  }
+  _impl_.physics_config_ = nullptr;
+}
+inline const ::physics::PhysicsConfig& CreateObjectRequest::_internal_physics_config() const {
+  const ::physics::PhysicsConfig* p = _impl_.physics_config_;
+  return p != nullptr ? *p : reinterpret_cast<const ::physics::PhysicsConfig&>(
+      ::physics::_PhysicsConfig_default_instance_);
+}
+inline const ::physics::PhysicsConfig& CreateObjectRequest::physics_config() const {
+  // @@protoc_insertion_point(field_get:physics.CreateObjectRequest.physics_config)
+  return _internal_physics_config();
+}
+inline void CreateObjectRequest::unsafe_arena_set_allocated_physics_config(
+    ::physics::PhysicsConfig* physics_config) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.physics_config_);
+  }
+  _impl_.physics_config_ = physics_config;
+  if (physics_config) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:physics.CreateObjectRequest.physics_config)
+}
+inline ::physics::PhysicsConfig* CreateObjectRequest::release_physics_config() {
+  
+  ::physics::PhysicsConfig* temp = _impl_.physics_config_;
+  _impl_.physics_config_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::physics::PhysicsConfig* CreateObjectRequest::unsafe_arena_release_physics_config() {
+  // @@protoc_insertion_point(field_release:physics.CreateObjectRequest.physics_config)
+  
+  ::physics::PhysicsConfig* temp = _impl_.physics_config_;
+  _impl_.physics_config_ = nullptr;
+  return temp;
+}
+inline ::physics::PhysicsConfig* CreateObjectRequest::_internal_mutable_physics_config() {
+  
+  if (_impl_.physics_config_ == nullptr) {
+    auto* p = CreateMaybeMessage<::physics::PhysicsConfig>(GetArenaForAllocation());
+    _impl_.physics_config_ = p;
+  }
+  return _impl_.physics_config_;
+}
+inline ::physics::PhysicsConfig* CreateObjectRequest::mutable_physics_config() {
+  ::physics::PhysicsConfig* _msg = _internal_mutable_physics_config();
+  // @@protoc_insertion_point(field_mutable:physics.CreateObjectRequest.physics_config)
+  return _msg;
+}
+inline void CreateObjectRequest::set_allocated_physics_config(::physics::PhysicsConfig* physics_config) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete _impl_.physics_config_;
+  }
+  if (physics_config) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(physics_config);
+    if (message_arena != submessage_arena) {
+      physics_config = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, physics_config, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  _impl_.physics_config_ = physics_config;
+  // @@protoc_insertion_point(field_set_allocated:physics.CreateObjectRequest.physics_config)
 }
 
 // -------------------------------------------------------------------
@@ -6225,26 +6667,6 @@ inline void PhysicsConfig::set_player_mass(float value) {
   // @@protoc_insertion_point(field_set:physics.PhysicsConfig.player_mass)
 }
 
-// float default_box_mass = 6;
-inline void PhysicsConfig::clear_default_box_mass() {
-  _impl_.default_box_mass_ = 0;
-}
-inline float PhysicsConfig::_internal_default_box_mass() const {
-  return _impl_.default_box_mass_;
-}
-inline float PhysicsConfig::default_box_mass() const {
-  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.default_box_mass)
-  return _internal_default_box_mass();
-}
-inline void PhysicsConfig::_internal_set_default_box_mass(float value) {
-  
-  _impl_.default_box_mass_ = value;
-}
-inline void PhysicsConfig::set_default_box_mass(float value) {
-  _internal_set_default_box_mass(value);
-  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.default_box_mass)
-}
-
 // float restitution = 7;
 inline void PhysicsConfig::clear_restitution() {
   _impl_.restitution_ = 0;
@@ -6285,7 +6707,67 @@ inline void PhysicsConfig::set_friction(float value) {
   // @@protoc_insertion_point(field_set:physics.PhysicsConfig.friction)
 }
 
-// float gravity_x = 9;
+// float rolling_friction = 9;
+inline void PhysicsConfig::clear_rolling_friction() {
+  _impl_.rolling_friction_ = 0;
+}
+inline float PhysicsConfig::_internal_rolling_friction() const {
+  return _impl_.rolling_friction_;
+}
+inline float PhysicsConfig::rolling_friction() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.rolling_friction)
+  return _internal_rolling_friction();
+}
+inline void PhysicsConfig::_internal_set_rolling_friction(float value) {
+  
+  _impl_.rolling_friction_ = value;
+}
+inline void PhysicsConfig::set_rolling_friction(float value) {
+  _internal_set_rolling_friction(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.rolling_friction)
+}
+
+// float linear_damping = 10;
+inline void PhysicsConfig::clear_linear_damping() {
+  _impl_.linear_damping_ = 0;
+}
+inline float PhysicsConfig::_internal_linear_damping() const {
+  return _impl_.linear_damping_;
+}
+inline float PhysicsConfig::linear_damping() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.linear_damping)
+  return _internal_linear_damping();
+}
+inline void PhysicsConfig::_internal_set_linear_damping(float value) {
+  
+  _impl_.linear_damping_ = value;
+}
+inline void PhysicsConfig::set_linear_damping(float value) {
+  _internal_set_linear_damping(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.linear_damping)
+}
+
+// float angular_damping = 11;
+inline void PhysicsConfig::clear_angular_damping() {
+  _impl_.angular_damping_ = 0;
+}
+inline float PhysicsConfig::_internal_angular_damping() const {
+  return _impl_.angular_damping_;
+}
+inline float PhysicsConfig::angular_damping() const {
+  // @@protoc_insertion_point(field_get:physics.PhysicsConfig.angular_damping)
+  return _internal_angular_damping();
+}
+inline void PhysicsConfig::_internal_set_angular_damping(float value) {
+  
+  _impl_.angular_damping_ = value;
+}
+inline void PhysicsConfig::set_angular_damping(float value) {
+  _internal_set_angular_damping(value);
+  // @@protoc_insertion_point(field_set:physics.PhysicsConfig.angular_damping)
+}
+
+// float gravity_x = 12;
 inline void PhysicsConfig::clear_gravity_x() {
   _impl_.gravity_x_ = 0;
 }
@@ -6305,7 +6787,7 @@ inline void PhysicsConfig::set_gravity_x(float value) {
   // @@protoc_insertion_point(field_set:physics.PhysicsConfig.gravity_x)
 }
 
-// float gravity_y = 10;
+// float gravity_y = 13;
 inline void PhysicsConfig::clear_gravity_y() {
   _impl_.gravity_y_ = 0;
 }
@@ -6325,7 +6807,7 @@ inline void PhysicsConfig::set_gravity_y(float value) {
   // @@protoc_insertion_point(field_set:physics.PhysicsConfig.gravity_y)
 }
 
-// float gravity_z = 11;
+// float gravity_z = 14;
 inline void PhysicsConfig::clear_gravity_z() {
   _impl_.gravity_z_ = 0;
 }

@@ -353,16 +353,44 @@ private:
         } else if (mass != 0.0f) {
             // Для динамических объектов включаем угловое движение
             body->setAngularFactor(btVector3(1.0f, 1.0f, 1.0f));
-            body->setDamping(0.0f, 0.0f);  // Убираем затухание полностью
             body->setActivationState(DISABLE_DEACTIVATION); // Отключаем деактивацию
             
-            // Устанавливаем максимальную упругость для отскока
-            body->setRestitution(1.0);       // Максимальная упругость
-            body->setFriction(0.05);        // Минимальное трение
-            body->setRollingFriction(0.01); // Минимальное сопротивление качению
+            // Устанавливаем физические свойства из объекта
+            float restitution = 0.0f;
+            float friction = 1.0f;
+            float rollingFriction = 0.3f;
+            float linearDamping = 0.2f;
+            float angularDamping = 0.3f;
             
-            // Отключаем затухание для более долгого движения
-            body->setDamping(0.0, 0.0);  // Убираем затухание для линейного и углового движения
+            // Получаем свойства в зависимости от типа объекта
+            if (desc.type() == ShapeDescriptor::SPHERE && desc.has_sphere()) {
+                const auto& sphereData = desc.sphere();
+                restitution = sphereData.restitution();
+                friction = sphereData.friction();
+                rollingFriction = sphereData.rolling_friction();
+                linearDamping = sphereData.linear_damping();
+                angularDamping = sphereData.angular_damping();
+            } else if (desc.type() == ShapeDescriptor::BOX && desc.has_box()) {
+                const auto& boxData = desc.box();
+                restitution = boxData.restitution();
+                friction = boxData.friction();
+                rollingFriction = boxData.rolling_friction();
+                linearDamping = boxData.linear_damping();
+                angularDamping = boxData.angular_damping();
+            }
+            
+            // Применяем физические свойства
+            body->setRestitution(restitution);
+            body->setFriction(friction);
+            body->setRollingFriction(rollingFriction);
+            body->setDamping(linearDamping, angularDamping);
+
+            std::cout << "Объект создан с физическими свойствами: "
+                      << "restitution=" << restitution
+                      << ", friction=" << friction 
+                      << ", rollingFriction=" << rollingFriction
+                      << ", linearDamping=" << linearDamping
+                      << ", angularDamping=" << angularDamping << std::endl;
 
             // Активируем обнаружение непрерывных столкновений для высоких скоростей
             if (desc.type() == ShapeDescriptor::SPHERE) {

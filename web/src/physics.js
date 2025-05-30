@@ -1148,11 +1148,12 @@ export function applyPhysicsConfig(config) {
 
         try {
             if (obj.physicsBy === "ammo" || obj.physicsBy === "both") {
-                const mass = id.startsWith('mainPlayer') ? 
-                    config.player_mass : 
-                    (config.default_box_mass || 5.0);
-
-                obj.mass = mass;
+                // Проверяем, что масса определена, иначе выкидываем ошибку
+                if (obj.mass === undefined || obj.mass === null) {
+                    throw new Error(`[Physics] Масса объекта ${id} не определена! obj.mass: ${obj.mass}`);
+                }
+                
+                const mass = obj.mass;
 
                 const velocity = obj.body.getLinearVelocity();
                 const shape = obj.body.getCollisionShape();

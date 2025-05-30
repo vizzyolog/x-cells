@@ -141,9 +141,31 @@ func (s *WSServer) startClientStreaming(wsWriter *SafeWriter) {
 func (s *WSServer) sendPhysicsConfig(conn *SafeWriter) {
 	physicsConfig := world.GetPhysicsConfig()
 
+	// Создаем плоскую структуру для обратной совместимости с фронтендом
+	flatConfig := map[string]interface{}{
+		// Настройки управления
+		"base_impulse":        physicsConfig.Control.BaseImpulse,
+		"max_impulse":         physicsConfig.Control.MaxImpulse,
+		"distance_multiplier": physicsConfig.Control.DistanceMultiplier,
+		"impulse_multiplier":  physicsConfig.Control.ImpulseMultiplier,
+
+		// Настройки игрока
+		"player_mass": physicsConfig.Player.PlayerMass,
+		"restitution": physicsConfig.Player.Restitution,
+
+		// Глобальные настройки мира
+		"friction":         physicsConfig.World.Friction,
+		"rolling_friction": physicsConfig.World.RollingFriction,
+		"linear_damping":   physicsConfig.World.LinearDamping,
+		"angular_damping":  physicsConfig.World.AngularDamping,
+		"gravity_x":        physicsConfig.World.GravityX,
+		"gravity_y":        physicsConfig.World.GravityY,
+		"gravity_z":        physicsConfig.World.GravityZ,
+	}
+
 	configMessage := map[string]interface{}{
 		"type":   "physics_config",
-		"config": physicsConfig,
+		"config": flatConfig,
 	}
 
 	// Используем имитацию сетевых условий

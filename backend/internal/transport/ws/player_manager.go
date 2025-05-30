@@ -57,24 +57,30 @@ func (s *WSServer) createPlayerObject(playerID, objectID string) error {
 	// Генерируем случайный радиус (2.0 - 20.0)
 	radius := float32(2.0 + rand.Float64()*18.0)
 
-	// Адаптивная масса: базовая масса + коэффициент на объем сферы
-	// Объем сферы = (4/3) * π * r³, но используем упрощенную формулу
-	volumeCoeff := radius * radius * radius * 0.1 // упрощенный коэффициент объема
-	baseMass := float32(50.0)                     // базовая масса для маленьких сфер
-	mass := baseMass + volumeCoeff                // итоговая масса
+	// Простая линейная зависимость: масса = радиус * коэффициент
+	// При радиусе 100 → масса 100 кг, значит коэффициент = 1.0
+	massCoeff := float32(1.0)
+	mass := radius * massCoeff
+
+	// Генерируем случайный уровень прыгучести как скилл (от 0.0 до 0.8)
+	bounceSkill := float32(rand.Float64() * 0.8) // 0.0 = нет отскока, 0.8 = очень прыгучий
+
+	log.Printf("[WSServer] Расчет массы игрока: радиус=%.2f, коэффициент=%.2f, масса=%.2f кг",
+		radius, massCoeff, mass)
 
 	// Генерируем случайный цвет для игрока
 	colors := []string{"#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff", "#ffa500", "#800080"}
 	color := colors[rand.IntN(len(colors))]
 
-	// Создаем сферу игрока
-	playerSphere := world.NewSphere(
+	// Создаем сферу игрока с индивидуальным скиллом прыгучести
+	playerSphere := world.NewPlayerWithBounceSkill(
 		objectID,
 		world.Vector3{X: spawnX, Y: spawnY, Z: spawnZ},
 		radius, // Случайный радиус
 		mass,   // Масса
 		color,
 		world.PhysicsTypeBoth, // Физика и на клиенте, и на сервере
+		bounceSkill,           // индивидуальный скилл прыгучести
 	)
 
 	// Создаем объект в клиентской физике (Ammo)
@@ -89,8 +95,8 @@ func (s *WSServer) createPlayerObject(playerID, objectID string) error {
 		return err
 	}
 
-	log.Printf("[WSServer] Создан объект игрока %s для игрока %s в позиции (%.2f, %.2f, %.2f) с радиусом %.2f и массой %.2f",
-		objectID, playerID, spawnX, spawnY, spawnZ, radius, mass)
+	log.Printf("[WSServer] Создан объект игрока %s для игрока %s в позиции (%.2f, %.2f, %.2f) с радиусом %.2f, массой %.2f и скиллом прыгучести %.2f",
+		objectID, playerID, spawnX, spawnY, spawnZ, radius, mass, bounceSkill)
 
 	return nil
 }

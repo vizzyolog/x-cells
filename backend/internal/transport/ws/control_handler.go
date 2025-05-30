@@ -185,9 +185,9 @@ func (s *WSServer) calculateMouseVectorImpulse(cmdMsg *CommandMessage, objectID 
 
 	// Создаем импульс в направлении X, Y и Z с учетом полученного вектора
 	impulse := &pb.Vector3{
-		X: direction.X * physicsConfig.BaseImpulse,
-		Y: direction.Y * physicsConfig.BaseImpulse,
-		Z: direction.Z * physicsConfig.BaseImpulse,
+		X: direction.X * physicsConfig.Control.BaseImpulse,
+		Y: direction.Y * physicsConfig.Control.BaseImpulse,
+		Z: direction.Z * physicsConfig.Control.BaseImpulse,
 	}
 
 	// Добавляем логирование для отладки

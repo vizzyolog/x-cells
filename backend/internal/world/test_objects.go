@@ -22,7 +22,6 @@ func NewTestObjectsCreator(factory *Factory) *TestObjectsCreator {
 func (t *TestObjectsCreator) CreateAll(terrainMaxHeight float32) {
 	t.CreateTerrain()
 	t.CreateTestSpheres(terrainMaxHeight)
-	//t.CreateTestBox(terrainMaxHeight)
 }
 
 // CreateTerrain создает тестовый террейн
@@ -74,26 +73,6 @@ func (t *TestObjectsCreator) CreateTestSpheres(terrainMaxHeight float32) {
 	// Статические тестовые объекты больше не создаются
 
 	log.Printf("[World] Тестовые сферы игроков не создаются - все игроки создаются динамически при подключении")
-}
-
-// CreateTestBox создает тестовый ящик
-func (t *TestObjectsCreator) CreateTestBox(terrainMaxHeight float32) {
-	// Создаем тестовый куб с физикой bullet (только на сервере)
-	boxBullet := NewBox(
-		"box_bullet_1",
-		Vector3{X: 10, Y: terrainMaxHeight + 50, Z: 10},
-		2.0,
-		2.0,
-		2.0,
-		5.0,
-		"#ffff00",
-		PhysicsTypeBullet,
-	)
-
-	// Создаем объект в серверной физике
-	if err := t.factory.CreateObjectBullet(boxBullet); err != nil {
-		log.Printf("[World] Ошибка при создании тестового куба в Bullet: %v", err)
-	}
 }
 
 // Генерация данных террейна с шумом Перлина для гор

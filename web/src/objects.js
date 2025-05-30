@@ -309,10 +309,10 @@ function createPhysicsBodyForSphere(data) {
         }
         
         // Устанавливаем дополнительные свойства
-        body.setFriction(0.02);         // Уменьшаем трение для лучшего скольжения
-        body.setRestitution(1.0);       // Максимальная упругость для мощного отскока
-        body.setRollingFriction(0.01);  // Очень низкое сопротивление качению
-        body.setDamping(0.0, 0.0);      // Убираем затухание для сохранения энергии
+        body.setFriction(1.0);          // Максимальное трение для контроля
+        body.setRollingFriction(0.3);   // Увеличиваем сопротивление качению
+        body.setRestitution(0.0);       // Полностью убираем отскок  
+        body.setDamping(0.2, 0.3);      // Добавляем затухание для остановки
         
         // Отключаем деактивацию
         body.setActivationState(4); // DISABLE_DEACTIVATION
@@ -338,8 +338,8 @@ function createPhysicsBodyForSphere(data) {
                 motionThreshold: radius * 0.7,
                 sweptSphereRadius: radius * 0.6
             },
-            friction: 0.02,
-            restitution: 1.0
+            friction: 1.0,
+            restitution: 0.0
         });
 
         // Очистка памяти
@@ -487,10 +487,10 @@ export function createTestSphere() {
 
     // Важные настройки для физического тела
     body.setActivationState(4); // DISABLE_DEACTIVATION
-    body.setFriction(0.2);      // Уменьшаем с 0.3 до 0.2
-    body.setRollingFriction(0.03); // Уменьшаем с 0.05 до 0.03
-    body.setRestitution(0.99);    // Увеличиваем до максимума
-    body.setDamping(0.0, 0.0);    // Отключаем затухание полностью
+    body.setFriction(1.0);          // Максимальное трение для контроля
+    body.setRollingFriction(0.3);   // Увеличиваем сопротивление качению
+    body.setRestitution(0.0);       // Полностью убираем отскок  
+    body.setDamping(0.2, 0.3);      // Добавляем затухание для остановки
 
     // Включаем CCD для предотвращения проваливания сквозь объекты
     body.setCcdMotionThreshold(radius * 0.6);

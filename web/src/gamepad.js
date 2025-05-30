@@ -4,7 +4,7 @@ import { applyImpulseToSphere } from './physics';
 import gameStateManager from './gamestatemanager';
 
 // Константы для настройки поведения
-const DEBUG_MODE = true; // Включает/выключает отладочные элементы (arrowHelper)
+const DEBUG_MODE = false; // Включает/выключает отладочные элементы (arrowHelper)
 const MIN_ARROW_LENGTH = 10;
 const MAX_ARROW_LENGTH = 150;
 const SEND_INTERVAL = 50; // Синхронизируем с серверным интервалом

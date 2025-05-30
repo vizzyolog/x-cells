@@ -52,3 +52,8 @@ func (c *grpcPhysicsClient) ApplyTorque(ctx context.Context, req *pb.ApplyTorque
 func (c *grpcPhysicsClient) UpdateObjectMass(ctx context.Context, req *pb.UpdateObjectMassRequest, opts ...grpc.CallOption) (*pb.UpdateObjectMassResponse, error) {
 	return c.client.UpdateObjectMass(ctx, req, opts...)
 }
+
+// SetPhysicsConfig устанавливает конфигурацию физики
+func (c *grpcPhysicsClient) SetPhysicsConfig(ctx context.Context, req *pb.SetPhysicsConfigRequest, opts ...grpc.CallOption) (*pb.SetPhysicsConfigResponse, error) {
+	return c.client.SetPhysicsConfig(ctx, req, opts...)
+}

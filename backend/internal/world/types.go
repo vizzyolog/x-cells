@@ -55,6 +55,12 @@ type SphereData struct {
 	Radius float32
 	Mass   float32
 	Color  string
+	// Физические свойства
+	Restitution     float32 // Упругость (отскок)
+	Friction        float32 // Трение
+	RollingFriction float32 // Сопротивление качению
+	LinearDamping   float32 // Линейное затухание
+	AngularDamping  float32 // Угловое затухание
 }
 
 type BoxData struct {
@@ -63,6 +69,12 @@ type BoxData struct {
 	Depth  float32
 	Mass   float32
 	Color  string
+	// Физические свойства
+	Restitution     float32 // Упругость (отскок)
+	Friction        float32 // Трение
+	RollingFriction float32 // Сопротивление качению
+	LinearDamping   float32 // Линейное затухание
+	AngularDamping  float32 // Угловое затухание
 }
 
 type TerrainData struct {

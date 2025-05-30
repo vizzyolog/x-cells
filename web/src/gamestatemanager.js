@@ -14,6 +14,9 @@ class GameStateManager extends EventEmitter {
         this.playerMesh = null;
         this.ws = ws;
         this.scene = scene;
+        this.playerID = null;      // Динамический ID игрока, получаемый от сервера
+        this.playerObjectID = null; // ID объекта игрока в мире
+        this.isPlayerIDReceived = false; // Флаг получения ID от сервера
     }
 
     setTerrainMesh(mesh) {
@@ -35,11 +38,53 @@ class GameStateManager extends EventEmitter {
             console.warn("[Game State Manager] game initialized!!!")
         }
     }
+
+    // Устанавливает player ID, полученный от сервера
+    setPlayerID(playerID, objectID) {
+        this.playerID = playerID;
+        this.playerObjectID = objectID;
+        this.isPlayerIDReceived = true;
+        console.log(`[GameStateManager] Установлен player ID: ${playerID}, object ID: ${objectID}`);
+    }
+
+    // Возвращает ID объекта игрока для отправки команд
+    getPlayerObjectID() {
+        return this.playerObjectID;
+    }
+
+    // Возвращает player ID
+    getPlayerID() {
+        return this.playerID;
+    }
+
+    // Проверяет, получен ли player ID от сервера
+    isPlayerReady() {
+        return this.isPlayerIDReceived && this.playerObjectID !== null;
+    }
+
+    // Сбрасывает состояние при отключении
+    reset() {
+        this.playerMesh = null;
+        this.playerID = null;
+        this.playerObjectID = null;
+        this.isPlayerIDReceived = false;
+        console.log('[GameStateManager] Состояние сброшено');
+    }
+
+    // Инициализация с WebSocket
+    init(ws, scene) {
+        this.ws = ws;
+        this.scene = scene;
+    }
 }
 
-// Создаем экземпляр GameStateManager с ws
-export let gameStateManager;
+// Создаем singleton экземпляр
+const gameStateManager = new GameStateManager();
 
 export function initGameStateManager(ws, scene){
-    gameStateManager = new GameStateManager(ws, scene);
+    gameStateManager.init(ws, scene);
 }
+
+// Экспортируем singleton по умолчанию
+export default gameStateManager;
+export { gameStateManager };

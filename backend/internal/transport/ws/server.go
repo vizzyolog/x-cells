@@ -1,23 +1,20 @@
 package ws
 
 import (
-	"context"
-	"encoding/json"
 	"log"
-	"math"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 
-	pb "x-cells/backend/internal/physics/generated"
 	"x-cells/backend/internal/transport"
 	"x-cells/backend/internal/world"
 )
 
 const (
-	DefaultUpdateInterval = 150 * time.Millisecond // Интервал отправки обновлений
-	DefaultPingInterval   = 2 * time.Second        // Интервал отправки пингов
+	DefaultUpdateInterval = 50 * time.Millisecond // Интервал отправки обновлений
+	DefaultPingInterval   = 2 * time.Second       // Интервал отправки пингов
 )
 
 type ObjectManager interface {
@@ -25,6 +22,8 @@ type ObjectManager interface {
 	GetObject(id string) (*world.WorldObject, bool)
 	UpdateObjectPosition(id string, position world.Vector3)
 	UpdateObjectRotation(id string, rotation world.Quaternion)
+	AddWorldObject(obj *world.WorldObject)
+	RemoveObject(id string)
 }
 
 // MessageHandler - тип функции обработчика сообщений
@@ -39,6 +38,23 @@ type WSServer struct {
 	connectionHandlers []func(conn *SafeWriter)
 	pingInterval       time.Duration
 	serializer         *WorldSerializer
+	controllerStates   map[string]*ControllerState // id -> controller state
+	impulseInterval    time.Duration               // интервал применения импульса
+	mu                 sync.RWMutex                // мьютекс для безопасного доступа к состояниям
+
+	// Управление игроками
+	players   map[string]*PlayerConnection // connectionID -> PlayerConnection
+	playersMu sync.RWMutex                 // мьютекс для безопасного доступа к игрокам
+	factory   *world.Factory               // фабрика для создания объектов
+
+	// Очередь создания игроков
+	playerQueue   chan *PlayerCreationRequest // очередь запросов на создание игроков
+	queueWorkerMu sync.Mutex                  // мьютекс для worker'а очереди
+
+	// Имитация сетевых условий
+	networkSim      NetworkSimulation
+	delayedMessages chan DelayedMessage
+	simMu           sync.RWMutex // мьютекс для настроек симуляции
 }
 
 // NewWSServer создает новый экземпляр WebSocket сервера
@@ -53,11 +69,47 @@ func NewWSServer(objectManager ObjectManager, physics transport.IPhysicsClient, 
 		connectionHandlers: []func(conn *SafeWriter){},
 		pingInterval:       DefaultPingInterval,
 		serializer:         serialaizer,
+		controllerStates:   make(map[string]*ControllerState),
+		impulseInterval:    time.Millisecond * 50, // 50ms = 20 раз в секунду
+		mu:                 sync.RWMutex{},
+
+		// Инициализация имитации сети
+		networkSim: NetworkSimulation{
+			Enabled:         false, // По умолчанию выключена
+			BaseLatency:     0,
+			LatencyVariance: 0,
+			PacketLoss:      0.0,
+			BandwidthLimit:  0,
+		},
+		delayedMessages: make(chan DelayedMessage, 1000),
+		simMu:           sync.RWMutex{},
+
+		// Управление игроками
+		players:   make(map[string]*PlayerConnection),
+		playersMu: sync.RWMutex{},
+
+		// Очередь создания игроков
+		playerQueue:   make(chan *PlayerCreationRequest, 100),
+		queueWorkerMu: sync.Mutex{},
+	}
+
+	// Создаем factory после инициализации сервера
+	// Нужно привести objectManager к типу *world.Manager
+	if manager, ok := objectManager.(*world.Manager); ok {
+		server.factory = world.NewFactory(manager, physics)
+	} else {
+		log.Printf("[WSServer] Предупреждение: objectManager не является *world.Manager, factory не создан")
 	}
 
 	// Регистрируем стандартные обработчики
 	server.RegisterHandler(MessageTypePing, server.handlePing)
 	server.RegisterHandler(MessageTypeCommand, server.handleCmd)
+
+	// Запускаем обработчик отложенных сообщений
+	go server.processDelayedMessages()
+
+	// Запускаем worker для обработки очереди создания игроков
+	go server.playerCreationWorker()
 
 	return server
 }
@@ -87,7 +139,11 @@ func (s *WSServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 
 	// Создаем потокобезопасную обертку для WebSocket соединения
 	safeConn := NewSafeWriter(conn)
-	defer safeConn.Close()
+	defer func() {
+		// Удаляем игрока при закрытии соединения
+		s.removePlayer(safeConn)
+		safeConn.Close()
+	}()
 
 	log.Printf("New WebSocket connection established from %s", conn.RemoteAddr())
 
@@ -100,9 +156,55 @@ func (s *WSServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	// Отправляем клиенту конфигурацию физики перед созданием объектов
 	s.sendPhysicsConfig(safeConn)
 
-	// Теперь отправляем объекты
+	// Теперь отправляем существующие объекты
 	if err := s.serializer.SendCreateForAllObjects(safeConn); err != nil {
 		log.Printf("[Go] Ошибка при отправке существующих объектов: %v", err)
+		return
+	}
+
+	// Создаем нового игрока через очередь для избежания гонок
+	request := &PlayerCreationRequest{
+		Conn:     safeConn,
+		Response: make(chan *PlayerCreationResponse, 1),
+	}
+
+	// Отправляем запрос в очередь
+	select {
+	case s.playerQueue <- request:
+		// Ждем ответа
+		select {
+		case response := <-request.Response:
+			if response.Error != nil {
+				log.Printf("[WSServer] Ошибка создания игрока: %v", response.Error)
+				return
+			}
+			player := response.Player
+
+			// Отправляем информацию о новом объекте игрока существующим клиентам
+			s.playersMu.RLock()
+			for _, existingPlayer := range s.players {
+				if err := s.serializer.SendCreateForObject(existingPlayer.Conn, player.ObjectID); err != nil {
+					log.Printf("[WSServer] Ошибка отправки объекта игрока %s клиенту %s: %v", player.ObjectID, existingPlayer.ID, err)
+				}
+			}
+			s.playersMu.RUnlock()
+
+			// Добавляем игрока в карту ПОСЛЕ отправки существующим клиентам
+			s.playersMu.Lock()
+			s.players[player.ID] = player
+			s.playersMu.Unlock()
+
+			// Отправляем новому игроку информацию о его объекте
+			if err := s.serializer.SendCreateForObject(safeConn, player.ObjectID); err != nil {
+				log.Printf("[WSServer] Ошибка отправки объекта игрока %s новому клиенту: %v", player.ObjectID, err)
+			}
+
+		case <-time.After(10 * time.Second):
+			log.Printf("[WSServer] Таймаут создания игрока")
+			return
+		}
+	case <-time.After(5 * time.Second):
+		log.Printf("[WSServer] Очередь создания игроков переполнена")
 		return
 	}
 
@@ -169,254 +271,12 @@ func (s *WSServer) HandleWS(w http.ResponseWriter, r *http.Request) {
 	log.Printf("WebSocket connection closed: %s", conn.RemoteAddr())
 }
 
-type Direction struct {
-	X float32 `json:"x"`
-	Y float32 `json:"y"`
-	Z float32 `json:"z"`
-}
+// Start запускает сервер обновлений
+func (s *WSServer) Start() {
+	// Запускаем горутину для регулярного применения импульсов
+	go s.applyImpulses()
 
-// VectorSub вычитает два вектора
-func VectorSub(v1, v2 *pb.Vector3) *pb.Vector3 {
-	return &pb.Vector3{
-		X: v1.X - v2.X,
-		Y: v1.Y - v2.Y,
-		Z: v1.Z - v2.Z,
-	}
-}
-
-// VectorLength вычисляет длину вектора
-func VectorLength(v *pb.Vector3) float32 {
-	return float32(math.Sqrt(float64(v.X*v.X + v.Y*v.Y + v.Z*v.Z)))
-}
-
-// handleCmd обрабатывает команды управления
-func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
-	cmdMsg, ok := message.(*CommandMessage)
-	if !ok {
-		return ErrInvalidMessage
-	}
-
-	var impulse pb.Vector3
-	switch cmdMsg.Cmd {
-	case "LEFT":
-		impulse.X = -15
-	case "RIGHT":
-		impulse.X = 15
-	case "UP":
-		impulse.Z = -15
-	case "DOWN":
-		impulse.Z = 15
-	case "SPACE":
-		impulse.Y = 20
-	case "MOUSE_VECTOR":
-		// Получаем данные о направлении
-		var direction struct {
-			X        float32 `json:"x"`
-			Y        float32 `json:"y"`
-			Z        float32 `json:"z"`
-			Distance float32 `json:"distance"`
-		}
-
-		// Преобразуем interface{} в []byte для json.Unmarshal
-		dataBytes, err := json.Marshal(cmdMsg.Data)
-		if err != nil {
-			log.Printf("[Go] Ошибка преобразования данных MOUSE_VECTOR: %v", err)
-			return nil
-		}
-
-		if err := json.Unmarshal(dataBytes, &direction); err != nil {
-			log.Printf("[Go] Ошибка разбора данных MOUSE_VECTOR: %v", err)
-			return nil
-		}
-
-		log.Printf("[Go] Получен вектор направления: (%f, %f, %f), расстояние: %f",
-			direction.X, direction.Y, direction.Z, direction.Distance)
-
-		// Используем настройки из конфигурации физики
-		physicsConfig := world.GetPhysicsConfig()
-
-		// Создаем импульс в направлении X, Y и Z с учетом полученного вектора
-		impulse.X = direction.X * physicsConfig.BaseImpulse
-		// impulse.Y = direction.Y * physicsConfig.BaseImpulse * 3
-		impulse.Z = direction.Z * physicsConfig.BaseImpulse
-
-		// Добавляем логирование для отладки
-		log.Printf("[Go] Рассчитанная сила импульса: %f, %f, %f",
-			impulse.X, impulse.Y, impulse.Z)
-
-	default:
-		log.Printf("[Go] Неизвестная команда: %s", cmdMsg.Cmd)
-		return nil
-	}
-
-	// Получаем все объекты из менеджера мира
-	worldObjects := s.objectManager.GetAllWorldObjects()
-
-	// Счетчик успешно обработанных объектов
-	successCount := 0
-
-	// Применяем импульс ко всем объектам, кроме типа ammo
-	for _, obj := range worldObjects {
-		// Пропускаем объекты, которые обрабатываются только на клиенте
-		if obj.PhysicsType == world.PhysicsTypeAmmo {
-			continue
-		}
-
-		if obj.ID == "terrain_1" {
-			continue
-		}
-
-		// Применяем импульс к объекту через Bullet Physics
-		_, err := s.physics.ApplyImpulse(context.Background(), &pb.ApplyImpulseRequest{
-			Id:      obj.ID,
-			Impulse: &impulse,
-		})
-
-		if err != nil {
-			log.Printf("[Go] Ошибка применения импульса к %s: %v", obj.ID, err)
-			continue
-		}
-
-		successCount++
-		log.Printf("[Go] Применен импульс к %s: (%f, %f, %f)",
-			obj.ID, impulse.X, impulse.Y, impulse.Z)
-	}
-
-	log.Printf("[Go] Применен импульс к %d объектам с типами физики bullet и both", successCount)
-
-	// Отправляем подтверждение обработки команды с временными метками
-	ackMsg := NewAckMessage(cmdMsg.Cmd, cmdMsg.ClientTime)
-	return conn.WriteJSON(ackMsg)
-}
-
-// Стандартный обработчик ping-сообщений
-func (s *WSServer) handlePing(conn *SafeWriter, message interface{}) error {
-	pingMsg, ok := message.(*PingMessage)
-	if !ok {
-		return ErrInvalidMessage
-	}
-
-	// Отправляем pong в ответ
-	return conn.WriteJSON(NewPongMessage(pingMsg.ClientTime))
-}
-
-// Запускает периодическую отправку пингов для проверки соединения
-func (s *WSServer) startPing(conn *SafeWriter) {
-	ticker := time.NewTicker(s.pingInterval)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		pingMsg := map[string]interface{}{
-			"type":        MessageTypePing,
-			"server_time": GetCurrentServerTime(),
-		}
-
-		if err := conn.WriteJSON(pingMsg); err != nil {
-			log.Printf("Error sending ping: %v", err)
-			return
-		}
-	}
-}
-
-func (s *WSServer) startClientStreaming(wsWriter *SafeWriter) {
-	ticker := time.NewTicker(DefaultUpdateInterval)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		// Получаем список всех объектов из мира
-		worldObjects := s.objectManager.GetAllWorldObjects()
-
-		// Для каждого объекта с физикой bullet или both получаем состояние
-		for _, obj := range worldObjects {
-			// Пропускаем объекты, которые обрабатываются только на клиенте
-			if obj.PhysicsType == world.PhysicsTypeAmmo {
-				continue
-			}
-
-			// Запрашиваем состояние объекта из физического движка
-			resp, err := s.physics.GetObjectState(context.Background(), &pb.GetObjectStateRequest{
-				Id: obj.ID,
-			})
-
-			if err != nil {
-				log.Printf("[Go] Ошибка получения состояния для %s: %v", obj.ID, err)
-				continue
-			}
-
-			// Проверяем, что получен ответ с состоянием
-			if resp.Status != "OK" || resp.State == nil {
-				continue
-			}
-
-			// Создаем Vector3 и Quaternion из ответа сервера
-			position := world.Vector3{
-				X: resp.State.Position.X,
-				Y: resp.State.Position.Y,
-				Z: resp.State.Position.Z,
-			}
-
-			rotation := world.Quaternion{
-				X: resp.State.Rotation.X,
-				Y: resp.State.Rotation.Y,
-				Z: resp.State.Rotation.Z,
-				W: resp.State.Rotation.W,
-			}
-
-			// Отправляем обновление позиции и вращения клиенту
-			if err := s.serializer.SendUpdateForObject(wsWriter, obj.ID, position, rotation); err != nil {
-				log.Printf("[Go] Ошибка отправки обновления для %s: %v", obj.ID, err)
-			}
-
-			// Дополнительно отправляем скорость, если она есть в ответе от сервера
-			if resp.State.LinearVelocity != nil {
-				velocity := map[string]interface{}{
-					"type":             "update",
-					"id":               obj.ID,
-					"server_time":      GetCurrentServerTime(),
-					"server_send_time": time.Now().UnixMilli(),
-					"objects": map[string]interface{}{
-						obj.ID: map[string]interface{}{
-							"velocity": map[string]float32{
-								"x": resp.State.LinearVelocity.X,
-								"y": resp.State.LinearVelocity.Y,
-								"z": resp.State.LinearVelocity.Z,
-							},
-						},
-					},
-				}
-
-				// Вычисляем общую скорость для логирования
-				speed := float32(math.Sqrt(float64(
-					resp.State.LinearVelocity.X*resp.State.LinearVelocity.X +
-						resp.State.LinearVelocity.Y*resp.State.LinearVelocity.Y +
-						resp.State.LinearVelocity.Z*resp.State.LinearVelocity.Z)))
-
-				// Логируем отправку скорости только для основного игрока (чтобы не загрязнять лог)
-				if obj.ID == "mainPlayer1" {
-					log.Printf("[Go] Отправка данных о скорости %s: (%f, %f, %f), скорость: %f м/с",
-						obj.ID, resp.State.LinearVelocity.X, resp.State.LinearVelocity.Y, resp.State.LinearVelocity.Z, speed)
-				}
-
-				if err := wsWriter.WriteJSON(velocity); err != nil {
-					log.Printf("[Go] Ошибка отправки скорости для %s: %v", obj.ID, err)
-				}
-			}
-		}
-	}
-}
-
-// Добавляем новый обработчик для отправки конфигурации физики клиенту
-func (s *WSServer) sendPhysicsConfig(conn *SafeWriter) {
-	physicsConfig := world.GetPhysicsConfig()
-
-	configMessage := map[string]interface{}{
-		"type":   "physics_config",
-		"config": physicsConfig,
-	}
-
-	if err := conn.WriteJSON(configMessage); err != nil {
-		log.Printf("[Go] Ошибка отправки конфигурации физики: %v", err)
-	} else {
-		log.Printf("[Go] Конфигурация физики отправлена клиенту")
-	}
+	// Запускаем HTTP сервер
+	http.HandleFunc("/ws", s.HandleWS)
+	log.Printf("[Go] WebSocket сервер запущен на /ws")
 }

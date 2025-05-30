@@ -24,6 +24,7 @@ const (
 	Physics_ApplyTorque_FullMethodName      = "/physics.Physics/ApplyTorque"
 	Physics_GetObjectState_FullMethodName   = "/physics.Physics/GetObjectState"
 	Physics_UpdateObjectMass_FullMethodName = "/physics.Physics/UpdateObjectMass"
+	Physics_SetPhysicsConfig_FullMethodName = "/physics.Physics/SetPhysicsConfig"
 )
 
 // PhysicsClient is the client API for Physics service.
@@ -37,6 +38,7 @@ type PhysicsClient interface {
 	ApplyTorque(ctx context.Context, in *ApplyTorqueRequest, opts ...grpc.CallOption) (*ApplyTorqueResponse, error)
 	GetObjectState(ctx context.Context, in *GetObjectStateRequest, opts ...grpc.CallOption) (*GetObjectStateResponse, error)
 	UpdateObjectMass(ctx context.Context, in *UpdateObjectMassRequest, opts ...grpc.CallOption) (*UpdateObjectMassResponse, error)
+	SetPhysicsConfig(ctx context.Context, in *SetPhysicsConfigRequest, opts ...grpc.CallOption) (*SetPhysicsConfigResponse, error)
 }
 
 type physicsClient struct {
@@ -97,6 +99,16 @@ func (c *physicsClient) UpdateObjectMass(ctx context.Context, in *UpdateObjectMa
 	return out, nil
 }
 
+func (c *physicsClient) SetPhysicsConfig(ctx context.Context, in *SetPhysicsConfigRequest, opts ...grpc.CallOption) (*SetPhysicsConfigResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetPhysicsConfigResponse)
+	err := c.cc.Invoke(ctx, Physics_SetPhysicsConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PhysicsServer is the server API for Physics service.
 // All implementations must embed UnimplementedPhysicsServer
 // for forward compatibility.
@@ -108,6 +120,7 @@ type PhysicsServer interface {
 	ApplyTorque(context.Context, *ApplyTorqueRequest) (*ApplyTorqueResponse, error)
 	GetObjectState(context.Context, *GetObjectStateRequest) (*GetObjectStateResponse, error)
 	UpdateObjectMass(context.Context, *UpdateObjectMassRequest) (*UpdateObjectMassResponse, error)
+	SetPhysicsConfig(context.Context, *SetPhysicsConfigRequest) (*SetPhysicsConfigResponse, error)
 	mustEmbedUnimplementedPhysicsServer()
 }
 
@@ -132,6 +145,9 @@ func (UnimplementedPhysicsServer) GetObjectState(context.Context, *GetObjectStat
 }
 func (UnimplementedPhysicsServer) UpdateObjectMass(context.Context, *UpdateObjectMassRequest) (*UpdateObjectMassResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateObjectMass not implemented")
+}
+func (UnimplementedPhysicsServer) SetPhysicsConfig(context.Context, *SetPhysicsConfigRequest) (*SetPhysicsConfigResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetPhysicsConfig not implemented")
 }
 func (UnimplementedPhysicsServer) mustEmbedUnimplementedPhysicsServer() {}
 func (UnimplementedPhysicsServer) testEmbeddedByValue()                 {}
@@ -244,6 +260,24 @@ func _Physics_UpdateObjectMass_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Physics_SetPhysicsConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPhysicsConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PhysicsServer).SetPhysicsConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Physics_SetPhysicsConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PhysicsServer).SetPhysicsConfig(ctx, req.(*SetPhysicsConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Physics_ServiceDesc is the grpc.ServiceDesc for Physics service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -270,6 +304,10 @@ var Physics_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateObjectMass",
 			Handler:    _Physics_UpdateObjectMass_Handler,
+		},
+		{
+			MethodName: "SetPhysicsConfig",
+			Handler:    _Physics_SetPhysicsConfig_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -40,6 +40,12 @@ message SphereData {
   float radius = 1;
   float mass = 2;
   string color = 3;
+  // Физические свойства объекта
+  float restitution = 4;     // Упругость (отскок)
+  float friction = 5;        // Трение
+  float rolling_friction = 6; // Сопротивление качению
+  float linear_damping = 7;   // Линейное затухание
+  float angular_damping = 8;  // Угловое затухание
 }
 
 message BoxData {
@@ -48,6 +54,12 @@ message BoxData {
   float depth = 3;
   float mass = 4;
   string color = 5;
+  // Физические свойства объекта
+  float restitution = 6;     // Упругость (отскок)
+  float friction = 7;        // Трение
+  float rolling_friction = 8; // Сопротивление качению
+  float linear_damping = 9;   // Линейное затухание
+  float angular_damping = 10; // Угловое затухание
 }
 
 message TerrainData {
@@ -67,6 +79,7 @@ message CreateObjectRequest {
   Vector3 position = 2;
   Quaternion rotation = 3;
   ShapeDescriptor shape = 4;
+  PhysicsConfig physics_config = 5;
 }
 
 message CreateObjectResponse {
@@ -114,6 +127,7 @@ service Physics {
   rpc ApplyTorque(ApplyTorqueRequest) returns (ApplyTorqueResponse);
   rpc GetObjectState(GetObjectStateRequest) returns (GetObjectStateResponse);
   rpc UpdateObjectMass(UpdateObjectMassRequest) returns (UpdateObjectMassResponse);
+  rpc SetPhysicsConfig(SetPhysicsConfigRequest) returns (SetPhysicsConfigResponse);
 }
 
 // Запрос для обновления массы объекта
@@ -124,5 +138,54 @@ message UpdateObjectMassRequest {
 
 // Ответ на запрос обновления массы
 message UpdateObjectMassResponse {
+  string status = 1;
+}
+
+// Глобальные настройки физики мира
+message WorldPhysicsConfig {
+  // Настройки гравитации
+  float gravity_x = 1;
+  float gravity_y = 2;
+  float gravity_z = 3;
+  
+  // Глобальные параметры затухания
+  float linear_damping = 4;
+  float angular_damping = 5;
+  
+  // Глобальные параметры трения
+  float friction = 6;
+  float rolling_friction = 7;
+}
+
+// Настройки игрока
+message PlayerConfig {
+  // Физические характеристики игрока
+  float player_mass = 1;        // Масса игрока
+  float restitution = 2;        // Способность к отскоку (скилл прыгучести)
+}
+
+// Настройки управления
+message ControlConfig {
+  // Настройки импульсов и движения
+  float base_impulse = 1;
+  float max_impulse = 2;
+  float distance_multiplier = 3;
+  float impulse_multiplier = 4;
+}
+
+// Обновленная конфигурация физики
+message PhysicsConfig {
+  WorldPhysicsConfig world = 1;
+  PlayerConfig player = 2;
+  ControlConfig control = 3;
+}
+
+// Запрос для установки конфигурации физики
+message SetPhysicsConfigRequest {
+  PhysicsConfig config = 1;
+}
+
+// Ответ на запрос установки конфигурации физики
+message SetPhysicsConfigResponse {
   string status = 1;
 }

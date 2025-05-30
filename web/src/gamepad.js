@@ -1,14 +1,19 @@
 import * as THREE from 'three';
-import { getPhysicsConfig } from './network';
+import { getPhysicsConfig, checkConnectionState } from './network';
+import { applyImpulseToSphere } from './physics';
+import gameStateManager from './gamestatemanager';
 
 // Константы для настройки поведения
 const DEBUG_MODE = false; // Включает/выключает отладочные элементы (arrowHelper)
 const MIN_ARROW_LENGTH = 10;
-const MAX_ARROW_LENGTH = 50;
-const SEND_INTERVAL = 50; // Уменьшаем интервал отправки до 50 мс для лучшей отзывчивости
+const MAX_ARROW_LENGTH = 150;
+const SEND_INTERVAL = 50; // Синхронизируем с серверным интервалом
 const ARROW_HEIGHT_OFFSET = 2; // Смещение стрелки по высоте над игроком
-const RAY_UPDATE_INTERVAL = 50; // Интервал обновления луча при движении камеры (мс)
+const RAY_UPDATE_INTERVAL = 50; // Синхронизируем с серверным интервалом
 const KEY_FORCE = 2.0; // Значительно увеличиваем силу импульса для клавиатурного управления
+const DEADZONE = 10.0; // Увеличенная мертвая зона - сопоставима со средним радиусом сферы (2-20)
+const MIN_DEADZONE = 5.0; // Минимальная мертвая зона
+const MAX_DEADZONE = 25.0; // Максимальная мертвая зона
 
 let arrowHelper;
 let lastSentPosition = new THREE.Vector3();
@@ -18,7 +23,7 @@ let mouse = new THREE.Vector2();
 let cameraLastPosition = new THREE.Vector3();
 let lastRayUpdateTime = 0;
 let lastIntersectPoint = new THREE.Vector3();
-let isMouseActive = false; // Флаг активности мыши над игровой областью
+let isMouseActive = true; // Флаг активности мыши над игровой областью (временно true для отладки)
 
 // Флаги для клавиатурного управления
 let keys = {
@@ -35,6 +40,10 @@ let terrainMeshRef = null;
 let playerMeshRef = null;
 let cameraRef = null;
 let socketRef = null;
+
+// Добавляем переменные для дебаунса
+let lastLocalImpulseTime = 0;
+const LOCAL_IMPULSE_INTERVAL = 50; // Синхронизируем с серверным интервалом
 
 export function getArrowDirection() {
     return lastSentPosition.clone();
@@ -68,6 +77,24 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    
+    // Добавляем обработчики для отслеживания когда мышь покидает канвас
+    const canvas = document.querySelector('canvas');
+    if (canvas) {
+        canvas.addEventListener('mouseenter', onMouseEnter);
+        canvas.addEventListener('mouseleave', onMouseLeave);
+        
+        // Проверяем, находится ли мышь уже в канвасе при инициализации
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = window.mouseX || window.innerWidth / 2;
+        const mouseY = window.mouseY || window.innerHeight / 2;
+        
+        if (mouseX >= rect.left && mouseX <= rect.right && 
+            mouseY >= rect.top && mouseY <= rect.bottom) {
+            isMouseActive = true;
+            console.log('[Gamepad] Мышь уже в области канваса при инициализации');
+        }
+    }
     
     // Запускаем анимацию для обновления стрелки и обработки клавиатурного ввода
     animate();
@@ -122,13 +149,13 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
                     // Используем множитель импульса из конфигурации, если она доступна
                     let keyForce = KEY_FORCE;
                     if (physicsConfig && physicsConfig.impulse_multiplier) {
-                        keyForce = (physicsConfig.base_impulse || 0.5) * 8.0; // Увеличиваем в 8 раз базовый импульс
+                        keyForce = (physicsConfig.base_impulse); // Увеличиваем в 8 раз базовый импульс
                     } else {
-                        keyForce = KEY_FORCE * 4.0; // Или увеличиваем в 4 раза значение по умолчанию
+                        keyForce = KEY_FORCE; // Или увеличиваем в 4 раза значение по умолчанию
                     }
                     
                     // Логируем для отладки
-                    console.log(`[Gamepad] Отправка импульса с клавиатуры: направление (${direction.x.toFixed(2)}, ${direction.y.toFixed(2)}, ${direction.z.toFixed(2)}), сила ${keyForce}`);
+                    //console.log(`[Gamepad] Отправка импульса с клавиатуры: направление (${direction.x.toFixed(2)}, ${direction.y.toFixed(2)}, ${direction.z.toFixed(2)}), сила ${keyForce}`);
                     
                     // Отправляем импульс на сервер
                     sendDirectionToServer(direction, keyForce, socketRef);
@@ -164,7 +191,11 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
     }
 
     function onMouseMove(event) {
-        // Обновляем координаты мыши
+        // Сохраняем глобальные координаты мыши
+        window.mouseX = event.clientX;
+        window.mouseY = event.clientY;
+        
+        // Обновляем координаты мыши для Three.js
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         
@@ -175,6 +206,18 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
         castRayAndUpdateDirection();
     }
     
+    function onMouseEnter(event) {
+        // Мышь вошла в область канваса
+        isMouseActive = true;
+        console.log('[Gamepad] Мышь вошла в область канваса, isMouseActive =', isMouseActive);
+    }
+    
+    function onMouseLeave(event) {
+        // Мышь покинула область канваса - останавливаем управление
+        isMouseActive = false;
+        console.log('[Gamepad] Мышь покинула область канваса, isMouseActive =', isMouseActive);
+    }
+    
     function updateRayFromLastMouse() {
         // Обновляем луч с текущими координатами мыши и новой позицией камеры
         castRayAndUpdateDirection();
@@ -182,6 +225,13 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
     
     function castRayAndUpdateDirection() {
         if (!cameraRef || !terrainMeshRef || !playerMeshRef || !socketRef) return;
+        
+        // Не обрабатываем управление мышью, если мышь точно вне канваса
+        // Но разрешаем, если мышь была активна (для случаев движения камеры)
+        if (!isMouseActive) {
+            console.log('[Gamepad] Пропускаем castRayAndUpdateDirection: мышь неактивна');
+            return;
+        }
         
         // Устанавливаем луч от камеры через координаты мыши
         raycaster.setFromCamera(mouse, cameraRef);
@@ -217,6 +267,12 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
             
             // Проверяем, нужно ли отправлять данные на сервер
             if (Date.now() - lastSendTime > SEND_INTERVAL) {
+                console.log('[Gamepad] Отправляем направление:', {
+                    direction: { x: currentDirection.x, y: currentDirection.y, z: currentDirection.z },
+                    distance: distance,
+                    mouse: { x: mouse.x, y: mouse.y },
+                    isMouseActive: isMouseActive
+                });
                 sendDirectionToServer(currentDirection, distance, socketRef);
                 lastSendTime = Date.now();
             }
@@ -224,24 +280,89 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
     }
 
     function sendDirectionToServer(direction, distance, socket) {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            // Для мышиного управления увеличиваем дистанцию, которая используется как сила импульса
-            const enhancedDistance = Math.min(distance * 1.5, 100); // Увеличиваем на 50%, но не больше 100
+        // Проверяем состояние соединения
+        let useServerPhysics = checkConnectionState();
+        
+        // Получаем конфигурацию физики
+        const physicsConfig = getPhysicsConfig();
+        if (!physicsConfig) {
+            console.error('[Gamepad] Конфигурация физики не инициализирована');
+            return;
+        }
+
+        // Получаем ID объекта игрока
+        const playerObjectID = gameStateManager.getPlayerObjectID();
+        if (!playerObjectID) {
+            console.warn('[Gamepad] Player ID еще не получен от сервера, команда не отправлена');
+            return;
+        }
+
+        // Вычисляем адаптивную мертвую зону
+        // Для радиусов сфер 2-20 единиц используем мертвую зону от 5 до 25 единиц
+        const estimatedRadius = Math.min(20, Math.max(2, distance / 10)); // Оценка радиуса по расстоянию
+        const adaptiveDeadzone = Math.min(MAX_DEADZONE, Math.max(MIN_DEADZONE, estimatedRadius * 1.5));
+        
+        // Если расстояние меньше адаптивной мертвой зоны, не отправляем команду
+        if (distance < adaptiveDeadzone) {
+            // console.log(`[Gamepad] Расстояние ${distance.toFixed(2)} меньше мертвой зоны ${adaptiveDeadzone.toFixed(2)}, команда не отправлена`);
+            return;
+        }
+
+        // Для мышиного управления увеличиваем дистанцию, которая используется как сила импульса
+        const enhancedDistance = Math.min(distance * 1.5, 100); // Увеличиваем на 50%, но не больше 100
+        
+        // Вычисляем силу импульса
+        const force = {
+            x: direction.x * enhancedDistance,
+            y: direction.y * enhancedDistance,
+            z: direction.z * enhancedDistance
+        };
+
+        // Отправляем команду на сервер, если соединение активно
+        if (useServerPhysics && socket && socket.readyState === WebSocket.OPEN) {
+            try {
+                socket.send(JSON.stringify({
+                    type: 'cmd',
+                    cmd: 'MOUSE_VECTOR',
+                    data: {
+                        x: direction.x,
+                        y: direction.y,
+                        z: direction.z,
+                        distance: enhancedDistance
+                    },
+                    client_time: Date.now(),
+                    object_id: playerObjectID // Используем динамический player ID
+                }));
+            } catch (error) {
+                console.error('[Gamepad] Ошибка отправки команды на сервер:', error);
+                useServerPhysics = false;
+            }
+        }
+        
+        // Если не используем серверную физику, применяем импульс локально
+        if (!useServerPhysics) {
+            const currentTime = Date.now();
+            const timeSinceLastImpulse = currentTime - lastLocalImpulseTime;
             
-            socket.send(JSON.stringify({
-                type: 'cmd',
-                cmd: 'MOUSE_VECTOR',
-                data: {
-                    x: direction.x,
-                    y: direction.y, // Теперь отправляем реальное значение Y
-                    z: direction.z,
-                    distance: enhancedDistance // Используем увеличенное значение дистанции
-                },
-                client_time: Date.now(),
-                object_id: 'mainPlayer1'
-            }));
-        } else {
-            console.error('WebSocket не подключен');
+            // Применяем импульс только если прошло достаточно времени с последнего применения
+            if (timeSinceLastImpulse >= LOCAL_IMPULSE_INTERVAL) {
+                try {
+                    applyImpulseToSphere(playerObjectID, force); // Используем динамический player ID
+                    console.log('[Gamepad] Применен локальный импульс:', {
+                        direction: { x: direction.x, y: direction.y, z: direction.z },
+                        force: force,
+                        interval: timeSinceLastImpulse,
+                        playerID: playerObjectID,
+                        distance: distance.toFixed(2),
+                        deadzone: adaptiveDeadzone.toFixed(2)
+                    });
+                    
+                    // Обновляем время последнего применения импульса
+                    lastLocalImpulseTime = currentTime;
+                } catch (error) {
+                    console.error('[Gamepad] Ошибка применения локального импульса:', error);
+                }
+            }
         }
     }
 }

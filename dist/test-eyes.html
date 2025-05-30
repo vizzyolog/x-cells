@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест Системы Глаз</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+        }
+        
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 1000;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 1000;
+        }
+        
+        button {
+            display: block;
+            margin: 5px 0;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .normal { background: #4CAF50; color: white; }
+        .happy { background: #FFD700; color: black; }
+        .angry { background: #FF4444; color: white; }
+        .scared { background: #9C27B0; color: white; }
+        .left { background: #2196F3; color: white; }
+        .right { background: #FF9800; color: white; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>🧪 Тест Системы Глаз</h3>
+        <p>Статус загрузки текстуры: <span id="texture-status">Загружается...</span></p>
+        <p>Глаза созданы: <span id="eyes-status">Нет</span></p>
+        <p>Используйте кнопки справа для смены эмоций</p>
+    </div>
+    
+    <div id="controls">
+        <h4>👀 Эмоции</h4>
+        <button class="normal" onclick="setEmotion('normal')">Обычное</button>
+        <button class="happy" onclick="setEmotion('happy')">Радость</button>
+        <button class="angry" onclick="setEmotion('angry')">Гнев</button>
+        <button class="scared" onclick="setEmotion('scared')">Страх</button>
+        <button class="left" onclick="setEmotion('looking_left')">Влево</button>
+        <button class="right" onclick="setEmotion('looking_right')">Вправо</button>
+        <hr>
+        <button onclick="recreateEyes()" style="background: #607D8B; color: white;">🔄 Пересоздать глаза</button>
+    </div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script>
+        // Глобальные переменные
+        let scene, camera, renderer;
+        let sphere, eyeSystem;
+        
+        // Система глаз (упрощенная версия)
+        class EyeSystem {
+            constructor() {
+                this.eyeTexture = null;
+                this.leftEye = null;
+                this.rightEye = null;
+                this.sphereMesh = null;
+                
+                // Параметры глаз - еще БОЛЬШЕ и ближе!
+                this.eyeSize = 1.44; // Увеличиваем на 20% (1.2 * 1.2)
+                this.eyeDistance = 1.0; // Ближе друг к другу
+                this.eyeOffset = 0.9;
+                
+                // Карта эмоций
+                this.emotions = {
+                    'normal': { u: 0, v: 0 },      
+                    'happy': { u: 0.166, v: 0 },    // 1/6
+                    'angry': { u: 0.333, v: 0 },    // 2/6
+                    'scared': { u: 0.5, v: 0 },     // 3/6
+                    'looking_left': { u: 0.666, v: 0 },  // 4/6
+                    'looking_right': { u: 0.833, v: 0 }  // 5/6
+                };
+                
+                this.currentEmotion = 'normal';
+            }
+            
+            async loadTexture() {
+                console.log('Начинаю загрузку текстуры eyes.png...');
+                // Временно принудительно используем fallback
+                console.log('Принудительно создаем fallback текстуру для тестирования');
+                this.createFallbackTexture();
+                document.getElementById('texture-status').textContent = 'Fallback создан ⚠️';
+                return true;
+                
+                /* Временно отключаем загрузку файла
+                try {
+                    const loader = new THREE.TextureLoader();
+                    this.eyeTexture = await new Promise((resolve, reject) => {
+                        loader.load(
+                            './eyes.png',
+                            (texture) => {
+                                console.log('Текстура успешно загружена:', texture);
+                                console.log('Размер текстуры:', texture.image.width, 'x', texture.image.height);
+                                resolve(texture);
+                            },
+                            (progress) => {
+                                console.log('Прогресс загрузки:', progress);
+                            },
+                            (error) => {
+                                console.error('Ошибка загрузки текстуры:', error);
+                                reject(error);
+                            }
+                        );
+                    });
+                    
+                    this.eyeTexture.magFilter = THREE.NearestFilter;
+                    this.eyeTexture.minFilter = THREE.NearestFilter;
+                    this.eyeTexture.wrapS = THREE.ClampToEdgeWrapping;
+                    this.eyeTexture.wrapT = THREE.ClampToEdgeWrapping;
+                    
+                    document.getElementById('texture-status').textContent = 'Загружена ✅';
+                    console.log('Текстура глаз настроена и готова к использованию');
+                    return true;
+                } catch (error) {
+                    document.getElementById('texture-status').textContent = 'Ошибка ❌';
+                    console.error('Ошибка загрузки текстуры глаз:', error);
+                    
+                    // Создаем простую текстуру как fallback
+                    this.createFallbackTexture();
+                    return false;
+                }
+                */
+            }
+            
+            createFallbackTexture() {
+                // Создаем большие выразительные глаза как у червячков в Worms!
+                const canvas = document.createElement('canvas');
+                canvas.width = 600; // 6 эмоций по 100px
+                canvas.height = 100;
+                const ctx = canvas.getContext('2d');
+                
+                // Заполняем прозрачным
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Создаем БОЛЬШИЕ глаза для каждой эмоции
+                const emotions = [
+                    { name: 'normal', pupilX: 50, pupilY: 50, pupilSize: 25 },
+                    { name: 'happy', pupilX: 50, pupilY: 60, pupilSize: 30, eyeHeight: 50 }, // Прищуренные счастливые
+                    { name: 'angry', pupilX: 50, pupilY: 35, pupilSize: 35, eyeColor: '#FFE6E6' }, // Налитые кровью
+                    { name: 'scared', pupilX: 50, pupilY: 30, pupilSize: 40, eyeColor: '#E6F3FF' }, // Широко открытые
+                    { name: 'left', pupilX: 30, pupilY: 50, pupilSize: 25 },
+                    { name: 'right', pupilX: 70, pupilY: 50, pupilSize: 25 } // Добавляем "вправо"
+                ];
+                
+                emotions.forEach((emotion, index) => {
+                    const x = index * 100;
+                    
+                    // Белок глаза (большой!)
+                    ctx.fillStyle = emotion.eyeColor || '#FFFFFF';
+                    const eyeHeight = emotion.eyeHeight || 70;
+                    ctx.beginPath();
+                    ctx.ellipse(x + 50, 50, 35, eyeHeight / 2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Черная обводка
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                    
+                    // БОЛЬШОЙ зрачок
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.ellipse(x + emotion.pupilX, emotion.pupilY, emotion.pupilSize / 2, emotion.pupilSize / 2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Блик в глазу для живости
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.ellipse(x + emotion.pupilX - 8, emotion.pupilY - 8, 6, 6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                this.eyeTexture = new THREE.CanvasTexture(canvas);
+                this.eyeTexture.magFilter = THREE.NearestFilter;
+                this.eyeTexture.minFilter = THREE.NearestFilter;
+                
+                console.log('Создана fallback текстура с БОЛЬШИМИ глазами размером:', canvas.width, 'x', canvas.height);
+            }
+            
+            createEyes(sphereMesh) {
+                console.log('Создание глаз... Текстура доступна:', !!this.eyeTexture);
+                if (!this.eyeTexture) {
+                    console.warn('Текстура глаз еще не загружена');
+                    return false;
+                }
+                
+                this.sphereMesh = sphereMesh;
+                const radius = sphereMesh.geometry.parameters.radius;
+                console.log('Радиус сферы:', radius);
+                
+                // Удаляем старые глаза если есть
+                this.removeEyes();
+                
+                // Создаем ПЛОСКУЮ геометрию для глаз - но БОЛЬШУЮ!
+                const eyeGeometry = new THREE.PlaneGeometry(this.eyeSize, this.eyeSize);
+                console.log('Геометрия глаз создана, размер:', this.eyeSize);
+                
+                // Создаем материал с текстурой
+                const eyeMaterial = new THREE.MeshBasicMaterial({
+                    map: this.eyeTexture.clone(),
+                    transparent: true,
+                    alphaTest: 0.1,
+                    side: THREE.DoubleSide
+                });
+                console.log('Материал глаз создан:', eyeMaterial);
+                console.log('Текстура в материале:', eyeMaterial.map);
+                
+                // Левый глаз - БОЛЬШОЙ и плоский!
+                this.leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial.clone());
+                this.leftEye.position.set(-this.eyeDistance / 2, 0.8, radius + 0.1);
+                console.log('Левый глаз создан, позиция:', this.leftEye.position);
+                
+                // Правый глаз - БОЛЬШОЙ и плоский!
+                this.rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial.clone());
+                this.rightEye.position.set(this.eyeDistance / 2, 0.8, radius + 0.1);
+                console.log('Правый глаз создан, позиция:', this.rightEye.position);
+                
+                // Добавляем глаза к сфере
+                sphereMesh.add(this.leftEye);
+                sphereMesh.add(this.rightEye);
+                console.log('Глаза добавлены к сфере');
+                console.log('Дети сферы:', sphereMesh.children.length);
+                
+                // Отладочная информация
+                console.log('Размер глаз:', this.eyeSize);
+                console.log('Позиция левого глаза:', this.leftEye.position);
+                console.log('Позиция правого глаза:', this.rightEye.position);
+                console.log('Радиус сферы:', radius);
+                
+                this.updateEmotion(this.currentEmotion);
+                
+                document.getElementById('eyes-status').textContent = 'Да ✅';
+                console.log('Глаза созданы и добавлены к сфере');
+                return true;
+            }
+            
+            updateEmotion(emotion) {
+                if (!this.emotions[emotion]) {
+                    console.warn(`Неизвестная эмоция: ${emotion}`);
+                    return;
+                }
+                
+                this.currentEmotion = emotion;
+                
+                if (!this.leftEye || !this.rightEye) {
+                    return;
+                }
+                
+                const coords = this.emotions[emotion];
+                
+                // Обновляем UV координаты
+                const uvOffsetX = coords.u;
+                const uvOffsetY = coords.v;
+                const uvScaleX = 0.166; // 1/6 для 6 эмоций в ряд
+                const uvScaleY = 1.0; // вся высота
+                
+                // Обновляем UV для левого глаза
+                if (this.leftEye.material.map) {
+                    this.leftEye.material.map.offset.set(uvOffsetX, uvOffsetY);
+                    this.leftEye.material.map.repeat.set(uvScaleX, uvScaleY);
+                    this.leftEye.material.needsUpdate = true;
+                }
+                
+                // Обновляем UV для правого глаза
+                if (this.rightEye.material.map) {
+                    this.rightEye.material.map.offset.set(uvOffsetX, uvOffsetY);
+                    this.rightEye.material.map.repeat.set(uvScaleX, uvScaleY);
+                    this.rightEye.material.needsUpdate = true;
+                }
+                
+                console.log(`Эмоция изменена на: ${emotion}`);
+            }
+            
+            removeEyes() {
+                if (this.leftEye && this.sphereMesh) {
+                    this.sphereMesh.remove(this.leftEye);
+                    this.leftEye.geometry.dispose();
+                    this.leftEye.material.dispose();
+                    this.leftEye = null;
+                }
+                
+                if (this.rightEye && this.sphereMesh) {
+                    this.sphereMesh.remove(this.rightEye);
+                    this.rightEye.geometry.dispose();
+                    this.rightEye.material.dispose();
+                    this.rightEye = null;
+                }
+                
+                document.getElementById('eyes-status').textContent = 'Нет';
+            }
+        }
+        
+        // Инициализация сцены
+        function init() {
+            // Создаем сцену
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111111);
+            
+            // Создаем камеру
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 2, 5);
+            
+            // Создаем рендерер
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+            
+            // Создаем освещение
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // Создаем сферу
+            const geometry = new THREE.SphereGeometry(1, 32, 32);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0x4444ff,
+                shininess: 30
+            });
+            sphere = new THREE.Mesh(geometry, material);
+            sphere.position.set(0, 0, 0);
+            sphere.castShadow = true;
+            sphere.receiveShadow = true;
+            scene.add(sphere);
+            
+            // Создаем пол
+            const floorGeometry = new THREE.PlaneGeometry(20, 20);
+            const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+            
+            // Инициализируем систему глаз
+            eyeSystem = new EyeSystem();
+            
+            // Обработчик изменения размера окна
+            window.addEventListener('resize', onWindowResize);
+            
+            // Запускаем анимацию
+            animate();
+            
+            // Загружаем текстуру и создаем глаза
+            loadAndCreateEyes();
+        }
+        
+        async function loadAndCreateEyes() {
+            await eyeSystem.loadTexture();
+            eyeSystem.createEyes(sphere);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Вращаем сферу для лучшего обзора
+            sphere.rotation.y += 0.005;
+            
+            // Покачиваем камеру
+            camera.position.x = Math.sin(Date.now() * 0.001) * 2;
+            camera.lookAt(sphere.position);
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Функции для кнопок
+        function setEmotion(emotion) {
+            if (eyeSystem) {
+                eyeSystem.updateEmotion(emotion);
+            }
+        }
+        
+        function recreateEyes() {
+            if (eyeSystem && sphere) {
+                eyeSystem.removeEyes();
+                document.getElementById('eyes-status').textContent = 'Пересоздаются...';
+                setTimeout(() => {
+                    eyeSystem.createEyes(sphere);
+                }, 100);
+            }
+        }
+        
+        // Запускаем инициализацию
+        init();
+    </script>
+</body>
+</html> 

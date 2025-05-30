@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { objects } from './objects';
 import { getArrowDirection } from './gamepad';
-import gameStateManager from './gamestatemanager';
+import gameStateManager from './gamestatemanager.js';
 
 // Объявляем камеру
 export let camera;

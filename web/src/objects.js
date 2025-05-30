@@ -1,15 +1,16 @@
 // objects.js
 import * as THREE from 'three';
-import { scene } from './scene';
+import { scene } from './scene.js';
 import { 
     getPhysicsWorld,
     applyPhysicsConfig,
     receiveObjectUpdate,
     stepPhysics,
     updatePhysicsObjects
-} from './physics';
-import gameStateManager from './gamestatemanager';
+} from './physics.js';
+import gameStateManager from './gamestatemanager.js';
 import { EventEmitter } from 'events';
+import { addEyesToSphere } from './eyes.js'; // Импортируем систему глаз
 
 export const terrainCreated = new EventEmitter();
 export const playerCreated = new EventEmitter();
@@ -233,7 +234,11 @@ export function createSphereMesh(data) {
         if (playerObjectID && data.id === playerObjectID) {
             playerMesh = mesh;
             gameStateManager.setPlayerMesh(playerMesh);
-            console.log(`[Objects] Установлен playerMesh для объекта ${data.id}`);
+            
+            // Добавляем глаза к сфере игрока
+            addEyesToSphere(mesh);
+            
+            console.log(`[Objects] Установлен playerMesh для объекта ${data.id} с глазами`);
         } else {
             // Если player ID еще не получен, объект может быть установлен позже в network.js
             console.log(`[Objects] Создан объект ${data.id}, player ID: ${playerObjectID || 'не получен'}`);

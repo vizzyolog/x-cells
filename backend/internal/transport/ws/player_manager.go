@@ -6,6 +6,7 @@ import (
 	"math/rand/v2"
 	"time"
 
+	"x-cells/backend/internal/game"
 	"x-cells/backend/internal/world"
 )
 
@@ -122,12 +123,63 @@ func (s *WSServer) addPlayer(conn *SafeWriter) (*PlayerConnection, error) {
 		return nil, fmt.Errorf("ошибка создания объекта игрока: %v", err)
 	}
 
+	// Получаем реальный радиус созданного объекта игрока
+	var playerRadius float64
+	if obj, exists := s.objectManager.GetObject(objectID); exists {
+		if obj.Shape != nil && obj.Shape.Sphere != nil {
+			playerRadius = float64(obj.Shape.Sphere.Radius)
+		} else {
+			return nil, fmt.Errorf("объект игрока %s создан без геометрии сферы", objectID)
+		}
+	} else {
+		return nil, fmt.Errorf("объект игрока %s не найден после создания", objectID)
+	}
+
 	// Создаем структуру игрока
 	player := &PlayerConnection{
 		ID:       playerID,
 		ObjectID: objectID,
 		Conn:     conn,
 		JoinTime: time.Now(),
+	}
+
+	// === НОВОЕ: Добавляем игрока в GameTicker ===
+	if s.gameTicker != nil {
+		// Используем type assertion для получения методов GameTicker
+		if gameTicker, ok := s.gameTicker.(interface {
+			AddPlayerWithRadius(playerID string, pos game.Vector3, radius float64)
+		}); ok {
+			// Позиция игрока (используем ту же, что при создании объекта)
+			spawnX := rand.IntN(200) - 100 // от -100 до 100
+			spawnZ := rand.IntN(200) - 100 // от -100 до 100
+			spawnY := 80.0                 // Примерная высота
+
+			// Создаем позицию с правильным типом Vector3
+			position := game.Vector3{
+				X: float64(spawnX),
+				Y: spawnY,
+				Z: float64(spawnZ),
+			}
+
+			gameTicker.AddPlayerWithRadius(playerID, position, playerRadius)
+			log.Printf("[WSServer] Игрок %s добавлен в GameTicker в позиции (%.1f, %.1f, %.1f) с радиусом %.1f",
+				playerID, float64(spawnX), spawnY, float64(spawnZ), playerRadius)
+		} else if gameTicker, ok := s.gameTicker.(interface {
+			AddPlayer(playerID string, pos game.Vector3)
+		}); ok {
+			// Fallback к старому методу
+			position := game.Vector3{
+				X: float64(rand.IntN(200) - 100),
+				Y: 80.0,
+				Z: float64(rand.IntN(200) - 100),
+			}
+			gameTicker.AddPlayer(playerID, position)
+			log.Printf("[WSServer] Игрок %s добавлен в GameTicker (старый метод)", playerID)
+		} else {
+			log.Printf("[WSServer] ОШИБКА: gameTicker не имеет метода AddPlayer")
+		}
+	} else {
+		log.Printf("[WSServer] ПРЕДУПРЕЖДЕНИЕ: gameTicker не установлен")
 	}
 
 	log.Printf("[WSServer] Создан игрок %s с объектом %s", playerID, objectID)
@@ -176,6 +228,16 @@ func (s *WSServer) removePlayer(conn *SafeWriter) {
 	// Удаляем объект игрока из мира
 	if err := s.removePlayerObject(playerToRemove.ObjectID); err != nil {
 		log.Printf("[WSServer] Ошибка удаления объекта игрока %s: %v", playerToRemove.ObjectID, err)
+	}
+
+	// === НОВОЕ: Удаляем игрока из GameTicker ===
+	if s.gameTicker != nil {
+		if gameTicker, ok := s.gameTicker.(interface {
+			RemovePlayer(playerID string)
+		}); ok {
+			gameTicker.RemovePlayer(playerIDToRemove)
+			log.Printf("[WSServer] Игрок %s удален из GameTicker", playerIDToRemove)
+		}
 	}
 
 	// Удаляем игрока из карты

@@ -55,6 +55,12 @@ type WSServer struct {
 	networkSim      NetworkSimulation
 	delayedMessages chan DelayedMessage
 	simMu           sync.RWMutex // мьютекс для настроек симуляции
+
+	// === НОВОЕ: Поддержка системы еды ===
+	foodSystem interface{} // Ссылка на систему еды (интерфейс для гибкости)
+
+	// === НОВОЕ: Поддержка GameTicker ===
+	gameTicker interface{} // Ссылка на GameTicker для управления игроками
 }
 
 // NewWSServer создает новый экземпляр WebSocket сервера
@@ -279,4 +285,72 @@ func (s *WSServer) Start() {
 	// Запускаем HTTP сервер
 	http.HandleFunc("/ws", s.HandleWS)
 	log.Printf("[Go] WebSocket сервер запущен на /ws")
+}
+
+// === МЕТОДЫ ДЛЯ РАБОТЫ С СИСТЕМОЙ ЕДЫ ===
+
+// SetFoodSystem устанавливает ссылку на систему еды
+func (s *WSServer) SetFoodSystem(foodSystem interface{}) {
+	s.foodSystem = foodSystem
+}
+
+// SetGameTicker устанавливает ссылку на GameTicker
+func (s *WSServer) SetGameTicker(gameTicker interface{}) {
+	s.gameTicker = gameTicker
+}
+
+// BroadcastFoodConsumed отправляет всем клиентам событие поедания еды
+func (s *WSServer) BroadcastFoodConsumed(playerID, foodID string, massGain float64) {
+	message := map[string]interface{}{
+		"type":      "food_consumed",
+		"player_id": playerID,
+		"food_id":   foodID,
+		"mass_gain": massGain,
+	}
+
+	s.playersMu.RLock()
+	defer s.playersMu.RUnlock()
+
+	for _, player := range s.players {
+		if err := player.Conn.WriteJSON(message); err != nil {
+			log.Printf("[WSServer] Ошибка отправки события поедания еды игроку %s: %v", player.ID, err)
+		}
+	}
+
+	log.Printf("[WSServer] Отправлено событие поедания еды: игрок %s съел %s (+%.1f массы)",
+		playerID, foodID, massGain)
+}
+
+// BroadcastFoodState отправляет всем клиентам текущее состояние еды
+func (s *WSServer) BroadcastFoodState(foodItems interface{}) {
+	message := map[string]interface{}{
+		"type": "food_state",
+		"food": foodItems,
+	}
+
+	s.playersMu.RLock()
+	defer s.playersMu.RUnlock()
+
+	for _, player := range s.players {
+		if err := player.Conn.WriteJSON(message); err != nil {
+			log.Printf("[WSServer] Ошибка отправки состояния еды игроку %s: %v", player.ID, err)
+		}
+	}
+}
+
+// BroadcastFoodSpawned отправляет всем клиентам событие создания новой еды
+func (s *WSServer) BroadcastFoodSpawned(food interface{}) {
+	message := map[string]interface{}{
+		"type":      "food_spawned",
+		"food_item": food,
+	}
+
+	s.playersMu.RLock()
+	defer s.playersMu.RUnlock()
+
+	for _, player := range s.players {
+		if err := player.Conn.WriteJSON(message); err != nil {
+			log.Printf("[WSServer] Ошибка отправки события создания еды игроку %s: %v", player.ID, err)
+		}
+	}
 }

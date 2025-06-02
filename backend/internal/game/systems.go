@@ -1,9 +1,11 @@
 package game
 
 import (
+	"context"
 	"log"
 	"time"
 
+	pb "x-cells/backend/internal/physics/generated"
 	"x-cells/backend/internal/transport"
 	"x-cells/backend/internal/world"
 )
@@ -153,6 +155,121 @@ func (pus *PhysicsUpdateSystem) GetName() string {
 // GetPriority возвращает приоритет системы
 func (pus *PhysicsUpdateSystem) GetPriority() int {
 	return pus.priority
+}
+
+// PhysicsPositionSyncSystem система синхронизации позиций игроков из физического движка с GameTicker
+type PhysicsPositionSyncSystem struct {
+	name          string
+	priority      int
+	physicsClient transport.IPhysicsClient
+	gameTicker    *GameTicker
+	objectManager ObjectManager
+	logger        *log.Logger
+	lastSync      time.Time
+	syncInterval  time.Duration
+}
+
+// ObjectManager интерфейс для получения объектов игроков
+type ObjectManager interface {
+	GetAllWorldObjects() []*world.WorldObject
+}
+
+// NewPhysicsPositionSyncSystem создает новую систему синхронизации позиций
+func NewPhysicsPositionSyncSystem(physicsClient transport.IPhysicsClient, gameTicker *GameTicker, objectManager ObjectManager, logger *log.Logger) *PhysicsPositionSyncSystem {
+	return &PhysicsPositionSyncSystem{
+		name:          "PhysicsPositionSyncSystem",
+		priority:      10, // Высокий приоритет - синхронизируем позиции рано
+		physicsClient: physicsClient,
+		gameTicker:    gameTicker,
+		objectManager: objectManager,
+		logger:        logger,
+		lastSync:      time.Now(),
+		syncInterval:  100 * time.Millisecond, // Синхронизируем каждые 100мс (10 FPS)
+	}
+}
+
+// Update синхронизирует позиции игроков
+func (ppss *PhysicsPositionSyncSystem) Update(deltaTime time.Duration) error {
+	// Ограничиваем частоту синхронизации
+	now := time.Now()
+	if now.Sub(ppss.lastSync) < ppss.syncInterval {
+		return nil
+	}
+	ppss.lastSync = now
+
+	// Получаем всех игроков из GameTicker
+	players := ppss.gameTicker.GetAllPlayers()
+	if len(players) == 0 {
+		return nil
+	}
+
+	// Получаем все объекты мира
+	worldObjects := ppss.objectManager.GetAllWorldObjects()
+
+	// Создаем карту objectID -> playerID для поиска
+	objectToPlayer := make(map[string]string)
+	for _, obj := range worldObjects {
+		// Объекты игроков обычно содержат "player" в ID
+		if len(obj.ID) > 0 && obj.PhysicsType != world.PhysicsTypeAmmo {
+			// Ищем игрока, которому принадлежит этот объект
+			for playerID := range players {
+				// Простая эвристика: если objectID содержит playerID
+				if len(playerID) > 10 && len(obj.ID) > 10 {
+					// Объекты игроков имеют формат вроде "player_timestamp_objectnum"
+					// playerID имеет формат вроде "player_timestamp"
+					objectToPlayer[obj.ID] = playerID
+					break
+				}
+			}
+		}
+	}
+
+	// Логируем периодически для отладки
+	if ppss.gameTicker.GetTickCount()%200 == 0 { // Каждые 10 секунд при 20 TPS
+		ppss.logger.Printf("[PhysicsPositionSync] Синхронизация: игроков %d, объектов %d, связей %d",
+			len(players), len(worldObjects), len(objectToPlayer))
+	}
+
+	// Синхронизируем позиции из физического движка
+	for objectID, playerID := range objectToPlayer {
+		// Получаем состояние объекта из физического движка
+		resp, err := ppss.physicsClient.GetObjectState(context.Background(), &pb.GetObjectStateRequest{
+			Id: objectID,
+		})
+
+		if err != nil {
+			// Логируем ошибки только периодически, чтобы не спамить
+			if ppss.gameTicker.GetTickCount()%400 == 0 {
+				ppss.logger.Printf("[PhysicsPositionSync] Ошибка получения состояния объекта %s: %v", objectID, err)
+			}
+			continue
+		}
+
+		if resp.Status != "OK" || resp.State == nil || resp.State.Position == nil {
+			continue
+		}
+
+		// Обновляем позицию игрока в GameTicker
+		newPos := Vector3{
+			X: float64(resp.State.Position.X),
+			Y: float64(resp.State.Position.Y),
+			Z: float64(resp.State.Position.Z),
+		}
+
+		ppss.gameTicker.UpdatePlayerPosition(playerID, newPos)
+	}
+
+	return nil
+}
+
+// GetName возвращает имя системы
+func (ppss *PhysicsPositionSyncSystem) GetName() string {
+	return ppss.name
+}
+
+// GetPriority возвращает приоритет системы
+func (ppss *PhysicsPositionSyncSystem) GetPriority() int {
+	return ppss.priority
 }
 
 // WebSocketBroadcaster интерфейс для отправки обновлений клиентам

@@ -9,6 +9,7 @@ import {
     updatePhysicsObjects
 } from './physics';
 import gameStateManager from './gamestatemanager';
+import { SimpleFoodClient } from './simple-food-client.js';
 
 let ws = null;
 let physicsStarted = false;
@@ -38,6 +39,9 @@ const KEYBOARD_IMPULSE_INTERVAL = 50; // Синхронизируем с сер�
 // Добавляем переменную для отслеживания состояния вкладки
 let isTabActive = true;
 let lastActiveTime = Date.now();
+
+// === НОВОЕ: Система еды ===
+let foodClient = null;
 
 // Функция для получения текущей конфигурации физики
 export function getPhysicsConfig() {
@@ -222,6 +226,22 @@ function handleMessage(data) {
         if (data.type === "physics_config") {
             physicsConfig = data.config;
             applyPhysicsConfig(physicsConfig);
+            return;
+        }
+
+        // === НОВОЕ: Обработка событий еды ===
+        if (data.type === "food_spawned" && foodClient) {
+            foodClient.handleFoodSpawned(data.food_item);
+            return;
+        }
+
+        if (data.type === "food_consumed" && foodClient) {
+            foodClient.handleFoodConsumed(data.player_id, data.food_id, data.mass_gain);
+            return;
+        }
+
+        if (data.type === "food_state" && foodClient) {
+            foodClient.handleFoodState(data.food);
             return;
         }
 
@@ -699,3 +719,23 @@ export function startPhysicsSimulation() {
 
 // Экспортируем функции для доступа из других модулей
 export { estimateServerTime };
+
+// === НОВЫЕ ФУНКЦИИ ДЛЯ СИСТЕМЫ ЕДЫ ===
+
+// Функция для инициализации системы еды (вызывается из main.js после создания scene)
+export function initFoodSystem(scene, world) {
+    foodClient = new SimpleFoodClient(scene, world);
+    console.log('[Network] Система еды инициализирована');
+}
+
+// Функция для обновления системы еды (вызывается из render loop)
+export function updateFoodSystem(deltaTime) {
+    if (foodClient) {
+        foodClient.update(deltaTime);
+    }
+}
+
+// Функция для получения количества еды (для UI)
+export function getFoodCount() {
+    return foodClient ? foodClient.getFoodCount() : 0;
+}

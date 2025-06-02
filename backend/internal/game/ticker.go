@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"log"
+	"math"
 	"sync"
 	"time"
 
@@ -57,6 +58,7 @@ type Player struct {
 	Radius   float64
 	Health   float64
 	Score    int64
+	Mass     float64 // Новое поле для системы еды
 	LastSeen time.Time
 }
 
@@ -288,22 +290,27 @@ func (gt *GameTicker) executeSystem(system TickSystem, deltaTime time.Duration) 
 	}
 }
 
-// Методы для управления игроками
+// AddPlayer добавляет игрока с стандартным радиусом
 func (gt *GameTicker) AddPlayer(playerID string, pos Vector3) {
+	gt.AddPlayerWithRadius(playerID, pos, 1.0) // Стандартный радиус
+}
+
+// AddPlayerWithRadius добавляет игрока с указанным радиусом
+func (gt *GameTicker) AddPlayerWithRadius(playerID string, pos Vector3, radius float64) {
 	gt.playersMutex.Lock()
 	defer gt.playersMutex.Unlock()
 
 	gt.players[playerID] = &Player{
 		ID:       playerID,
 		Position: pos,
-		Radius:   1.0, // Стандартный радиус
+		Radius:   radius, // Используем переданный радиус
 		Health:   100.0,
 		Score:    0,
 		LastSeen: time.Now(),
 	}
 
-	gt.logger.Printf("[GameTicker] Добавлен игрок %s в позиции (%.1f, %.1f, %.1f)",
-		playerID, pos.X, pos.Y, pos.Z)
+	gt.logger.Printf("[GameTicker] Добавлен игрок %s в позиции (%.1f, %.1f, %.1f) с радиусом %.1f",
+		playerID, pos.X, pos.Y, pos.Z, radius)
 }
 
 func (gt *GameTicker) RemovePlayer(playerID string) {
@@ -321,6 +328,40 @@ func (gt *GameTicker) GetPlayer(playerID string) *Player {
 	return gt.players[playerID]
 }
 
+// UpdatePlayerMass безопасно обновляет массу игрока
+func (gt *GameTicker) UpdatePlayerMass(playerID string, massChange float64) {
+	gt.playersMutex.Lock()
+	defer gt.playersMutex.Unlock()
+
+	if player, exists := gt.players[playerID]; exists {
+		player.Mass += massChange
+		gt.logger.Printf("[GameTicker] Масса игрока %s изменена на %.2f (новая масса: %.2f)",
+			playerID, massChange, player.Mass)
+	}
+}
+
+// UpdatePlayerPosition безопасно обновляет позицию игрока из физического движка
+func (gt *GameTicker) UpdatePlayerPosition(playerID string, newPos Vector3) {
+	gt.playersMutex.Lock()
+	defer gt.playersMutex.Unlock()
+
+	if player, exists := gt.players[playerID]; exists {
+		player.Position = newPos
+		player.LastSeen = time.Now()
+		// Логируем только изменения значительных позиций (более 1 единицы)
+		oldPos := player.Position
+		distance := math.Sqrt(
+			(newPos.X-oldPos.X)*(newPos.X-oldPos.X) +
+				(newPos.Y-oldPos.Y)*(newPos.Y-oldPos.Y) +
+				(newPos.Z-oldPos.Z)*(newPos.Z-oldPos.Z),
+		)
+		if distance > 1.0 && gt.GetTickCount()%60 == 0 { // Логируем раз в 3 секунды при 20 TPS
+			gt.logger.Printf("[GameTicker] Позиция игрока %s обновлена: (%.1f, %.1f, %.1f)",
+				playerID, newPos.X, newPos.Y, newPos.Z)
+		}
+	}
+}
+
 func (gt *GameTicker) GetAllPlayers() map[string]*Player {
 	gt.playersMutex.RLock()
 	defer gt.playersMutex.RUnlock()
@@ -334,6 +375,7 @@ func (gt *GameTicker) GetAllPlayers() map[string]*Player {
 			Radius:   player.Radius,
 			Health:   player.Health,
 			Score:    player.Score,
+			Mass:     player.Mass,
 			LastSeen: player.LastSeen,
 		}
 	}

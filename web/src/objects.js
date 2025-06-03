@@ -63,19 +63,17 @@ export function createMeshAndBodyForObject(data) {
             mesh, 
             body, 
             object_type: type, 
-            mass: data.mass || 0, // Сохраняем массу из данных сервера
+            mass: data.mass, // Сохраняем массу из данных сервера
+            radius: data.radius, // Сохраняем радиус из данных сервера
             physicsBy: data.physics_by
         };
         
-        console.warn("[Objects] Создан объект:", {
+        console.log("[Objects] Создан объект:", {
             id: data.id,
             type: data.object_type,
             physics_by: data.physics_by,
             mass: data.mass,
-            position: { x: data.x, y: data.y, z: data.z },
             radius: data.radius,
-            color: data.color,
-            server_time: data.server_time,
             hasBody: !!body,
             hasMesh: !!mesh
         });
@@ -279,7 +277,6 @@ function createPhysicsBodyForSphere(data) {
         }
 
         const radius = data.radius;
-       
         const mass = data.mass;
 
         // Создаем все Ammo объекты через window.Ammo
@@ -326,21 +323,7 @@ function createPhysicsBodyForSphere(data) {
         const SPHERE_GROUP = 2;
         physicsWorld.addRigidBody(body, SPHERE_GROUP, -1); // Сферы сталкиваются со всеми
         
-        console.log("[Sphere] Физическое тело создано:", {
-            radius,
-            mass,
-            position: {
-                x: data.x || 0,
-                y: data.y || 0,
-                z: data.z || 0
-            },
-            ccd: {
-                motionThreshold: radius * 0.7,
-                sweptSphereRadius: radius * 0.6
-            },
-            friction: 1.0,
-            restitution: 0.0
-        });
+        console.log(`[Objects] Физическое тело сферы ${data.id} создано: radius=${radius}, mass=${mass}`);
 
         // Очистка памяти
         window.Ammo.destroy(rbInfo);

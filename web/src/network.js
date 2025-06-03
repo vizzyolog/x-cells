@@ -30,7 +30,8 @@ let currentPing = 0;
 
 // Добавляем переменную для отслеживания времени последнего обновления
 let lastUpdateTime = Date.now();
-const UPDATE_TIMEOUT = 100; // Синхронизируем с сервером (2x server interval)
+const UPDATE_TIMEOUT = 500; // Увеличиваем с 100 до 500мс - более разумный таймаут
+const UPDATE_WARNING_TIMEOUT = 200; // Предупреждение при 200мс без обновлений
 
 // Добавляем переменные для дебаунса
 let lastKeyboardImpulseTime = 0;
@@ -42,6 +43,17 @@ let lastActiveTime = Date.now();
 
 // === НОВОЕ: Система еды ===
 let foodClient = null;
+
+// === НОВОЕ: Система контроля соединения ===
+let connectionStats = {
+    lastBatchUpdate: Date.now(),
+    lastPing: Date.now(),
+    lastCommand: Date.now(),
+    batchUpdateCount: 0,
+    missedUpdatesThreshold: 3, // Пропускаем только после 3 подряд пропущенных обновлений
+    avgUpdateInterval: 50, // Ожидаемый интервал обновлений от сервера
+    lastWarningTime: 0 // Время последнего предупреждения (для предотвращения спама)
+};
 
 // Функция для получения текущей конфигурации физики
 export function getPhysicsConfig() {
@@ -195,18 +207,35 @@ function updateServerDelayDisplay(delay) {
 // Функция для проверки состояния соединения
 export function checkConnectionState() {
     const currentTime = Date.now();
-    const timeSinceLastUpdate = currentTime - lastUpdateTime;
     
     // Проверяем состояние WebSocket соединения
     if (!ws || ws.readyState !== WebSocket.OPEN) {
         return false;
     }
     
-    // Если прошло больше UPDATE_TIMEOUT мс с последнего обновления, переключаемся на локальную физику
-    if (timeSinceLastUpdate > UPDATE_TIMEOUT) {
+    // Используем время последнего batch_update как основной индикатор
+    const timeSinceLastBatch = currentTime - connectionStats.lastBatchUpdate;
+    const timeSinceLastPing = currentTime - connectionStats.lastPing;
+    
+    // Считаем серверную активность по любому типу обновлений
+    const timeSinceAnyActivity = Math.min(timeSinceLastBatch, timeSinceLastPing);
+    
+    // Предупреждение только при долгом отсутствии ЛЮБЫХ обновлений
+    if (timeSinceAnyActivity > UPDATE_WARNING_TIMEOUT && timeSinceAnyActivity <= UPDATE_TIMEOUT) {
+        // Логируем предупреждение только раз в 2 секунды, чтобы не спамить
+        if (currentTime - connectionStats.lastWarningTime > 2000) {
+            console.warn(`[WS] Долго нет активности сервера: ${timeSinceAnyActivity}мс (batch: ${timeSinceLastBatch}мс, ping: ${timeSinceLastPing}мс)`);
+            connectionStats.lastWarningTime = currentTime;
+        }
+    }
+    
+    // Переключаемся на локальную физику только при критической задержке batch_update
+    // И только если нет недавней активности от пинга тоже
+    if (timeSinceLastBatch > UPDATE_TIMEOUT && timeSinceLastPing > UPDATE_TIMEOUT / 2) {
         // Логируем только если это не связано с неактивной вкладкой
-        if (isTabActive) {
-            console.log(`[WS] Нет обновлений ${timeSinceLastUpdate}мс, переключаемся на локальную физику`);
+        if (isTabActive && currentTime - connectionStats.lastWarningTime > 2000) {
+            console.log(`[WS] Критическая задержка всех обновлений, переключаемся на локальную физику (batch: ${timeSinceLastBatch}мс, ping: ${timeSinceLastPing}мс)`);
+            connectionStats.lastWarningTime = currentTime;
         }
         return false;
     }
@@ -237,11 +266,32 @@ function handleMessage(data) {
 
         if (data.type === "food_consumed" && foodClient) {
             foodClient.handleFoodConsumed(data.player_id, data.food_id, data.mass_gain);
+            
+            // === ПРОСТОЕ: Только обновляем JS объект, физику обновит player_size_update ===
+            const currentPlayerID = gameStateManager.getPlayerID();
+            if (currentPlayerID === data.player_id) {
+                const obj = objects[data.player_id];
+                if (obj) {
+                    const oldMass = obj.mass || 0;
+                    obj.mass = oldMass + data.mass_gain;
+                    console.log(`[Network] Масса текущего игрока обновлена: ${oldMass.toFixed(1)} → ${obj.mass.toFixed(1)} (+${data.mass_gain.toFixed(1)})`);
+                } else {
+                    console.warn(`[Network] Объект текущего игрока ${data.player_id} не найден для обновления массы`);
+                }
+            }
+            
             return;
         }
 
         if (data.type === "food_state" && foodClient) {
             foodClient.handleFoodState(data.food);
+            return;
+        }
+
+        // === НОВОЕ: Обработка обновления размера игрока ===
+        if (data.type === "player_size_update") {
+            console.log(`[Network] ПОЛУЧЕНО СОБЫТИЕ player_size_update для ${data.player_id}: радиус=${data.new_radius}, масса=${data.new_mass}`);
+            handlePlayerSizeUpdate(data.player_id, data.new_radius, data.new_mass);
             return;
         }
 
@@ -268,6 +318,9 @@ function handleMessage(data) {
             const now = Date.now();
             const roundTripTime = now - data.client_time;
             
+            // === НОВОЕ: Обновляем статистику соединения ===
+            connectionStats.lastPing = now;
+            
             pingHistory.push(roundTripTime);
             if (pingHistory.length > MAX_PING_SAMPLES) {
                 pingHistory.shift();
@@ -281,7 +334,14 @@ function handleMessage(data) {
             return;
         }
 
-        // Обновляем время последнего обновления для всех типов обновлений объектов
+        // === ОБНОВЛЕННАЯ ЛОГИКА: Более умное обновление времени активности ===
+        // Обновляем статистику для batch_update
+        if (data.type === "batch_update") {
+            connectionStats.lastBatchUpdate = Date.now();
+            connectionStats.batchUpdateCount++;
+        }
+        
+        // Обновляем общее время для других типов игровых обновлений  
         if (data.type === "batch_update" || data.type === "update" || 
             (data.id && data.position) || (data.id && data.velocity)) {
             lastUpdateTime = Date.now();
@@ -387,6 +447,10 @@ function handleMessage(data) {
         } 
         else if (data.type === "cmd_ack") {
             // Обрабатываем подтверждение команды с временной меткой
+            
+            // === НОВОЕ: Обновляем статистику команд ===
+            connectionStats.lastCommand = Date.now();
+            
             if (data.client_time && data.server_time) {
                 const roundTripTime = Date.now() - data.client_time;
                 
@@ -468,12 +532,6 @@ function handleKeyDown(e) {
                 data: { x: forceX, y: forceY, z: forceZ }
             };
             
-            console.log('[WS] Отправка команды:', {
-                cmd,
-                force: { x: forceX, y: forceY, z: forceZ },
-                client_time: clientTime
-            });
-            
             ws.send(JSON.stringify(commandObj));
         }
         
@@ -498,16 +556,6 @@ function handleKeyDown(e) {
                         try {
                             // Применяем импульс с точно такой же силой, как на сервере
                             applyImpulseToSphere(id, { x: forceX, y: forceY, z: forceZ });
-                            
-                            // Логируем текущую скорость после применения импульса
-                            const velocity = obj.body.getLinearVelocity();
-                            console.log(`[WS] Скорость объекта ${id} после импульса:`, {
-                                x: velocity.x(),
-                                y: velocity.y(),
-                                z: velocity.z(),
-                                interval: timeSinceLastImpulse
-                            });
-                            window.Ammo.destroy(velocity);
                         } catch (error) {
                             console.error(`[WS] Ошибка при применении импульса к объекту ${id}:`, error);
                         }
@@ -578,36 +626,12 @@ export async function initNetwork() {
 
                 // Обрабатываем пакетные обновления
                 if (data.type === "batch_update" && data.updates) {
-                    console.log('[WS] Получено пакетное обновление:', {
-                        type: data.type,
-                        time: data.time,
-                        updatesCount: Object.keys(data.updates).length
-                    });
                     handleMessage(data);
                     return;
                 }
 
-                // Для остальных сообщений логируем детали
-                console.log('[WS] Получено сообщение:', {
-                    type: data.type,
-                    id: data.id,
-                    hasPosition: data.position !== undefined,
-                    hasVelocity: data.velocity !== undefined
-                });
-
-                // Если приходит сообщение с id и object_type, но без type - это объект создания
-                if (!data.type && data.id && data.object_type) {
-                    console.log('[WS] Получен объект без type, считаем это create:', data);
-                    data.type = "create";
-                    handleMessage(data);
-                }
-                // Обрабатываем update сообщения
-                else if (data.type === "update" && data.id) {
-                    console.log('[WS] Обработка update сообщения:', {
-                        id: data.id,
-                        position: data.position,
-                        velocity: data.velocity
-                    });
+                // Обрабатываем остальные сообщения
+                if (data.type === "update" && data.id) {
                     receiveObjectUpdate(data);
                 } 
                 else if (data.type === "create" && data.id) {
@@ -738,4 +762,48 @@ export function updateFoodSystem(deltaTime) {
 // Функция для получения количества еды (для UI)
 export function getFoodCount() {
     return foodClient ? foodClient.getFoodCount() : 0;
+}
+
+// === НОВОЕ: Обработка обновления размера игрока ===
+function handlePlayerSizeUpdate(playerID, newRadius, newMass) {
+    console.log(`[Network] Получено обновление размера игрока ${playerID}: радиус=${newRadius.toFixed(1)}, масса=${newMass.toFixed(1)}`);
+    
+    const obj = objects[playerID];
+    if (!obj) {
+        console.warn(`[Network] Объект игрока ${playerID} не найден для обновления размера`);
+        return;
+    }
+    
+    // Обновляем только данные объекта, без физики пока
+    obj.radius = newRadius;
+    obj.mass = newMass;
+    
+    // Обновляем визуальный mesh
+    if (obj.mesh && obj.mesh.geometry) {
+        const originalRadius = obj.mesh.geometry.parameters?.radius || 1;
+        const scale = newRadius / originalRadius;
+        obj.mesh.scale.setScalar(scale);
+        console.log(`[Network] Размер игрока ${playerID} обновлен: радиус=${newRadius.toFixed(1)}, масса=${newMass.toFixed(1)}, scale=${scale.toFixed(2)}`);
+    }
+
+    // Простое обновление массы в физическом теле (без смены радиуса)
+    if (obj.body && obj.physicsBy !== "bullet") {
+        try {
+            const currentVel = obj.body.getLinearVelocity();
+            const shape = obj.body.getCollisionShape();
+            const localInertia = new window.Ammo.btVector3(0, 0, 0);
+            shape.calculateLocalInertia(newMass, localInertia);
+            obj.body.setMassProps(newMass, localInertia);
+            obj.body.setLinearVelocity(currentVel);
+            obj.body.activate(true);
+            
+            // Очистка памяти
+            window.Ammo.destroy(localInertia);
+            window.Ammo.destroy(currentVel);
+            
+            console.log(`[Network] Физическая масса обновлена: ${newMass}кг`);
+        } catch (error) {
+            console.error(`[Network] Ошибка обновления массы:`, error);
+        }
+    }
 }

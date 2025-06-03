@@ -113,6 +113,16 @@ async function start() {
         massDiv.style.fontSize = '11px';
         playerInfoElement.appendChild(massDiv);
         
+        // Радиус сферы
+        const radiusDiv = document.createElement('div');
+        radiusDiv.id = 'player-radius';
+        radiusDiv.textContent = '🟢 --';
+        radiusDiv.style.padding = '3px';
+        radiusDiv.style.backgroundColor = 'rgba(0, 128, 255, 0.3)';
+        radiusDiv.style.borderRadius = '3px';
+        radiusDiv.style.fontSize = '11px';
+        playerInfoElement.appendChild(radiusDiv);
+        
         // Статус игрока
         const statusDiv = document.createElement('div');
         statusDiv.id = 'player-status';

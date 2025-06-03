@@ -298,9 +298,10 @@ export function stepPhysics(deltaTime) {
 }
 
 // Функция для обновления отображения скорости игрока
-function updatePlayerSpeedDisplay(speed, mass) {
+function updatePlayerSpeedDisplay(speed, mass, radius) {
     const speedDisplay = document.getElementById('player-speed');
     const massDisplay = document.getElementById('player-mass');
+    const radiusDisplay = document.getElementById('player-radius');
     const statusDisplay = document.getElementById('player-status');
     const objectsDisplay = document.getElementById('world-objects');
     
@@ -312,10 +313,27 @@ function updatePlayerSpeedDisplay(speed, mass) {
     // Форматируем значения до 2 знаков после запятой
     const formattedSpeed = speed.toFixed(2);
     const formattedMass = mass.toFixed(2);
+    const formattedRadius = radius ? radius.toFixed(1) : '--';
     
     // Обновляем текст
     speedDisplay.textContent = `⚡ ${formattedSpeed} м/с`;
     massDisplay.textContent = `⚖️ ${formattedMass} кг`;
+    
+    // Обновляем радиус
+    if (radiusDisplay) {
+        radiusDisplay.textContent = `🟢 ${formattedRadius}м`;
+        
+        // Цветовая индикация радиуса
+        if (radius < 5) {
+            radiusDisplay.style.backgroundColor = 'rgba(0, 255, 0, 0.5)'; // Зеленый - маленький
+        } else if (radius < 10) {
+            radiusDisplay.style.backgroundColor = 'rgba(0, 128, 255, 0.5)'; // Синий - средний
+        } else if (radius < 15) {
+            radiusDisplay.style.backgroundColor = 'rgba(255, 165, 0, 0.5)'; // Оранжевый - большой
+        } else {
+            radiusDisplay.style.backgroundColor = 'rgba(255, 0, 255, 0.5)'; // Фиолетовый - огромный
+        }
+    }
     
     // Обновляем статус игрока
     if (statusDisplay) {
@@ -408,7 +426,7 @@ export function updatePhysicsObjects(useServerPhysics) {
             }
 
             // Обновляем отображение скорости
-            updatePlayerSpeedDisplay(speed, obj.mass);
+            updatePlayerSpeedDisplay(speed, obj.mass, obj.radius);
 
             // Обновляем индикатор физики
             updatePhysicsModeDisplay(useServerPhysics);
@@ -422,8 +440,6 @@ export function updatePhysicsObjects(useServerPhysics) {
         for (const id in objects) {
             const obj = objects[id];
             if (obj.object_type === "sphere" && obj.body) {
-                console.log(`[Physics] Используем sphere ${id} для обновления приборов (playerObjectID: ${debugInfo.playerObjectID})`);
-                
                 const velocity = obj.body.getLinearVelocity();
                 const speed = Math.sqrt(
                     velocity.x() * velocity.x() +
@@ -438,16 +454,12 @@ export function updatePhysicsObjects(useServerPhysics) {
                     continue; // Попробуем следующую сферу
                 }
 
-                updatePlayerSpeedDisplay(speed, obj.mass);
+                updatePlayerSpeedDisplay(speed, obj.mass, obj.radius);
                 updatePhysicsModeDisplay(useServerPhysics);
                 window.Ammo.destroy(velocity);
+                foundPlayer = true;
                 break;
             }
-        }
-        
-        // Выводим отладочную информацию только если есть объекты
-        if (Math.random() < 0.01) { // Выводим раз в 100 кадров чтобы не засорять консоль
-            console.log('[Physics] Отладка приборов:', debugInfo);
         }
     }
 }
@@ -654,7 +666,6 @@ function getInterpolationStrategy(ping, jitter) {
     
     // Проверяем, изменилась ли стратегия
     if (strategy !== networkMonitor.adaptationState.currentStrategy) {
-        console.log(`[NetworkMonitor] Смена стратегии: ${networkMonitor.adaptationState.currentStrategy} -> ${strategy} (ping=${ping}ms, jitter=${actualJitter.toFixed(1)}ms)`);
         networkMonitor.adaptationState.currentStrategy = strategy;
         networkMonitor.adaptationState.lastStrategyChange = Date.now();
         networkMonitor.adaptationState.isAdapting = true;
@@ -702,8 +713,6 @@ function getAdaptiveInterpolationParams() {
         targetParams.teleportThreshold *= 0.5; // Уменьшаем порог телепортации
         targetParams.positionAlpha = PHYSICS_SETTINGS.ADAPTATION.AGGRESSIVE_ALPHA;
         targetParams.velocityAlpha = PHYSICS_SETTINGS.ADAPTATION.AGGRESSIVE_ALPHA;
-        
-        console.log(`[NetworkMonitor] Режим быстрой сходимости: агрессивные параметры активны`);
     }
     // Адаптируем параметры на основе пинга и джиттера
     else if (ping > PHYSICS_SETTINGS.NETWORK.MAX_PING || jitter > PHYSICS_SETTINGS.NETWORK.JITTER_THRESHOLD) {
@@ -852,7 +861,10 @@ function updateHybridPhysics(obj) {
     if (distance > adaptiveParams.teleportThreshold || 
         (networkMonitor.adaptationState.fastConvergenceMode && distance > PHYSICS_SETTINGS.ADAPTATION.RESET_THRESHOLD)) {
         
-        console.log(`[Physics] Телепортация объекта ${obj.id}: distance=${distance.toFixed(2)}, threshold=${adaptiveParams.teleportThreshold.toFixed(2)}, fastMode=${networkMonitor.adaptationState.fastConvergenceMode}`);
+        // Логируем только критические телепортации (больше 50 единиц)
+        if (distance > 50) {
+            // console.log(`[Physics] Критическая телепортация объекта ${obj.id}: distance=${distance.toFixed(2)}`);
+        }
         
         const newTransform = new window.Ammo.btTransform();
         newTransform.setIdentity();
@@ -1213,14 +1225,6 @@ export function applyImpulseToSphere(id, direction) {
 
         // Очищаем память
         window.Ammo.destroy(impulse);
-
-        console.log(`[Physics] Применен импульс к ${id}:`, {
-            direction: { x: direction.x, y: direction.y, z: direction.z },
-            mass: obj.mass,
-            config: {
-                base_impulse: physicsConfig.base_impulse
-            }
-        });
     } catch (e) {
         console.error(`[Physics] Ошибка при применении импульса к ${id}:`, e);
         throw e; // Пробрасываем ошибку дальше
@@ -1316,8 +1320,6 @@ function detectNetworkChange() {
     
     // Если обнаружено значительное изменение
     if (significantPingChange || highJitter || veryHighJitter) {
-        console.log(`[NetworkMonitor] Обнаружено изменение сети: ping change=${pingChange.toFixed(1)}ms, jitter=${jitter.toFixed(1)}ms`);
-        
         // Помечаем, что мы в процессе адаптации
         networkMonitor.adaptationState.isAdapting = true;
         networkMonitor.adaptationState.fastConvergenceMode = true;
@@ -1341,7 +1343,6 @@ function detectNetworkChange() {
         if (networkMonitor.adaptationState.fastConvergenceMode && 
             timeSinceStart > PHYSICS_SETTINGS.ADAPTATION.FAST_CONVERGENCE_TIME) {
             networkMonitor.adaptationState.fastConvergenceMode = false;
-            console.log(`[NetworkMonitor] Режим быстрой сходимости завершен`);
         }
         
         // Завершаем адаптацию если система стабильна или прошло достаточно времени
@@ -1349,7 +1350,6 @@ function detectNetworkChange() {
             timeSinceChange > networkMonitor.adaptationState.stabilizationTime) {
             networkMonitor.adaptationState.isAdapting = false;
             networkMonitor.adaptationState.fastConvergenceMode = false;
-            console.log(`[NetworkMonitor] Адаптация завершена (стабильность: ${networkMonitor.stabilityStats.isStable})`);
         }
     }
     
@@ -1359,8 +1359,6 @@ function detectNetworkChange() {
 // Функция для сброса состояния объекта при резких изменениях
 function resetObjectState(obj) {
     if (!obj || !obj.body) return;
-    
-    console.log(`[Physics] Сброс состояния объекта ${obj.id}`);
     
     // Очищаем буферы для этого объекта
     if (serverUpdateBuffer.positions[obj.id]) {
@@ -1420,7 +1418,7 @@ function forceUpdateInstruments() {
             window.Ammo.destroy(velocity);
             // Не устанавливаем foundPlayer = true, чтобы попробовать найти другую сферу
         } else {
-            updatePlayerSpeedDisplay(speed, obj.mass);
+            updatePlayerSpeedDisplay(speed, obj.mass, obj.radius);
             window.Ammo.destroy(velocity);
             foundPlayer = true;
         }
@@ -1445,7 +1443,7 @@ function forceUpdateInstruments() {
                     continue; // Попробуем следующую сферу
                 }
                 
-                updatePlayerSpeedDisplay(speed, obj.mass);
+                updatePlayerSpeedDisplay(speed, obj.mass, obj.radius);
                 window.Ammo.destroy(velocity);
                 foundPlayer = true;
                 break;

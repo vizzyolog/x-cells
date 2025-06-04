@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { getPhysicsConfig, checkConnectionState } from './network';
 import { applyImpulseToSphere } from './physics';
-import gameStateManager from './gamestatemanager';
+import gameStateManager from './gamestatemanager.js';
+import { showDirectionOnSphere, showNormalOnSphere } from './eyes.js'; // Импортируем систему глаз
 
 // Константы для настройки поведения
 const DEBUG_MODE = true; // Включает/выключает отладочные элементы (arrowHelper)
@@ -137,6 +138,9 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
             if (direction.length() > 0) {
                 direction.normalize();
                 
+                // Экспортируем направление в глобальную переменную для глаз
+                window.gamepadDirection = direction.clone();
+                
                 // Отправляем направление на сервер
                 if (Date.now() - lastSendTime > SEND_INTERVAL) {
                     // Получаем текущую конфигурацию физики
@@ -154,12 +158,18 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
                     sendDirectionToServer(direction, keyForce, socketRef);
                     lastSendTime = Date.now();
                     
+                    // Показываем направление движения глазами
+                    showDirectionOnSphere(direction);
+                    
                     // Обновляем lastSentPosition для отображения стрелки
                     lastSentPosition.copy(direction);
                     lastSentPosition.userData = { distance: keyForce };
                     directionNeedsUpdate = true;
                 }
             }
+        } else {
+            // Возвращаем глаза в нормальное состояние, когда нет движения
+            showNormalOnSphere();
         }
     }
     
@@ -246,6 +256,9 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
             // Нормализуем для получения направления
             currentDirection.normalize();
             
+            // Экспортируем направление в глобальную переменную для глаз
+            window.gamepadDirection = currentDirection.clone();
+            
             // Запоминаем направление и расстояние
             lastSentPosition.copy(currentDirection);
             
@@ -257,6 +270,7 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
             
             // Проверяем, нужно ли отправлять данные на сервер
             if (Date.now() - lastSendTime > SEND_INTERVAL) {
+
                 sendDirectionToServer(currentDirection, distance, socketRef);
                 lastSendTime = Date.now();
             }
@@ -383,3 +397,16 @@ function updateArrowHelper(playerMesh) {
 
 // Экспортируем функции для использования в других модулях
 export { initGamepad, updateArrowHelper };
+
+// Экспортируем функции для получения данных о луче мыши
+export function getCurrentDirection() {
+    return currentDirection.clone();
+}
+
+export function getLastIntersectPoint() {
+    return lastIntersectPoint.clone();
+}
+
+export function isMouseActiveInCanvas() {
+    return isMouseActive;
+}

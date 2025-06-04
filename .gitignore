@@ -9,6 +9,7 @@
 *.dylib
 
 .idea/
+.vscode/
 
 # Test binary, built with `go test -c`
 *.test
@@ -26,6 +27,7 @@ go.work.sum
 # env file
 .env
 node_modules
+package-lock.json
 
 *.txt
 *.bak

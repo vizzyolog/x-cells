@@ -1,6 +1,6 @@
 // physics.js
 import { objects } from './objects';
-import gameStateManager from './gamestatemanager';
+import gameStateManager from './gamestatemanager.js';
 import { startPhysicsSimulation, checkConnectionState, getCurrentPing } from './network';
 
 // Обновляем константы для настройки физики

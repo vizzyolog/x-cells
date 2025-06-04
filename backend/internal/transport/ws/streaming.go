@@ -131,7 +131,7 @@ func (s *WSServer) startClientStreaming(wsWriter *SafeWriter) {
 			if err := s.simulateNetworkConditions(wsWriter, batchUpdate); err != nil {
 				log.Printf("[Go] Ошибка отправки пакетного обновления: %v", err)
 			} else {
-				log.Printf("[Go] Отправлено пакетное обновление для %d объектов", len(updatesCopy))
+				// log.Printf("[Go] Отправлено пакетное обновление для %d объектов", len(updatesCopy))
 			}
 		}
 	}

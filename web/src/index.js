@@ -1,7 +1,7 @@
 // index.js
 import { initScene, scene, renderer, updateShadowCamera } from './scene';
 import { initAmmo, stepPhysics, updatePhysicsObjects } from './physics';
-import { initNetwork } from './network';
+import { initNetwork, initFoodSystem, updateFoodSystem, getFoodCount } from './network';
 import { objects, playerMesh} from './objects';
 import { initCamera, camera, updateCamera, logCameraStatus, setQuadraticFactor } from './camera';
 import { initGameStateManager, gameStateManager } from './gamestatemanager.js';
@@ -19,9 +19,13 @@ document.body.appendChild(stats.dom);
 function animate() {
     stats.begin(); 
     
+    const deltaTime = 1 / 60; // Примерно 60 FPS
 
-    stepPhysics(1 / 60);
+    stepPhysics(deltaTime);
     updatePhysicsObjects(objects);
+
+    // === НОВОЕ: Обновляем систему еды ===
+    updateFoodSystem(deltaTime);
 
     // Обновляем камеру из нового модуля
     updateCamera();
@@ -117,6 +121,16 @@ async function start() {
         massDiv.style.fontSize = '11px';
         playerInfoElement.appendChild(massDiv);
         
+        // Радиус сферы
+        const radiusDiv = document.createElement('div');
+        radiusDiv.id = 'player-radius';
+        radiusDiv.textContent = '🟢 --';
+        radiusDiv.style.padding = '3px';
+        radiusDiv.style.backgroundColor = 'rgba(0, 128, 255, 0.3)';
+        radiusDiv.style.borderRadius = '3px';
+        radiusDiv.style.fontSize = '11px';
+        playerInfoElement.appendChild(radiusDiv);
+        
         // Статус игрока
         const statusDiv = document.createElement('div');
         statusDiv.id = 'player-status';
@@ -152,6 +166,9 @@ async function start() {
         
         // Инициализируем сетевое соединение
         const ws = await initNetwork()
+        
+        // === НОВОЕ: Инициализируем систему еды ===
+        initFoodSystem(scene, null); // Передаем scene, world пока не нужен
             
         initGameStateManager(ws, scene);
 

@@ -53,6 +53,16 @@ func (c *grpcPhysicsClient) UpdateObjectMass(ctx context.Context, req *pb.Update
 	return c.client.UpdateObjectMass(ctx, req, opts...)
 }
 
+// UpdateObjectRadius обновляет радиус объекта
+func (c *grpcPhysicsClient) UpdateObjectRadius(ctx context.Context, req *pb.UpdateObjectRadiusRequest, opts ...grpc.CallOption) (*pb.UpdateObjectRadiusResponse, error) {
+	return c.client.UpdateObjectRadius(ctx, req, opts...)
+}
+
+// UpdateObjectMassAndRadius обновляет массу и радиус объекта одновременно
+func (c *grpcPhysicsClient) UpdateObjectMassAndRadius(ctx context.Context, req *pb.UpdateObjectMassAndRadiusRequest, opts ...grpc.CallOption) (*pb.UpdateObjectMassAndRadiusResponse, error) {
+	return c.client.UpdateObjectMassAndRadius(ctx, req, opts...)
+}
+
 // SetPhysicsConfig устанавливает конфигурацию физики
 func (c *grpcPhysicsClient) SetPhysicsConfig(ctx context.Context, req *pb.SetPhysicsConfigRequest, opts ...grpc.CallOption) (*pb.SetPhysicsConfigResponse, error) {
 	return c.client.SetPhysicsConfig(ctx, req, opts...)

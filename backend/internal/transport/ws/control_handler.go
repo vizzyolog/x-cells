@@ -70,7 +70,7 @@ func (s *WSServer) handleCmd(conn *SafeWriter, message interface{}) error {
 
 	// Используем ObjectID игрока из соединения
 	objectID := player.ObjectID
-	log.Printf("[Go] Команда для игрока %s", objectID)
+	// log.Printf("[Go] Команда для игрока %s", objectID)
 
 	// Обновляем состояние контроллера
 	s.updateControllerState(objectID, cmdMsg)
@@ -177,8 +177,8 @@ func (s *WSServer) calculateMouseVectorImpulse(cmdMsg *CommandMessage, objectID 
 		return nil
 	}
 
-	log.Printf("[Go] Получен вектор направления для %s: (%f, %f, %f), расстояние: %f",
-		objectID, direction.X, direction.Y, direction.Z, direction.Distance)
+	// log.Printf("[Go] Получен вектор направления для %s: (%f, %f, %f), расстояние: %f",
+	//	objectID, direction.X, direction.Y, direction.Z, direction.Distance)
 
 	// Используем настройки из конфигурации физики
 	physicsConfig := world.GetPhysicsConfig()
@@ -191,7 +191,7 @@ func (s *WSServer) calculateMouseVectorImpulse(cmdMsg *CommandMessage, objectID 
 	}
 
 	// Добавляем логирование для отладки
-	log.Printf("[Go] Импульсы для %s: X=%f, Y=%f, Z=%f", objectID, impulse.X, impulse.Y, impulse.Z)
+	// log.Printf("[Go] Импульсы для %s: X=%f, Y=%f, Z=%f", objectID, impulse.X, impulse.Y, impulse.Z)
 
 	return impulse
 }
@@ -222,8 +222,8 @@ func (s *WSServer) applyImpulseToObject(objectID string, impulse *pb.Vector3) er
 		return err
 	}
 
-	log.Printf("[Go] Применен импульс к объекту игрока %s: (%f, %f, %f)",
-		objectID, impulse.X, impulse.Y, impulse.Z)
+	// log.Printf("[Go] Применен импульс к объекту игрока %s: (%f, %f, %f)",
+	//	objectID, impulse.X, impulse.Y, impulse.Z)
 
 	return nil
 }

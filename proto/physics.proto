@@ -127,6 +127,8 @@ service Physics {
   rpc ApplyTorque(ApplyTorqueRequest) returns (ApplyTorqueResponse);
   rpc GetObjectState(GetObjectStateRequest) returns (GetObjectStateResponse);
   rpc UpdateObjectMass(UpdateObjectMassRequest) returns (UpdateObjectMassResponse);
+  rpc UpdateObjectRadius(UpdateObjectRadiusRequest) returns (UpdateObjectRadiusResponse);
+  rpc UpdateObjectMassAndRadius(UpdateObjectMassAndRadiusRequest) returns (UpdateObjectMassAndRadiusResponse);
   rpc SetPhysicsConfig(SetPhysicsConfigRequest) returns (SetPhysicsConfigResponse);
 }
 
@@ -138,6 +140,29 @@ message UpdateObjectMassRequest {
 
 // Ответ на запрос обновления массы
 message UpdateObjectMassResponse {
+  string status = 1;
+}
+
+// Запрос для обновления радиуса объекта
+message UpdateObjectRadiusRequest {
+  string id = 1;
+  float radius = 2;
+}
+
+// Ответ на запрос обновления радиуса
+message UpdateObjectRadiusResponse {
+  string status = 1;
+}
+
+// Запрос для обновления массы и радиуса объекта одновременно
+message UpdateObjectMassAndRadiusRequest {
+  string id = 1;
+  float mass = 2;
+  float radius = 3;
+}
+
+// Ответ на запрос обновления массы и радиуса
+message UpdateObjectMassAndRadiusResponse {
   string status = 1;
 }
 

@@ -7,6 +7,7 @@ type Manager struct {
 	objects      map[string]*Object
 	worldObjects map[string]*WorldObject
 	mu           sync.RWMutex
+	factory      *Factory // Фабрика для работы с объектами
 }
 
 // NewManager создает новый экземпляр Manager
@@ -104,4 +105,18 @@ func (m *Manager) UpdateObjectRotation(id string, rotation Quaternion) {
 	if obj, exists := m.worldObjects[id]; exists {
 		obj.Rotation = rotation
 	}
+}
+
+// SetFactory устанавливает фабрику для менеджера
+func (m *Manager) SetFactory(factory *Factory) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.factory = factory
+}
+
+// GetFactory возвращает фабрику менеджера
+func (m *Manager) GetFactory() *Factory {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.factory
 }

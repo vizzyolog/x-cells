@@ -27,6 +27,8 @@ static const char* Physics_method_names[] = {
   "/physics.Physics/ApplyTorque",
   "/physics.Physics/GetObjectState",
   "/physics.Physics/UpdateObjectMass",
+  "/physics.Physics/UpdateObjectRadius",
+  "/physics.Physics/UpdateObjectMassAndRadius",
   "/physics.Physics/SetPhysicsConfig",
 };
 
@@ -42,7 +44,9 @@ Physics::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, c
   , rpcmethod_ApplyTorque_(Physics_method_names[2], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_GetObjectState_(Physics_method_names[3], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_UpdateObjectMass_(Physics_method_names[4], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_SetPhysicsConfig_(Physics_method_names[5], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_UpdateObjectRadius_(Physics_method_names[5], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_UpdateObjectMassAndRadius_(Physics_method_names[6], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_SetPhysicsConfig_(Physics_method_names[7], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::Status Physics::Stub::CreateObject(::grpc::ClientContext* context, const ::physics::CreateObjectRequest& request, ::physics::CreateObjectResponse* response) {
@@ -160,6 +164,52 @@ void Physics::Stub::async::UpdateObjectMass(::grpc::ClientContext* context, cons
   return result;
 }
 
+::grpc::Status Physics::Stub::UpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::physics::UpdateObjectRadiusResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::physics::UpdateObjectRadiusRequest, ::physics::UpdateObjectRadiusResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_UpdateObjectRadius_, context, request, response);
+}
+
+void Physics::Stub::async::UpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest* request, ::physics::UpdateObjectRadiusResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::physics::UpdateObjectRadiusRequest, ::physics::UpdateObjectRadiusResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_UpdateObjectRadius_, context, request, response, std::move(f));
+}
+
+void Physics::Stub::async::UpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest* request, ::physics::UpdateObjectRadiusResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_UpdateObjectRadius_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectRadiusResponse>* Physics::Stub::PrepareAsyncUpdateObjectRadiusRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::physics::UpdateObjectRadiusResponse, ::physics::UpdateObjectRadiusRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_UpdateObjectRadius_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectRadiusResponse>* Physics::Stub::AsyncUpdateObjectRadiusRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncUpdateObjectRadiusRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status Physics::Stub::UpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::physics::UpdateObjectMassAndRadiusResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::physics::UpdateObjectMassAndRadiusRequest, ::physics::UpdateObjectMassAndRadiusResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_UpdateObjectMassAndRadius_, context, request, response);
+}
+
+void Physics::Stub::async::UpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest* request, ::physics::UpdateObjectMassAndRadiusResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::physics::UpdateObjectMassAndRadiusRequest, ::physics::UpdateObjectMassAndRadiusResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_UpdateObjectMassAndRadius_, context, request, response, std::move(f));
+}
+
+void Physics::Stub::async::UpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest* request, ::physics::UpdateObjectMassAndRadiusResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_UpdateObjectMassAndRadius_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassAndRadiusResponse>* Physics::Stub::PrepareAsyncUpdateObjectMassAndRadiusRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::physics::UpdateObjectMassAndRadiusResponse, ::physics::UpdateObjectMassAndRadiusRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_UpdateObjectMassAndRadius_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassAndRadiusResponse>* Physics::Stub::AsyncUpdateObjectMassAndRadiusRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncUpdateObjectMassAndRadiusRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
 ::grpc::Status Physics::Stub::SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::physics::SetPhysicsConfigResponse* response) {
   return ::grpc::internal::BlockingUnaryCall< ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_SetPhysicsConfig_, context, request, response);
 }
@@ -237,6 +287,26 @@ Physics::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Physics_method_names[5],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Physics::Service, ::physics::UpdateObjectRadiusRequest, ::physics::UpdateObjectRadiusResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](Physics::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::physics::UpdateObjectRadiusRequest* req,
+             ::physics::UpdateObjectRadiusResponse* resp) {
+               return service->UpdateObjectRadius(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Physics_method_names[6],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< Physics::Service, ::physics::UpdateObjectMassAndRadiusRequest, ::physics::UpdateObjectMassAndRadiusResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](Physics::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::physics::UpdateObjectMassAndRadiusRequest* req,
+             ::physics::UpdateObjectMassAndRadiusResponse* resp) {
+               return service->UpdateObjectMassAndRadius(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      Physics_method_names[7],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< Physics::Service, ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](Physics::Service* service,
              ::grpc::ServerContext* ctx,
@@ -278,6 +348,20 @@ Physics::Service::~Service() {
 }
 
 ::grpc::Status Physics::Service::UpdateObjectMass(::grpc::ServerContext* context, const ::physics::UpdateObjectMassRequest* request, ::physics::UpdateObjectMassResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Physics::Service::UpdateObjectRadius(::grpc::ServerContext* context, const ::physics::UpdateObjectRadiusRequest* request, ::physics::UpdateObjectRadiusResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status Physics::Service::UpdateObjectMassAndRadius(::grpc::ServerContext* context, const ::physics::UpdateObjectMassAndRadiusRequest* request, ::physics::UpdateObjectMassAndRadiusResponse* response) {
   (void) context;
   (void) request;
   (void) response;

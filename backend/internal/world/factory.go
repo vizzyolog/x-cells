@@ -334,3 +334,61 @@ func NewPlayerWithBounceSkill(id string, position Vector3, radius, mass float32,
 		Color:       color,
 	}
 }
+
+// UpdateObjectMassInBullet обновляет массу объекта в Bullet Physics
+func (f *Factory) UpdateObjectMassInBullet(objectID string, newMass float32) error {
+	ctx := context.Background()
+
+	request := &pb.UpdateObjectMassRequest{
+		Id:   objectID,
+		Mass: newMass,
+	}
+
+	resp, err := f.physicsClient.UpdateObjectMass(ctx, request)
+	if err != nil {
+		log.Printf("[World] Ошибка при обновлении массы объекта %s в Bullet: %v", objectID, err)
+		return err
+	}
+
+	log.Printf("[World] Масса объекта %s обновлена в Bullet Physics. Статус: %s", objectID, resp.Status)
+	return nil
+}
+
+// UpdateObjectRadiusInBullet обновляет радиус объекта в Bullet Physics
+func (f *Factory) UpdateObjectRadiusInBullet(objectID string, newRadius float32) error {
+	ctx := context.Background()
+
+	request := &pb.UpdateObjectRadiusRequest{
+		Id:     objectID,
+		Radius: newRadius,
+	}
+
+	resp, err := f.physicsClient.UpdateObjectRadius(ctx, request)
+	if err != nil {
+		log.Printf("[World] Ошибка при обновлении радиуса объекта %s в Bullet: %v", objectID, err)
+		return err
+	}
+
+	log.Printf("[World] Радиус объекта %s обновлен в Bullet Physics. Статус: %s", objectID, resp.Status)
+	return nil
+}
+
+// UpdateObjectMassAndRadiusInBullet обновляет массу и радиус объекта одновременно в Bullet Physics
+func (f *Factory) UpdateObjectMassAndRadiusInBullet(objectID string, newMass, newRadius float32) error {
+	ctx := context.Background()
+
+	request := &pb.UpdateObjectMassAndRadiusRequest{
+		Id:     objectID,
+		Mass:   newMass,
+		Radius: newRadius,
+	}
+
+	resp, err := f.physicsClient.UpdateObjectMassAndRadius(ctx, request)
+	if err != nil {
+		log.Printf("[World] Ошибка при обновлении массы и радиуса объекта %s в Bullet: %v", objectID, err)
+		return err
+	}
+
+	log.Printf("[World] Масса и радиус объекта %s обновлены в Bullet Physics. Статус: %s", objectID, resp.Status)
+	return nil
+}

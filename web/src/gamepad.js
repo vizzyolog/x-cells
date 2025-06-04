@@ -5,7 +5,7 @@ import gameStateManager from './gamestatemanager.js';
 import { showDirectionOnSphere, showNormalOnSphere } from './eyes.js'; // Импортируем систему глаз
 
 // Константы для настройки поведения
-const DEBUG_MODE = false; // Включает/выключает отладочные элементы (arrowHelper)
+const DEBUG_MODE = true; // Включает/выключает отладочные элементы (arrowHelper)
 const MIN_ARROW_LENGTH = 10;
 const MAX_ARROW_LENGTH = 150;
 const SEND_INTERVAL = 50; // Синхронизируем с серверным интервалом
@@ -69,9 +69,6 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
     // Добавляем arrowHelper в сцену только если DEBUG_MODE включен
     if (DEBUG_MODE) {
         scene.add(arrowHelper);
-        console.log("ArrowHelper initialized and added to scene");
-    } else {
-        console.log("ArrowHelper initialized but hidden (DEBUG_MODE is off)");
     }
 
     // Добавляем обработчики событий мыши и клавиатуры
@@ -93,7 +90,6 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
         if (mouseX >= rect.left && mouseX <= rect.right && 
             mouseY >= rect.top && mouseY <= rect.bottom) {
             isMouseActive = true;
-            console.log('[Gamepad] Мышь уже в области канваса при инициализации');
         }
     }
     
@@ -158,9 +154,6 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
                         keyForce = KEY_FORCE; // Или увеличиваем в 4 раза значение по умолчанию
                     }
                     
-                    // Логируем для отладки
-                    //console.log(`[Gamepad] Отправка импульса с клавиатуры: направление (${direction.x.toFixed(2)}, ${direction.y.toFixed(2)}, ${direction.z.toFixed(2)}), сила ${keyForce}`);
-                    
                     // Отправляем импульс на сервер
                     sendDirectionToServer(direction, keyForce, socketRef);
                     lastSendTime = Date.now();
@@ -219,13 +212,11 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
     function onMouseEnter(event) {
         // Мышь вошла в область канваса
         isMouseActive = true;
-        console.log('[Gamepad] Мышь вошла в область канваса, isMouseActive =', isMouseActive);
     }
     
     function onMouseLeave(event) {
         // Мышь покинула область канваса - останавливаем управление
         isMouseActive = false;
-        console.log('[Gamepad] Мышь покинула область канваса, isMouseActive =', isMouseActive);
     }
     
     function updateRayFromLastMouse() {
@@ -239,7 +230,6 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
         // Не обрабатываем управление мышью, если мышь точно вне канваса
         // Но разрешаем, если мышь была активна (для случаев движения камеры)
         if (!isMouseActive) {
-            console.log('[Gamepad] Пропускаем castRayAndUpdateDirection: мышь неактивна');
             return;
         }
         
@@ -280,16 +270,7 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
             
             // Проверяем, нужно ли отправлять данные на сервер
             if (Date.now() - lastSendTime > SEND_INTERVAL) {
-                console.log('[Gamepad] Отправляем направление:', {
-                    direction: { x: currentDirection.x, y: currentDirection.y, z: currentDirection.z },
-                    distance: distance,
-                    mouse: { x: mouse.x, y: mouse.y },
-                    isMouseActive: isMouseActive
-                });
-                
-                // Показываем направление движения глазами
-                showDirectionOnSphere(currentDirection);
-                
+
                 sendDirectionToServer(currentDirection, distance, socketRef);
                 lastSendTime = Date.now();
             }
@@ -321,7 +302,6 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
         
         // Если расстояние меньше адаптивной мертвой зоны, не отправляем команду
         if (distance < adaptiveDeadzone) {
-            // console.log(`[Gamepad] Расстояние ${distance.toFixed(2)} меньше мертвой зоны ${adaptiveDeadzone.toFixed(2)}, команда не отправлена`);
             return;
         }
 
@@ -365,14 +345,6 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
             if (timeSinceLastImpulse >= LOCAL_IMPULSE_INTERVAL) {
                 try {
                     applyImpulseToSphere(playerObjectID, force); // Используем динамический player ID
-                    console.log('[Gamepad] Применен локальный импульс:', {
-                        direction: { x: direction.x, y: direction.y, z: direction.z },
-                        force: force,
-                        interval: timeSinceLastImpulse,
-                        playerID: playerObjectID,
-                        distance: distance.toFixed(2),
-                        deadzone: adaptiveDeadzone.toFixed(2)
-                    });
                     
                     // Обновляем время последнего применения импульса
                     lastLocalImpulseTime = currentTime;
@@ -388,7 +360,6 @@ function initGamepad(camera, terrainMesh, playerMesh, socket, scene) {
 export function setDebugMode(enabled) {
     if (arrowHelper) {
         arrowHelper.visible = enabled;
-        console.log(`ArrowHelper visibility set to ${enabled}`);
     }
 }
 
@@ -421,8 +392,6 @@ function updateArrowHelper(playerMesh) {
         
         // Устанавливаем длину стрелки пропорционально расстоянию
         arrowHelper.setLength(arrowLength);
-    } else {
-        console.error("arrowHelper не инициализирован");
     }
 }
 

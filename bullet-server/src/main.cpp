@@ -28,6 +28,10 @@ using physics::ApplyImpulseRequest;
 using physics::ApplyImpulseResponse;
 using physics::UpdateObjectMassRequest;
 using physics::UpdateObjectMassResponse;
+using physics::UpdateObjectRadiusRequest;
+using physics::UpdateObjectRadiusResponse;
+using physics::UpdateObjectMassAndRadiusRequest;
+using physics::UpdateObjectMassAndRadiusResponse;
 
 class PhysicsServiceImpl final : public Physics::Service {
 public:
@@ -79,7 +83,7 @@ public:
     Status CreateObject(ServerContext* context, 
                        const CreateObjectRequest* request,
                        CreateObjectResponse* response) override {
-        std::cout << "Получен запрос на создание объекта: " << request->id() << std::endl;
+        std::cout << "[BULLET] Создание объекта: " << request->id() << std::endl;
         
         // Создаем физический объект
         btRigidBody* body = createRigidBody(
@@ -96,7 +100,7 @@ public:
         // Сохраняем объект
         objects[request->id()] = body;
         
-        std::cout << "Создан объект " << request->id() << " без ограничений скорости" << std::endl;
+        std::cout << "[BULLET] Объект " << request->id() << " создан успешно" << std::endl;
         
         response->set_status("OK");
         return Status::OK;
@@ -116,10 +120,6 @@ public:
         
         // Применяем крутящий момент
         body->applyTorque(btVector3(torque.x(), torque.y(), torque.z()));
-        
-        std::cout << "Применен крутящий момент к объекту " << request->id() 
-                  << ": (" << torque.x() << ", " << torque.y() 
-                  << ", " << torque.z() << ")" << std::endl;
 
         response->set_status("OK");
         return Status::OK;
@@ -139,8 +139,6 @@ public:
     Status ApplyImpulse(ServerContext* context, 
                         const ApplyImpulseRequest* request,
                         ApplyImpulseResponse* response) override {
-        std::cout << "Applying impulse to object: " << request->id() << std::endl;
-        
         auto it = objects.find(request->id());
         if (it == objects.end()) {
             response->set_status("ERROR: Object not found");
@@ -152,10 +150,6 @@ public:
         
         // Применяем импульс без ограничений
         btVector3 rawImpulse(impulse.x(), impulse.y(), impulse.z());
-        
-        std::cout << "Применяем импульс без ограничений: [" << rawImpulse.x() << ", " << rawImpulse.y() 
-                  << ", " << rawImpulse.z() << "]" << std::endl;
-        
         body->applyCentralImpulse(rawImpulse);
         
         response->set_status("OK");
@@ -174,6 +168,9 @@ public:
         
         btRigidBody* body = it->second;
         
+        // Сохраняем старую массу для логирования
+        float oldMass = 1.0f / body->getInvMass();
+        
         // Получаем текущую форму
         btCollisionShape* shape = body->getCollisionShape();
         
@@ -191,7 +188,139 @@ public:
         // Активируем объект для обновления физики
         body->activate(true);
         
-        std::cout << "Обновлена масса для объекта " << request->id() << ": " << request->mass() << std::endl;
+        std::cout << "[BULLET] Масса объекта " << request->id() << ": " 
+                  << std::fixed << std::setprecision(1) 
+                  << oldMass << " кг → " << request->mass() << " кг" << std::endl;
+        
+        response->set_status("OK");
+        return Status::OK;
+    }
+
+    // Метод для обновления радиуса объекта
+    Status UpdateObjectRadius(ServerContext* context, 
+                              const UpdateObjectRadiusRequest* request,
+                              UpdateObjectRadiusResponse* response) override {
+        auto it = objects.find(request->id());
+        if (it == objects.end()) {
+            response->set_status("ERROR: Object not found");
+            return Status::OK;
+        }
+        
+        btRigidBody* body = it->second;
+        btCollisionShape* shape = body->getCollisionShape();
+        
+        // Проверяем, что это сфера
+        if (shape->getShapeType() != SPHERE_SHAPE_PROXYTYPE) {
+            response->set_status("ERROR: Object is not a sphere");
+            return Status::OK;
+        }
+        
+        // Сохраняем старый радиус для логирования
+        btSphereShape* oldSphere = static_cast<btSphereShape*>(shape);
+        float oldRadius = oldSphere->getRadius();
+        
+        // Убираем объект из мира для безопасного изменения формы
+        dynamicsWorld->removeRigidBody(body);
+        
+        // Создаем новую сферу с новым радиусом
+        btSphereShape* newSphereShape = new btSphereShape(request->radius());
+        
+        // Сохраняем текущую массу
+        btScalar mass = 1.0f / body->getInvMass(); // Получаем массу из обратного значения
+        
+        // Удаляем старую форму
+        delete shape;
+        
+        // Устанавливаем новую форму
+        body->setCollisionShape(newSphereShape);
+        
+        // Пересчитываем инерцию для новой формы
+        btVector3 localInertia(0, 0, 0);
+        if (mass != 0.0f) {
+            newSphereShape->calculateLocalInertia(mass, localInertia);
+            body->setMassProps(mass, localInertia);
+        }
+        
+        // Обновляем CCD параметры для новой сферы
+        if (mass != 0.0f) {
+            body->setCcdMotionThreshold(request->radius() * 0.6f);
+            body->setCcdSweptSphereRadius(request->radius() * 0.5f);
+        }
+        
+        // Возвращаем объект в мир
+        dynamicsWorld->addRigidBody(body);
+        
+        // Активируем объект
+        body->activate(true);
+        
+        std::cout << "[BULLET] Радиус объекта " << request->id() << ": " 
+                  << std::fixed << std::setprecision(2) 
+                  << oldRadius << " → " << request->radius() << std::endl;
+        
+        response->set_status("OK");
+        return Status::OK;
+    }
+
+    // Метод для обновления массы и радиуса объекта одновременно
+    Status UpdateObjectMassAndRadius(ServerContext* context, 
+                                     const UpdateObjectMassAndRadiusRequest* request,
+                                     UpdateObjectMassAndRadiusResponse* response) override {
+        auto it = objects.find(request->id());
+        if (it == objects.end()) {
+            response->set_status("ERROR: Object not found");
+            return Status::OK;
+        }
+        
+        btRigidBody* body = it->second;
+        btCollisionShape* shape = body->getCollisionShape();
+        
+        // Проверяем, что это сфера
+        if (shape->getShapeType() != SPHERE_SHAPE_PROXYTYPE) {
+            response->set_status("ERROR: Object is not a sphere");
+            return Status::OK;
+        }
+        
+        // Сохраняем старые значения для логирования
+        btSphereShape* oldSphere = static_cast<btSphereShape*>(shape);
+        float oldRadius = oldSphere->getRadius();
+        float oldMass = 1.0f / body->getInvMass();
+        
+        // Убираем объект из мира для безопасного изменения
+        dynamicsWorld->removeRigidBody(body);
+        
+        // Создаем новую сферу с новым радиусом
+        btSphereShape* newSphereShape = new btSphereShape(request->radius());
+        
+        // Удаляем старую форму
+        delete shape;
+        
+        // Устанавливаем новую форму
+        body->setCollisionShape(newSphereShape);
+        
+        // Устанавливаем новую массу и пересчитываем инерцию
+        btVector3 localInertia(0, 0, 0);
+        if (request->mass() != 0.0f) {
+            newSphereShape->calculateLocalInertia(request->mass(), localInertia);
+        }
+        body->setMassProps(request->mass(), localInertia);
+        
+        // Обновляем CCD параметры для новой сферы
+        if (request->mass() != 0.0f) {
+            body->setCcdMotionThreshold(request->radius() * 0.6f);
+            body->setCcdSweptSphereRadius(request->radius() * 0.5f);
+        }
+        
+        // Возвращаем объект в мир
+        dynamicsWorld->addRigidBody(body);
+        
+        // Активируем объект
+        body->activate(true);
+        
+        std::cout << "[BULLET] Объект " << request->id() << " обновлен: " 
+                  << std::fixed << std::setprecision(1)
+                  << "масса " << oldMass << "→" << request->mass() << " кг, " 
+                  << std::setprecision(2)
+                  << "радиус " << oldRadius << "→" << request->radius() << std::endl;
         
         response->set_status("OK");
         return Status::OK;
@@ -385,13 +514,6 @@ private:
             body->setRollingFriction(rollingFriction);
             body->setDamping(linearDamping, angularDamping);
 
-            std::cout << "Объект создан с физическими свойствами: "
-                      << "restitution=" << restitution
-                      << ", friction=" << friction 
-                      << ", rollingFriction=" << rollingFriction
-                      << ", linearDamping=" << linearDamping
-                      << ", angularDamping=" << angularDamping << std::endl;
-
             // Активируем обнаружение непрерывных столкновений для высоких скоростей
             if (desc.type() == ShapeDescriptor::SPHERE) {
                 body->setCcdMotionThreshold(desc.sphere().radius() * 0.6);
@@ -470,44 +592,18 @@ private:
             return;
         }
         
-        std::cout << "[C++] Активные объекты в мире Bullet (" << objects.size() << "):" << std::endl;
-        
-        // Проходим по всем объектам и выводим информацию об активных
+        // Подсчитываем активные объекты
         int activeCount = 0;
         for (const auto& pair : objects) {
-            const std::string& id = pair.first;
             btRigidBody* body = pair.second;
-            
-            if (!body || !body->isActive()) {
-                continue;
-            }
-            
-            activeCount++;
-            
-            btTransform transform;
-            // Получаем текущую трансформацию
-            if (body->getMotionState()) {
-                body->getMotionState()->getWorldTransform(transform);
-            } else {
-                transform = body->getWorldTransform();
-            }
-            
-            // Получаем позицию и скорость
-            const btVector3& position = transform.getOrigin();
-            const btVector3& velocity = body->getLinearVelocity();
-            float speed = velocity.length();
-            
-            // Выводим только объекты с заметной скоростью или первые несколько
-            if (speed > 0.1f || activeCount <= 3) {
-                std::cout << "  " << id << ": pos(" 
-                          << std::fixed << std::setprecision(1)
-                          << position.x() << ", " << position.y() << ", " << position.z() 
-                          << ") speed=" << speed << " м/с" << std::endl;
+            if (body && body->isActive()) {
+                activeCount++;
             }
         }
         
-        if (activeCount == 0) {
-            std::cout << "  Нет активных объектов" << std::endl;
+        // Краткая статистика раз в 5 секунд
+        if (activeCount > 0) {
+            std::cout << "[BULLET] Активных объектов: " << activeCount << "/" << objects.size() << std::endl;
         }
     }
 

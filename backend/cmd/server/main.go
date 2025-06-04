@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"x-cells/backend/internal/game"
 	"x-cells/backend/internal/transport"
 	"x-cells/backend/internal/transport/ws"
 	"x-cells/backend/internal/world"
@@ -35,8 +36,36 @@ func main() {
 	testObjectsCreator := world.NewTestObjectsCreator(factory)
 	testObjectsCreator.CreateAll(50.0)
 
+	// === НОВОЕ: Создаем GameTicker и системы ===
+	logger := log.New(os.Stdout, "[X-CELLS] ", log.LstdFlags)
+	gameTicker := game.NewGameTicker(20, worldManager, logger) // 20 TPS
+
+	// Добавляем простую систему еды
+	simpleFoodSystem := game.NewSimpleFoodSystem(gameTicker, logger)
+	gameTicker.RegisterSystem(simpleFoodSystem)
+
+	// === НОВОЕ: Добавляем систему синхронизации позиций игроков ===
+	physicsPositionSync := game.NewPhysicsPositionSyncSystem(physicsClient, gameTicker, worldManager, logger)
+	gameTicker.RegisterSystem(physicsPositionSync)
+
+	// Запускаем игровой цикл
+	if err := gameTicker.Start(); err != nil {
+		log.Fatalf("Failed to start game ticker: %v", err)
+	}
+	defer gameTicker.Stop()
+
 	// Сервер для WS
 	wsServer := ws.NewWSServer(worldManager, physicsClient, serializer)
+
+	// Связываем WebSocket сервер с системой еды (взаимная связь)
+	wsServer.SetFoodSystem(simpleFoodSystem)
+	simpleFoodSystem.SetBroadcaster(wsServer)
+
+	// === НОВОЕ: Связываем WSServer с GameTicker для управления игроками ===
+	wsServer.SetGameTicker(gameTicker)
+
+	// === НОВОЕ: Связываем GameTicker с WSServer для отправки обновлений размера игроков ===
+	gameTicker.SetPlayerBroadcaster(wsServer)
 
 	http.HandleFunc("/ws", wsServer.HandleWS)
 

@@ -15,6 +15,8 @@ type IPhysicsClient interface {
 	ApplyTorque(ctx context.Context, req *pb.ApplyTorqueRequest, opts ...grpc.CallOption) (*pb.ApplyTorqueResponse, error)
 	GetObjectState(ctx context.Context, req *pb.GetObjectStateRequest, opts ...grpc.CallOption) (*pb.GetObjectStateResponse, error)
 	UpdateObjectMass(ctx context.Context, req *pb.UpdateObjectMassRequest, opts ...grpc.CallOption) (*pb.UpdateObjectMassResponse, error)
+	UpdateObjectRadius(ctx context.Context, req *pb.UpdateObjectRadiusRequest, opts ...grpc.CallOption) (*pb.UpdateObjectRadiusResponse, error)
+	UpdateObjectMassAndRadius(ctx context.Context, req *pb.UpdateObjectMassAndRadiusRequest, opts ...grpc.CallOption) (*pb.UpdateObjectMassAndRadiusResponse, error)
 	SetPhysicsConfig(ctx context.Context, req *pb.SetPhysicsConfigRequest, opts ...grpc.CallOption) (*pb.SetPhysicsConfigResponse, error)
 	Close() error
 }

@@ -7,12 +7,12 @@ export class SimpleFoodClient {
         this.world = world;
         this.foodMeshes = new Map(); // foodID -> mesh
 
-        console.log('[SimpleFoodClient] Инициализирован');
+        // console.log('[SimpleFoodClient] Инициализирован');
     }
 
     // Обработка события создания новой еды
     handleFoodSpawned(foodItem) {
-        console.log('[SimpleFoodClient] Создание еды:', foodItem);
+        // console.log('[SimpleFoodClient] Создание еды:', foodItem);
         
         if (this.foodMeshes.has(foodItem.id)) {
             console.warn('[SimpleFoodClient] Еда уже существует:', foodItem.id);
@@ -40,12 +40,12 @@ export class SimpleFoodClient {
         this.scene.add(mesh);
         this.foodMeshes.set(foodItem.id, mesh);
 
-        console.log('[SimpleFoodClient] Еда создана:', foodItem.id, 'в позиции', foodItem.x, foodItem.y, foodItem.z);
+        // console.log('[SimpleFoodClient] Еда создана:', foodItem.id, 'в позиции', foodItem.x, foodItem.y, foodItem.z);
     }
 
     // Обработка события поедания еды
     handleFoodConsumed(playerID, foodID, massGain) {
-        console.log('[SimpleFoodClient] Еда съедена:', { playerID, foodID, massGain });
+        // console.log('[SimpleFoodClient] Еда съедена:', { playerID, foodID, massGain });
         
         const mesh = this.foodMeshes.get(foodID);
         if (!mesh) {
@@ -63,12 +63,12 @@ export class SimpleFoodClient {
             mesh.material.dispose();
         });
 
-        console.log('[SimpleFoodClient] Еда удалена:', foodID);
+        // console.log('[SimpleFoodClient] Еда удалена:', foodID);
     }
 
     // Обработка полного состояния еды (при подключении)
     handleFoodState(foodItems) {
-        console.log('[SimpleFoodClient] Получено состояние еды:', foodItems);
+        // console.log('[SimpleFoodClient] Получено состояние еды:', foodItems);
         
         // Удаляем всю старую еду
         this.clearAllFood();
@@ -87,7 +87,7 @@ export class SimpleFoodClient {
             mesh.material.dispose();
         }
         this.foodMeshes.clear();
-        console.log('[SimpleFoodClient] Вся еда очищена');
+        // console.log('[SimpleFoodClient] Вся еда очищена');
     }
 
     // Анимация исчезновения

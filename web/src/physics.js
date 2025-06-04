@@ -35,7 +35,7 @@ const PHYSICS_SETTINGS = {
         // Влияет на: минимальное расстояние для применения коррекции
         // Рекомендации: 0.3-1.2 (для сферы радиусом 3.0: 0.6 = 10% от диаметра, незаметно)
         // Меньше = более чувствительно к мелким отклонениям; Больше = игнорирует микро-дребезг
-        DEAD_ZONE: 2.0, // УВЕЛИЧЕНО: с 0.6 до 2.0 для устранения вибрации при движении
+        DEAD_ZONE: 12.0, // УВЕЛИЧЕНО: с 5.0 до 12.0 для крупных сфер (радиус 20+ = диаметр 40+, 12/40 = 30%)
         
         // Базовая сила коррекции (множитель силы)
         // Влияет на: скорость притягивания к серверной позиции
@@ -688,8 +688,8 @@ function getAdaptiveInterpolationParams() {
     const jitter = getSmoothedJitter();
     const currentTime = Date.now();
     
-    // Измеряем джиттер каждые 500мс
-    if (currentTime - networkMonitor.lastPingMeasurement > 500) {
+    // УСКОРЕННАЯ адаптация: измеряем джиттер каждые 200мс вместо 500мс
+    if (currentTime - networkMonitor.lastPingMeasurement > 200) {
         measureJitter();
         networkMonitor.lastPingMeasurement = currentTime;
     }
@@ -744,14 +744,14 @@ function getAdaptiveInterpolationParams() {
         targetParams.teleportThreshold *= 0.8; // Более частые телепортации
     }
     
-    // Плавно переходим к новым параметрам (экспоненциальное сглаживание параметров)
+    // УСКОРЕННАЯ адаптация параметров: плавно переходим к новым параметрам
     let adaptationSpeed;
     if (networkMonitor.adaptationState.fastConvergenceMode) {
         adaptationSpeed = 0.8; // Очень быстрая адаптация в первые секунды
     } else if (networkMonitor.adaptationState.isAdapting) {
-        adaptationSpeed = 0.4; // Быстрая адаптация
+        adaptationSpeed = 0.6; // УСКОРЕНО: с 0.4 до 0.6 - быстрая адаптация
     } else {
-        adaptationSpeed = 0.1; // Медленная адаптация в стабильном состоянии
+        adaptationSpeed = 0.3; // УСКОРЕНО: с 0.1 до 0.3 - отзывчивый стабильный режим
     }
     
     networkMonitor.smoothedParams.positionAlpha = lerp(
@@ -835,6 +835,33 @@ function updateHybridPhysics(obj) {
         Math.pow(currentPos.z - serverPos.z, 2)
     );
 
+    // АДАПТИВНАЯ мертвая зона на основе размера объекта
+    const objectRadius = obj.radius || 3.0; // Используем радиус объекта или значение по умолчанию
+    
+    // Базовая мертвая зона: 150% радиуса (75% диаметра)
+    let adaptiveDeadZone = Math.max(
+        PHYSICS_SETTINGS.INTERPOLATION.DEAD_ZONE * 0.1, // Минимум 1.2 единицы
+        objectRadius * 1.5 // 150% от радиуса (75% от диаметра - заметно но приемлемо для крупных объектов)
+    );
+    
+    // БОНУС при плохой сети: увеличиваем мертвую зону еще на 50%
+    const jitter = getSmoothedJitter();
+    if (jitter > PHYSICS_SETTINGS.NETWORK.JITTER_THRESHOLD) {
+        adaptiveDeadZone *= 1.5; // При джиттере >50мс увеличиваем зону в 1.5 раза
+    }
+    
+    // СКОРОСТНОЙ БОНУС: быстрые объекты могут иметь большие расхождения из-за экстраполяции
+    const currentVel = obj.body.getLinearVelocity();
+    const speed = Math.sqrt(currentVel.x() * currentVel.x() + currentVel.y() * currentVel.y() + currentVel.z() * currentVel.z());
+    window.Ammo.destroy(currentVel);
+    
+    // При скорости >50м/с добавляем бонус: скорость/10 единиц к мертвой зоне
+    // Например: 200м/с → +20 единиц, 100м/с → +10 единиц
+    if (speed > 50) {
+        const speedBonus = (speed - 50) / 10;
+        adaptiveDeadZone += speedBonus;
+    }
+
     // Обновляем статистику стабильности
     updateStabilityStats(distance);
 
@@ -882,113 +909,95 @@ function updateHybridPhysics(obj) {
         window.Ammo.destroy(newTransform);
     }
     // Мертвая зона - минимальные корректировки
-    else if (distance < PHYSICS_SETTINGS.INTERPOLATION.DEAD_ZONE) {
-        // В режиме быстрой сходимости применяем коррекцию даже в мертвой зоне
-        const alphaMultiplier = networkMonitor.adaptationState.fastConvergenceMode ? 2.0 : 0.5;
-        const smoothedPos = exponentialSmoothing(currentPos, serverPos, adaptiveParams.positionAlpha * alphaMultiplier);
-        obj.mesh.position.set(smoothedPos.x, smoothedPos.y, smoothedPos.z);
+    else if (distance < adaptiveDeadZone) {
+        // ДИАГНОСТИКА: Редко логируем состояние мертвой зоны
+        if (Math.random() < 0.001) { // 0.1% вероятность
+            console.log(`[ДИАГНОСТИКА] Мертвая зона: distance=${distance.toFixed(2)}, adaptiveDeadZone=${adaptiveDeadZone.toFixed(2)} (radius=${objectRadius.toFixed(1)}, speed=${speed.toFixed(1)}м/с)`);
+        }
         
-        // Мягкая коррекция физического тела
-        const correctionMultiplier = networkMonitor.adaptationState.fastConvergenceMode ? 1.5 : 0.3;
-        const correction = {
-            x: (serverPos.x - currentPos.x) * correctionMultiplier,
-            y: (serverPos.y - currentPos.y) * correctionMultiplier,
-            z: (serverPos.z - currentPos.z) * correctionMultiplier
-        };
-
-        const force = new window.Ammo.btVector3(correction.x, correction.y, correction.z);
-        obj.body.applyCentralForce(force);
-        window.Ammo.destroy(force);
+        // МЯГКАЯ коррекция в мертвой зоне
+        const timeSinceLastCorrection = currentTime - (obj.lastCorrectionTime || 0);
+        const shouldCorrect = timeSinceLastCorrection > 500; // Редкая мягкая коррекция раз в 500мс
+        
+        if (shouldCorrect) {
+            // Очень мягкая коррекция
+            const smoothingFactor = 0.05;
+            const smoothedPos = exponentialSmoothing(currentPos, serverPos, smoothingFactor);
+            
+            obj.mesh.position.set(smoothedPos.x, smoothedPos.y, smoothedPos.z);
+            
+            // Очень мягкая коррекция физического тела
+            const newTransform = new window.Ammo.btTransform();
+            obj.body.getMotionState().getWorldTransform(newTransform);
+            newTransform.setOrigin(new window.Ammo.btVector3(smoothedPos.x, smoothedPos.y, smoothedPos.z));
+            obj.body.getMotionState().setWorldTransform(newTransform);
+            window.Ammo.destroy(newTransform);
+            
+            obj.lastCorrectionTime = currentTime;
+        } else {
+            // Просто показываем локальную позицию
+            obj.mesh.position.set(currentPos.x, currentPos.y, currentPos.z);
+        }
     }
     // Основная интерполяция с адаптивными алгоритмами
     else {
-        const updateInterval = PHYSICS_SETTINGS.NETWORK.UPDATE_INTERVAL;
-        const progress = Math.min(timeSinceUpdate / updateInterval, 1.0);
-        
-        // Выбираем стратегию интерполяции на основе сетевых условий
-        const strategy = getInterpolationStrategy(ping, getSmoothedJitter());
-        let targetPos;
-
-        switch (strategy) {
-            case 'extrapolation':
-                // Экстраполяция с предсказанием
-                const acceleration = calculateAcceleration(obj);
-                const extrapolationTime = Math.min(timeSinceUpdate, PHYSICS_SETTINGS.PREDICTION.EXTRAPOLATION_TIME) / 1000.0;
-                targetPos = extrapolatePosition(serverPos, smoothVelocity || {x:0,y:0,z:0}, acceleration, extrapolationTime);
-                break;
-                
-            case 'hermite':
-                // Hermite интерполяция для плавного движения
-                const positions = serverUpdateBuffer.positions[obj.id];
-                if (positions && positions.length >= 2) {
-                    const p0 = positions[positions.length - 2];
-                    const p1 = positions[positions.length - 1];
-                    const v0 = serverUpdateBuffer.velocities[obj.id]?.[positions.length - 2] || {x:0,y:0,z:0};
-                    const v1 = smoothVelocity || {x:0,y:0,z:0};
-                    
-                    targetPos = hermiteInterpolate(p0, p1, v0, v1, progress, 
-                        PHYSICS_SETTINGS.INTERPOLATION.HERMITE_TENSION,
-                        PHYSICS_SETTINGS.INTERPOLATION.HERMITE_BIAS);
-                } else {
-                    // Fallback к линейной интерполяции
-                    targetPos = {
-                        x: currentPos.x + (serverPos.x - currentPos.x) * progress,
-                        y: currentPos.y + (serverPos.y - currentPos.y) * progress,
-                        z: currentPos.z + (serverPos.z - currentPos.z) * progress
-                    };
-                }
-                break;
-                
-            default: // 'linear'
-                // Стандартная линейная интерполяция
-                targetPos = {
-                    x: currentPos.x + (serverPos.x - currentPos.x) * progress,
-                    y: currentPos.y + (serverPos.y - currentPos.y) * progress,
-                    z: currentPos.z + (serverPos.z - currentPos.z) * progress
-                };
-                break;
+        // ДИАГНОСТИКА: Логируем попадание в зону агрессивной коррекции
+        if (Math.random() < 0.01) { // 1% вероятность
+            console.log(`[ДИАГНОСТИКА] Зона коррекции: distance=${distance.toFixed(2)}, adaptiveDeadZone=${adaptiveDeadZone.toFixed(2)}, teleportThreshold=${adaptiveParams.teleportThreshold.toFixed(2)}`);
         }
-
-        // Применяем экспоненциальное сглаживание к целевой позиции
-        const smoothedPos = exponentialSmoothing(currentPos, targetPos, adaptiveParams.positionAlpha);
-        obj.mesh.position.set(smoothedPos.x, smoothedPos.y, smoothedPos.z);
-
-        // Применяем адаптивную коррекцию к физическому телу
-        let correctionMultiplier = adaptiveParams.correctionStrength;
         
-        // В режиме быстрой сходимости увеличиваем силу коррекции
-        if (networkMonitor.adaptationState.fastConvergenceMode) {
-            correctionMultiplier *= 2.0;
+        // АДАПТИВНЫЙ интервал коррекции на основе скорости объекта
+        // Используем уже вычисленную скорость из адаптивной мертвой зоны
+        
+        // Быстрые объекты корректируются чаще: 100мс при 100м/с, 300мс при 20м/с  
+        let adaptiveCorrectionInterval = Math.max(100, Math.min(300, 400 - speed * 2));
+        
+        // АДАПТИВНОЕ увеличение интервала при стабильно больших расхождениях
+        // Если расхождение больше 1.5 радиуса и близко к границе телепортации - делаем коррекцию реже
+        if (distance > objectRadius * 1.5 && distance < adaptiveParams.teleportThreshold * 0.8) {
+            adaptiveCorrectionInterval *= 1.5; // Увеличиваем интервал в 1.5 раза (450мс вместо 300мс)
+        }
+        
+        // АГРЕССИВНАЯ КОРРЕКЦИЯ: Когда расхождение больше мертвой зоны
+        // Проверяем, не было ли недавней коррекции
+        const timeSinceLastCorrection = currentTime - (obj.lastCorrectionTime || 0);
+        const shouldCorrect = timeSinceLastCorrection > adaptiveCorrectionInterval;
+        
+        if (shouldCorrect) {
+            // ПЛАВНАЯ коррекция вместо агрессивной телепортации
+            const timestamp = new Date().toLocaleTimeString() + '.' + String(Date.now() % 1000).padStart(3, '0');
+            console.log(`[Physics] ${timestamp} Плавная коррекция объекта ${obj.id}: distance=${distance.toFixed(2)}, interval=${adaptiveCorrectionInterval}ms, speed=${speed.toFixed(1)}м/с, radius=${objectRadius.toFixed(1)}`);
             
-            // Дополнительная прямая коррекция позиции физического тела
-            const directCorrection = {
-                x: (serverPos.x - currentPos.x) * 0.3,
-                y: (serverPos.y - currentPos.y) * 0.3,
-                z: (serverPos.z - currentPos.z) * 0.3
-            };
+            // Плавное движение к серверной позиции
+            const smoothingFactor = 0.2; // Более плавное сглаживание для крупных объектов
+            const smoothedPos = exponentialSmoothing(currentPos, serverPos, smoothingFactor);
             
+            // Обновляем визуальную позицию
+            obj.mesh.position.set(smoothedPos.x, smoothedPos.y, smoothedPos.z);
+            
+            // Мягкая коррекция физического тела
             const newTransform = new window.Ammo.btTransform();
             obj.body.getMotionState().getWorldTransform(newTransform);
-            const currentOrigin = newTransform.getOrigin();
-            newTransform.setOrigin(new window.Ammo.btVector3(
-                currentOrigin.x() + directCorrection.x,
-                currentOrigin.y() + directCorrection.y,
-                currentOrigin.z() + directCorrection.z
-            ));
+            newTransform.setOrigin(new window.Ammo.btVector3(smoothedPos.x, smoothedPos.y, smoothedPos.z));
             obj.body.getMotionState().setWorldTransform(newTransform);
             window.Ammo.destroy(newTransform);
+            
+            // Применяем сглаженную скорость
+            if (smoothVelocity) {
+                const velocity = new window.Ammo.btVector3(smoothVelocity.x, smoothVelocity.y, smoothVelocity.z);
+                obj.body.setLinearVelocity(velocity);
+                window.Ammo.destroy(velocity);
+            }
+            
+            obj.lastCorrectionTime = currentTime;
+        } else {
+            // ДИАГНОСТИКА: Логируем пропуск коррекции
+            if (Math.random() < 0.01) { // 1% вероятность  
+                console.log(`[ДИАГНОСТИКА] Пропуск коррекции: timeSinceLastCorrection=${timeSinceLastCorrection}ms < ${adaptiveCorrectionInterval}ms`);
+            }
+            // Пропускаем коррекцию, используем локальную физику
+            obj.mesh.position.set(currentPos.x, currentPos.y, currentPos.z);
         }
-        
-        const correction = {
-            x: (serverPos.x - currentPos.x) * correctionMultiplier,
-            y: (serverPos.y - currentPos.y) * correctionMultiplier,
-            z: (serverPos.z - currentPos.z) * correctionMultiplier
-        };
-
-        const force = new window.Ammo.btVector3(correction.x, correction.y, correction.z);
-        obj.body.applyCentralForce(force);
-        obj.body.activate(true);
-        window.Ammo.destroy(force);
     }
 
     window.Ammo.destroy(trans);
@@ -1242,8 +1251,8 @@ function measureJitter() {
         timestamp: currentTime
     });
     
-    // Ограничиваем размер истории (последние 10 измерений)
-    if (networkMonitor.pingHistory.length > 10) {
+    // УСКОРЕННАЯ адаптация: уменьшаем буфер истории с 10 до 5 измерений
+    if (networkMonitor.pingHistory.length > 5) {
         networkMonitor.pingHistory.shift();
     }
     
@@ -1259,7 +1268,8 @@ function measureJitter() {
         timestamp: currentTime
     });
     
-    if (networkMonitor.jitterHistory.length > 5) {
+    // УСКОРЕННАЯ адаптация: уменьшаем буфер с 5 до 3 измерений
+    if (networkMonitor.jitterHistory.length > 3) {
         networkMonitor.jitterHistory.shift();
     }
     
@@ -1311,7 +1321,7 @@ function detectNetworkChange() {
     
     // ЗАЩИТА: Минимальное время между детекциями изменений (дебаунс)
     const timeSinceLastChange = currentTime - networkMonitor.adaptationState.lastStrategyChange;
-    if (timeSinceLastChange < 1000) { // Не чаще чем раз в секунду
+    if (timeSinceLastChange < 300) { // Быстрее реагируем на изменения
         return false;
     }
     
@@ -1350,15 +1360,9 @@ function detectNetworkChange() {
         const timeSinceChange = currentTime - networkMonitor.adaptationState.lastStrategyChange;
         const timeSinceStart = currentTime - networkMonitor.adaptationState.adaptationStartTime;
         
-        // Выключаем режим быстрой сходимости через 2 секунды
-        if (networkMonitor.adaptationState.fastConvergenceMode && 
-            timeSinceStart > PHYSICS_SETTINGS.ADAPTATION.FAST_CONVERGENCE_TIME) {
-            networkMonitor.adaptationState.fastConvergenceMode = false;
-        }
-        
-        // Завершаем адаптацию если система стабильна или прошло достаточно времени
-        if ((networkMonitor.stabilityStats.isStable && timeSinceStart > 1000) || 
-            timeSinceChange > networkMonitor.adaptationState.stabilizationTime) {
+        // УСКОРЕННАЯ адаптация: завершаем адаптацию если система стабильна или прошло достаточно времени
+        if ((networkMonitor.stabilityStats.isStable && timeSinceStart > 500) || 
+            timeSinceChange > 1500) { // УСКОРЕНО: с 3000мс до 1500мс
             networkMonitor.adaptationState.isAdapting = false;
             networkMonitor.adaptationState.fastConvergenceMode = false;
         }

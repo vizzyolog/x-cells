@@ -838,16 +838,43 @@ function updateHybridPhysics(obj) {
     // АДАПТИВНАЯ мертвая зона на основе размера объекта
     const objectRadius = obj.radius || 3.0; // Используем радиус объекта или значение по умолчанию
     
-    // Базовая мертвая зона: 150% радиуса (75% диаметра)
+    // УВЕЛИЧЕННАЯ Базовая мертвая зона: 200% радиуса (100% диаметра) для крупных объектов
     let adaptiveDeadZone = Math.max(
         PHYSICS_SETTINGS.INTERPOLATION.DEAD_ZONE * 0.1, // Минимум 1.2 единицы
-        objectRadius * 1.5 // 150% от радиуса (75% от диаметра - заметно но приемлемо для крупных объектов)
+        objectRadius * 2.0 // УВЕЛИЧЕНО: с 1.5 до 2.0 (100% от диаметра вместо 75%)
     );
     
-    // БОНУС при плохой сети: увеличиваем мертвую зону еще на 50%
+    // КРИТИЧЕСКАЯ ДИАГНОСТИКА: Выводим базовые значения
+    if (Math.random() < 0.1) { // 10% вероятность для отладки
+        console.log(`[ДИАГНОСТИКА] Базовые значения: radius=${objectRadius.toFixed(1)}, baseDeadZone=${adaptiveDeadZone.toFixed(2)}, distance=${distance.toFixed(2)}`);
+    }
+    
+    // СПЕЦИАЛЬНАЯ ОБРАБОТКА для свободного падения и вертикального движения
+    const verticalDistance = Math.abs(currentPos.y - serverPos.y);
+    const horizontalDistance = Math.sqrt(
+        Math.pow(currentPos.x - serverPos.x, 2) + 
+        Math.pow(currentPos.z - serverPos.z, 2)
+    );
+    
+    // Если вертикальная составляющая большая (падение/прыжок), увеличиваем мертвую зону
+    if (verticalDistance > objectRadius * 1.0) { // Если Y-расхождение больше радиуса
+        const verticalBonus = verticalDistance * 0.5; // Добавляем 50% от вертикального расхождения
+        adaptiveDeadZone += verticalBonus;
+        
+        if (Math.random() < 0.05) { // 5% вероятность для диагностики падения
+            console.log(`[ДИАГНОСТИКА] Свободное падение: verticalDist=${verticalDistance.toFixed(2)}, bonus=+${verticalBonus.toFixed(2)}, newDeadZone=${adaptiveDeadZone.toFixed(2)}`);
+        }
+    }
+    
+    // УСИЛЕННЫЙ БОНУС при плохой сети: увеличиваем мертвую зону еще на 100%
     const jitter = getSmoothedJitter();
     if (jitter > PHYSICS_SETTINGS.NETWORK.JITTER_THRESHOLD) {
-        adaptiveDeadZone *= 1.5; // При джиттере >50мс увеличиваем зону в 1.5 раза
+        const oldZone = adaptiveDeadZone;
+        adaptiveDeadZone *= 2.0; // УВЕЛИЧЕНО: с 1.5 до 2.0 при джиттере >50мс
+        
+        if (Math.random() < 0.05) { // 5% вероятность для диагностики джиттера
+            console.log(`[ДИАГНОСТИКА] Джиттер-бонус: jitter=${jitter.toFixed(1)}ms, oldZone=${oldZone.toFixed(2)} → newZone=${adaptiveDeadZone.toFixed(2)}`);
+        }
     }
     
     // СКОРОСТНОЙ БОНУС: быстрые объекты могут иметь большие расхождения из-за экстраполяции
@@ -855,19 +882,46 @@ function updateHybridPhysics(obj) {
     const speed = Math.sqrt(currentVel.x() * currentVel.x() + currentVel.y() * currentVel.y() + currentVel.z() * currentVel.z());
     window.Ammo.destroy(currentVel);
     
-    // При скорости >50м/с добавляем бонус: скорость/10 единиц к мертвой зоне
-    // Например: 200м/с → +20 единиц, 100м/с → +10 единиц
-    if (speed > 50) {
-        const speedBonus = (speed - 50) / 10;
+    // При скорости >30м/с добавляем бонус: скорость/8 единиц к мертвой зоне (было /10)
+    // Например: 40м/с → +5 единиц, 80м/с → +10 единиц
+    if (speed > 30) {
+        const speedBonus = (speed - 30) / 8; // УЛУЧШЕНО: порог с 50 до 30, делитель с 10 до 8
         adaptiveDeadZone += speedBonus;
+    }
+
+    // ОСОБАЯ ЛОГИКА для объектов с недавним изменением размера
+    const timeSinceLastUpdate = obj.lastServerUpdate ? currentTime - obj.lastServerUpdate : 0;
+    if (timeSinceLastUpdate < 1000) { // Если размер менялся в последнюю секунду
+        adaptiveDeadZone *= 1.5; // Увеличиваем зону на 50% для стабилизации
+    }
+
+    // СПЕЦИАЛЬНАЯ ЛОГИКА ДЛЯ ВЗАИМОДЕЙСТВИЯ С ТЕРРЕЙНОМ
+    // Если в мире есть объекты террейна и сфера движется быстро по Y - увеличиваем зону
+    const hasTerrainNearby = Object.values(objects).some(o => o.object_type === "terrain");
+    
+    // ИСПРАВЛЯЕМ: Получаем вертикальную скорость из правильного источника  
+    const verticalSpeed = Math.abs(obj.serverVelocity ? obj.serverVelocity.y : 0);
+    
+    if (hasTerrainNearby && (verticalSpeed > 10 || verticalDistance > objectRadius * 0.5)) {
+        const terrainBonus = Math.max(objectRadius * 0.5, verticalSpeed * 0.3);
+        adaptiveDeadZone += terrainBonus;
+        
+        if (Math.random() < 0.03) { // 3% вероятность для диагностики террейна
+            console.log(`[ДИАГНОСТИКА] Террейн-бонус: verticalSpeed=${verticalSpeed.toFixed(1)}м/с, terrainBonus=+${terrainBonus.toFixed(2)}, finalDeadZone=${adaptiveDeadZone.toFixed(2)}`);
+        }
+    }
+
+    // ФИНАЛЬНАЯ ДИАГНОСТИКА: выводим итоговую мертвую зону для крупных объектов
+    if (objectRadius > 10) {
+        console.log(`[ДИАГНОСТИКА] ИТОГО для radius=${objectRadius.toFixed(1)}: distance=${distance.toFixed(2)} vs deadZone=${adaptiveDeadZone.toFixed(2)} (было 18.10)`);
     }
 
     // Обновляем статистику стабильности
     updateStabilityStats(distance);
 
     // Применяем серверную скорость с сглаживанием
-    const smoothVelocity = getSmoothVelocityFromBuffer(obj.id) || obj.serverVelocity;
-    if (smoothVelocity) {
+    const smoothVelocityFromBuffer = getSmoothVelocityFromBuffer(obj.id) || obj.serverVelocity;
+    if (smoothVelocityFromBuffer) {
         // Экспоненциальное сглаживание скорости для уменьшения рывков
         const currentVel = obj.body.getLinearVelocity();
         const currentVelObj = {
@@ -876,22 +930,32 @@ function updateHybridPhysics(obj) {
             z: currentVel.z()
         };
         
-        const smoothedVel = exponentialSmoothing(currentVelObj, smoothVelocity, adaptiveParams.velocityAlpha);
+        const smoothedVel = exponentialSmoothing(currentVelObj, smoothVelocityFromBuffer, adaptiveParams.velocityAlpha);
         
         const velocity = new window.Ammo.btVector3(smoothedVel.x, smoothedVel.y, smoothedVel.z);
         obj.body.setLinearVelocity(velocity);
         obj.body.activate(true);
         window.Ammo.destroy(velocity);
+        window.Ammo.destroy(currentVel);
+    }
+
+    // КРИТИЧЕСКИЙ ФИКС: Понижаем пороги телепортации для больших расхождений
+    // Получаем пороги телепортации
+    const baseTeleportThreshold = Math.min(adaptiveParams.teleportThreshold, objectRadius * 5.0);
+    const emergencyTeleportThreshold = objectRadius * 10.0; // Экстренная телепортация при 10 диаметрах
+    
+    // ПРИНУДИТЕЛЬНАЯ ДИАГНОСТИКА телепортации для критических случаев
+    if (distance > 50) {
+        console.log(`[КРИТИЧНО] Огромное расхождение: distance=${distance.toFixed(2)}, baseTeleport=${baseTeleportThreshold.toFixed(2)}, emergencyTeleport=${emergencyTeleportThreshold.toFixed(2)}, objectRadius=${objectRadius.toFixed(1)}`);
     }
 
     // Агрессивная телепортация при больших расхождениях или в режиме быстрой сходимости
-    if (distance > adaptiveParams.teleportThreshold || 
+    if (distance > baseTeleportThreshold || 
+        distance > emergencyTeleportThreshold ||
         (networkMonitor.adaptationState.fastConvergenceMode && distance > PHYSICS_SETTINGS.ADAPTATION.RESET_THRESHOLD)) {
         
-        // Логируем только критические телепортации (больше 50 единиц)
-        if (distance > 50) {
-            // console.log(`[Physics] Критическая телепортация объекта ${obj.id}: distance=${distance.toFixed(2)}`);
-        }
+        // ВСЕГДА логируем телепортации при больших расхождениях
+        console.log(`[ТЕЛЕПОРТАЦИЯ] Объект ${obj.id}: distance=${distance.toFixed(2)}, threshold=${baseTeleportThreshold.toFixed(2)}, emergency=${emergencyTeleportThreshold.toFixed(2)}`);
         
         const newTransform = new window.Ammo.btTransform();
         newTransform.setIdentity();
@@ -907,12 +971,16 @@ function updateHybridPhysics(obj) {
         }
         
         window.Ammo.destroy(newTransform);
+        
+        // Обнуляем счетчики после телепортации
+        obj.lastCorrectionTime = currentTime;
+        return; // Выходим после телепортации
     }
     // Мертвая зона - минимальные корректировки
     else if (distance < adaptiveDeadZone) {
-        // ДИАГНОСТИКА: Редко логируем состояние мертвой зоны
-        if (Math.random() < 0.001) { // 0.1% вероятность
-            console.log(`[ДИАГНОСТИКА] Мертвая зона: distance=${distance.toFixed(2)}, adaptiveDeadZone=${adaptiveDeadZone.toFixed(2)} (radius=${objectRadius.toFixed(1)}, speed=${speed.toFixed(1)}м/с)`);
+        // УСИЛЕННАЯ ДИАГНОСТИКА: Всегда логируем для крупных объектов
+        if (objectRadius > 10 || Math.random() < 0.01) { // Всегда для радиуса >10 или 1% для остальных
+            console.log(`[ДИАГНОСТИКА] Мертвая зона: distance=${distance.toFixed(2)}, adaptiveDeadZone=${adaptiveDeadZone.toFixed(2)} (radius=${objectRadius.toFixed(1)}, speed=${speed.toFixed(1)}м/с, vertical=${verticalDistance ? verticalDistance.toFixed(2) : '?'})`);
         }
         
         // МЯГКАЯ коррекция в мертвой зоне
@@ -983,8 +1051,8 @@ function updateHybridPhysics(obj) {
             window.Ammo.destroy(newTransform);
             
             // Применяем сглаженную скорость
-            if (smoothVelocity) {
-                const velocity = new window.Ammo.btVector3(smoothVelocity.x, smoothVelocity.y, smoothVelocity.z);
+            if (smoothVelocityFromBuffer) {
+                const velocity = new window.Ammo.btVector3(smoothVelocityFromBuffer.x, smoothVelocityFromBuffer.y, smoothVelocityFromBuffer.z);
                 obj.body.setLinearVelocity(velocity);
                 window.Ammo.destroy(velocity);
             }
@@ -1089,8 +1157,16 @@ function updateObjectFromServer(obj, data) {
             // Получаем адаптивные параметры для коррекции
             const adaptiveParams = getAdaptiveInterpolationParams();
             
-            // Применяем телепортацию только при критических расхождениях
-            if (distance > adaptiveParams.teleportThreshold) {
+            // Если коррекция критично важна (очень большое расхождение) - используем телепортацию
+            // ДИНАМИЧЕСКИЙ порог телепортации: больше для крупных объектов
+            const baseTeleportThreshold = PHYSICS_SETTINGS.INTERPOLATION.TELEPORT_THRESHOLD;
+            const objectRadius = obj.radius || 3.0;
+            const teleportThreshold = Math.max(
+                baseTeleportThreshold, 
+                objectRadius * 3.0 // УВЕЛИЧЕНО: телепорт при расстоянии больше 3 диаметров
+            );
+            
+            if (distance > teleportThreshold) {
                 trans.setOrigin(new window.Ammo.btVector3(
                     data.position.x,
                     data.position.y,
@@ -1153,6 +1229,16 @@ function updateObjectFromServer(obj, data) {
             obj.body.activate(true);
             window.Ammo.destroy(velocity);
         }
+    }
+
+    // Обновляем размер объекта, если он изменился на сервере
+    if (data.radius !== undefined && Math.abs(data.radius - obj.radius) > 0.1) {
+        console.log(`[Physics] Обновляем размер объекта ${obj.id}: ${obj.radius} → ${data.radius}`);
+        obj.radius = data.radius;
+        obj.lastServerUpdate = currentTime; // ОТМЕЧАЕМ время обновления размера
+        
+        // Обновляем физическую форму если необходимо
+        // (в данном случае сфера остается сферой, только с новым радиусом)
     }
 }
 

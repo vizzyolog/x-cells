@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math"
 	"sync"
@@ -9,6 +10,11 @@ import (
 
 	"x-cells/backend/internal/world"
 )
+
+// PlayerUpdateBroadcaster интерфейс для отправки обновлений игрока клиентам
+type PlayerUpdateBroadcaster interface {
+	BroadcastPlayerSizeUpdate(playerID string, newRadius float64, newMass float64)
+}
 
 // GameTicker основной менеджер игрового цикла для x-cells проекта
 type GameTicker struct {
@@ -49,6 +55,9 @@ type GameTicker struct {
 	// Логирование
 	logger           *log.Logger
 	warningThreshold time.Duration
+
+	// Интерфейс для отправки обновлений игроков (новое поле)
+	playerBroadcaster PlayerUpdateBroadcaster
 }
 
 // Player представляет игрока в системе
@@ -292,11 +301,18 @@ func (gt *GameTicker) executeSystem(system TickSystem, deltaTime time.Duration) 
 
 // AddPlayer добавляет игрока с стандартным радиусом
 func (gt *GameTicker) AddPlayer(playerID string, pos Vector3) {
-	gt.AddPlayerWithRadius(playerID, pos, 1.0) // Стандартный радиус
+	gt.AddPlayerWithRadiusAndMass(playerID, pos, 1.0, 1.0) // Стандартные значения только для fallback
 }
 
-// AddPlayerWithRadius добавляет игрока с указанным радиусом
+// AddPlayerWithRadius добавляет игрока с указанным радиусом (без массы - deprecated)
+// ВНИМАНИЕ: Этот метод устарел, используйте AddPlayerWithRadiusAndMass
 func (gt *GameTicker) AddPlayerWithRadius(playerID string, pos Vector3, radius float64) {
+	gt.logger.Printf("[GameTicker] ПРЕДУПРЕЖДЕНИЕ: Используется устаревший метод AddPlayerWithRadius для игрока %s. Масса будет установлена в 0.", playerID)
+	gt.AddPlayerWithRadiusAndMass(playerID, pos, radius, 0.0) // Масса = 0, так как реальная масса не передана
+}
+
+// AddPlayerWithRadiusAndMass добавляет игрока с указанным радиусом и массой
+func (gt *GameTicker) AddPlayerWithRadiusAndMass(playerID string, pos Vector3, radius float64, mass float64) {
 	gt.playersMutex.Lock()
 	defer gt.playersMutex.Unlock()
 
@@ -304,13 +320,14 @@ func (gt *GameTicker) AddPlayerWithRadius(playerID string, pos Vector3, radius f
 		ID:       playerID,
 		Position: pos,
 		Radius:   radius, // Используем переданный радиус
+		Mass:     mass,   // Используем переданную массу
 		Health:   100.0,
 		Score:    0,
 		LastSeen: time.Now(),
 	}
 
-	gt.logger.Printf("[GameTicker] Добавлен игрок %s в позиции (%.1f, %.1f, %.1f) с радиусом %.1f",
-		playerID, pos.X, pos.Y, pos.Z, radius)
+	gt.logger.Printf("[GameTicker] Добавлен игрок %s в позиции (%.1f, %.1f, %.1f) с радиусом %.1f и массой %.1f",
+		playerID, pos.X, pos.Y, pos.Z, radius, mass)
 }
 
 func (gt *GameTicker) RemovePlayer(playerID string) {
@@ -328,16 +345,82 @@ func (gt *GameTicker) GetPlayer(playerID string) *Player {
 	return gt.players[playerID]
 }
 
+// SetPlayerBroadcaster устанавливает интерфейс для отправки обновлений игроков
+func (gt *GameTicker) SetPlayerBroadcaster(broadcaster PlayerUpdateBroadcaster) {
+	gt.playerBroadcaster = broadcaster
+}
+
 // UpdatePlayerMass безопасно обновляет массу игрока
 func (gt *GameTicker) UpdatePlayerMass(playerID string, massChange float64) {
 	gt.playersMutex.Lock()
 	defer gt.playersMutex.Unlock()
 
-	if player, exists := gt.players[playerID]; exists {
-		player.Mass += massChange
-		gt.logger.Printf("[GameTicker] Масса игрока %s изменена на %.2f (новая масса: %.2f)",
-			playerID, massChange, player.Mass)
+	player, exists := gt.players[playerID]
+	if !exists {
+		gt.logger.Printf("[GameTicker] player %s not found for mass update", playerID)
+		return
 	}
+
+	oldMass := math.Max(player.Mass, 1.0)
+	oldRadius := player.Radius
+	player.Mass += massChange
+
+	// Формула: newRadius = oldRadius * (newMass / oldMass)^(1/3)
+	massRatio := player.Mass / oldMass
+	newRadius := oldRadius * math.Pow(massRatio, 1.0/3.0)
+	player.Radius = newRadius
+
+	gt.logger.Printf("[GameTicker] player %s: mass %.1f->%.1f, radius %.2f->%.2f",
+		playerID, oldMass, player.Mass, oldRadius, newRadius)
+
+	// Синхронизация с Bullet Physics
+	if gt.worldManager == nil {
+		return
+	}
+
+	factory := gt.worldManager.GetFactory()
+	if factory == nil {
+		return
+	}
+
+	gt.logger.Printf("[GameTicker] updating bullet physics for player ID: %s", playerID)
+	err := factory.UpdateObjectMassAndRadiusInBullet(playerID, float32(player.Mass), float32(newRadius))
+	if err != nil {
+		gt.logger.Printf("[GameTicker] bullet physics update failed for %s: %v", playerID, err)
+		return
+	}
+
+	// Отправляем обновление клиентам
+	if math.Abs(newRadius-oldRadius) <= 0.1 || gt.playerBroadcaster == nil {
+		return
+	}
+
+	gt.playerBroadcaster.BroadcastPlayerSizeUpdate(playerID, newRadius, player.Mass)
+}
+
+// UpdatePlayerRadius безопасно обновляет радиус игрока напрямую (для внешних систем)
+func (gt *GameTicker) UpdatePlayerRadius(playerID string, newRadius float64) {
+	gt.playersMutex.Lock()
+	defer gt.playersMutex.Unlock()
+
+	if player, exists := gt.players[playerID]; exists {
+		oldRadius := player.Radius
+		player.Radius = newRadius
+
+		gt.logger.Printf("[GameTicker] Радиус игрока %s изменен: %.2f->%.2f",
+			playerID, oldRadius, newRadius)
+	}
+}
+
+// GetPlayerRadius возвращает текущий радиус игрока
+func (gt *GameTicker) GetPlayerRadius(playerID string) float64 {
+	gt.playersMutex.RLock()
+	defer gt.playersMutex.RUnlock()
+
+	if player, exists := gt.players[playerID]; exists {
+		return player.Radius
+	}
+	return 0.0
 }
 
 // UpdatePlayerPosition безопасно обновляет позицию игрока из физического движка
@@ -519,4 +602,30 @@ func (gt *GameTicker) checkPerformance(tickTime time.Duration) {
 		gt.logger.Printf("[GameTicker] ПРЕДУПРЕЖДЕНИЕ: Медленный тик: %v (цель: %v)",
 			tickTime, gt.tickDuration)
 	}
+}
+
+// AddPlayerFromWorldObject добавляет игрока на основе WorldObject
+func (gt *GameTicker) AddPlayerFromWorldObject(playerID string, worldObject *world.WorldObject) error {
+	if worldObject == nil {
+		return fmt.Errorf("worldObject не может быть nil")
+	}
+
+	if worldObject.Shape == nil || worldObject.Shape.Sphere == nil {
+		return fmt.Errorf("worldObject должен содержать геометрию сферы")
+	}
+
+	// Извлекаем все параметры из WorldObject
+	position := Vector3{
+		X: float64(worldObject.Object.Position.X),
+		Y: float64(worldObject.Object.Position.Y),
+		Z: float64(worldObject.Object.Position.Z),
+	}
+	radius := float64(worldObject.Shape.Sphere.Radius)
+	mass := float64(worldObject.Shape.Sphere.Mass)
+
+	// Используем существующий метод для добавления
+	gt.AddPlayerWithRadiusAndMass(playerID, position, radius, mass)
+
+	gt.logger.Printf("[GameTicker] Игрок %s добавлен из WorldObject с полными параметрами", playerID)
+	return nil
 }

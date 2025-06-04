@@ -103,6 +103,8 @@ func NewWSServer(objectManager ObjectManager, physics transport.IPhysicsClient, 
 	// Нужно привести objectManager к типу *world.Manager
 	if manager, ok := objectManager.(*world.Manager); ok {
 		server.factory = world.NewFactory(manager, physics)
+		// Устанавливаем factory в manager для обратного доступа
+		manager.SetFactory(server.factory)
 	} else {
 		log.Printf("[WSServer] Предупреждение: objectManager не является *world.Manager, factory не создан")
 	}
@@ -353,4 +355,26 @@ func (s *WSServer) BroadcastFoodSpawned(food interface{}) {
 			log.Printf("[WSServer] Ошибка отправки события создания еды игроку %s: %v", player.ID, err)
 		}
 	}
+}
+
+// BroadcastPlayerSizeUpdate отправляет всем клиентам обновление размера игрока
+func (s *WSServer) BroadcastPlayerSizeUpdate(playerID string, newRadius float64, newMass float64) {
+	message := map[string]interface{}{
+		"type":       "player_size_update",
+		"player_id":  playerID,
+		"new_radius": newRadius,
+		"new_mass":   newMass,
+	}
+
+	s.playersMu.RLock()
+	defer s.playersMu.RUnlock()
+
+	for _, player := range s.players {
+		if err := player.Conn.WriteJSON(message); err != nil {
+			log.Printf("[WSServer] Ошибка отправки обновления размера игрока %s: %v", player.ID, err)
+		}
+	}
+
+	log.Printf("[WSServer] Отправлено обновление размера игрока %s: радиус %.2f, масса %.2f",
+		playerID, newRadius, newMass)
 }

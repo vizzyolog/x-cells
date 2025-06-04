@@ -44,6 +44,7 @@ type FoodEventBroadcaster interface {
 	BroadcastFoodConsumed(playerID, foodID string, massGain float64)
 	BroadcastFoodSpawned(food interface{})
 	BroadcastFoodState(foodItems interface{})
+	BroadcastPlayerSizeUpdate(playerID string, newRadius float64, newMass float64)
 }
 
 // SimpleFood - простой объект еды
@@ -69,11 +70,11 @@ func NewSimpleFoodSystem(gameTicker *GameTicker, logger *log.Logger) *SimpleFood
 		nextFoodID: 1,
 
 		// Настройки (консервативные для начала)
-		maxFood:       20,              // Только 20 единиц еды
+		maxFood:       200,             // Только 20 единиц еды
 		spawnInterval: 2 * time.Second, // Спавн каждые 2 секунды
 
 		// Зона спавна
-		spawnRadius: 150.0, // Увеличили с 50 до 150 единиц
+		spawnRadius: 350.0, // Увеличили с 50 до 150 единиц
 		groundLevel: 1.0,   // Земля на уровне 1
 
 		// Коллизии
@@ -145,7 +146,7 @@ func (sfs *SimpleFoodSystem) createRandomFood() *SimpleFood {
 		Y:         y,
 		Z:         z,
 		Radius:    sfs.foodRadius,
-		Mass:      1.0,       // Все еда дает +1 массу
+		Mass:      10.0,      // Все еда дает +1 массу
 		Color:     "#90EE90", // Светло-зеленый
 		SpawnTime: time.Now(),
 	}

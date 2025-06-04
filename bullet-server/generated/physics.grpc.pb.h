@@ -71,6 +71,20 @@ class Physics final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectMassResponse>> PrepareAsyncUpdateObjectMass(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectMassResponse>>(PrepareAsyncUpdateObjectMassRaw(context, request, cq));
     }
+    virtual ::grpc::Status UpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::physics::UpdateObjectRadiusResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectRadiusResponse>> AsyncUpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectRadiusResponse>>(AsyncUpdateObjectRadiusRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectRadiusResponse>> PrepareAsyncUpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectRadiusResponse>>(PrepareAsyncUpdateObjectRadiusRaw(context, request, cq));
+    }
+    virtual ::grpc::Status UpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::physics::UpdateObjectMassAndRadiusResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectMassAndRadiusResponse>> AsyncUpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectMassAndRadiusResponse>>(AsyncUpdateObjectMassAndRadiusRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectMassAndRadiusResponse>> PrepareAsyncUpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectMassAndRadiusResponse>>(PrepareAsyncUpdateObjectMassAndRadiusRaw(context, request, cq));
+    }
     virtual ::grpc::Status SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::physics::SetPhysicsConfigResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::SetPhysicsConfigResponse>> AsyncSetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::physics::SetPhysicsConfigResponse>>(AsyncSetPhysicsConfigRaw(context, request, cq));
@@ -91,6 +105,10 @@ class Physics final {
       virtual void GetObjectState(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest* request, ::physics::GetObjectStateResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void UpdateObjectMass(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest* request, ::physics::UpdateObjectMassResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void UpdateObjectMass(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest* request, ::physics::UpdateObjectMassResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void UpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest* request, ::physics::UpdateObjectRadiusResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void UpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest* request, ::physics::UpdateObjectRadiusResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void UpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest* request, ::physics::UpdateObjectMassAndRadiusResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void UpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest* request, ::physics::UpdateObjectMassAndRadiusResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
     };
@@ -108,6 +126,10 @@ class Physics final {
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::GetObjectStateResponse>* PrepareAsyncGetObjectStateRaw(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectMassResponse>* AsyncUpdateObjectMassRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectMassResponse>* PrepareAsyncUpdateObjectMassRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectRadiusResponse>* AsyncUpdateObjectRadiusRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectRadiusResponse>* PrepareAsyncUpdateObjectRadiusRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectMassAndRadiusResponse>* AsyncUpdateObjectMassAndRadiusRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::UpdateObjectMassAndRadiusResponse>* PrepareAsyncUpdateObjectMassAndRadiusRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::SetPhysicsConfigResponse>* AsyncSetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::physics::SetPhysicsConfigResponse>* PrepareAsyncSetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) = 0;
   };
@@ -149,6 +171,20 @@ class Physics final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassResponse>> PrepareAsyncUpdateObjectMass(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassResponse>>(PrepareAsyncUpdateObjectMassRaw(context, request, cq));
     }
+    ::grpc::Status UpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::physics::UpdateObjectRadiusResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectRadiusResponse>> AsyncUpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectRadiusResponse>>(AsyncUpdateObjectRadiusRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectRadiusResponse>> PrepareAsyncUpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectRadiusResponse>>(PrepareAsyncUpdateObjectRadiusRaw(context, request, cq));
+    }
+    ::grpc::Status UpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::physics::UpdateObjectMassAndRadiusResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassAndRadiusResponse>> AsyncUpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassAndRadiusResponse>>(AsyncUpdateObjectMassAndRadiusRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassAndRadiusResponse>> PrepareAsyncUpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassAndRadiusResponse>>(PrepareAsyncUpdateObjectMassAndRadiusRaw(context, request, cq));
+    }
     ::grpc::Status SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::physics::SetPhysicsConfigResponse* response) override;
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::SetPhysicsConfigResponse>> AsyncSetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::physics::SetPhysicsConfigResponse>>(AsyncSetPhysicsConfigRaw(context, request, cq));
@@ -169,6 +205,10 @@ class Physics final {
       void GetObjectState(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest* request, ::physics::GetObjectStateResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void UpdateObjectMass(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest* request, ::physics::UpdateObjectMassResponse* response, std::function<void(::grpc::Status)>) override;
       void UpdateObjectMass(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest* request, ::physics::UpdateObjectMassResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void UpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest* request, ::physics::UpdateObjectRadiusResponse* response, std::function<void(::grpc::Status)>) override;
+      void UpdateObjectRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest* request, ::physics::UpdateObjectRadiusResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void UpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest* request, ::physics::UpdateObjectMassAndRadiusResponse* response, std::function<void(::grpc::Status)>) override;
+      void UpdateObjectMassAndRadius(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest* request, ::physics::UpdateObjectMassAndRadiusResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response, std::function<void(::grpc::Status)>) override;
       void SetPhysicsConfig(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
      private:
@@ -192,6 +232,10 @@ class Physics final {
     ::grpc::ClientAsyncResponseReader< ::physics::GetObjectStateResponse>* PrepareAsyncGetObjectStateRaw(::grpc::ClientContext* context, const ::physics::GetObjectStateRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassResponse>* AsyncUpdateObjectMassRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassResponse>* PrepareAsyncUpdateObjectMassRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectMassRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectRadiusResponse>* AsyncUpdateObjectRadiusRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectRadiusResponse>* PrepareAsyncUpdateObjectRadiusRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectRadiusRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassAndRadiusResponse>* AsyncUpdateObjectMassAndRadiusRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::physics::UpdateObjectMassAndRadiusResponse>* PrepareAsyncUpdateObjectMassAndRadiusRaw(::grpc::ClientContext* context, const ::physics::UpdateObjectMassAndRadiusRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::physics::SetPhysicsConfigResponse>* AsyncSetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::physics::SetPhysicsConfigResponse>* PrepareAsyncSetPhysicsConfigRaw(::grpc::ClientContext* context, const ::physics::SetPhysicsConfigRequest& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_CreateObject_;
@@ -199,6 +243,8 @@ class Physics final {
     const ::grpc::internal::RpcMethod rpcmethod_ApplyTorque_;
     const ::grpc::internal::RpcMethod rpcmethod_GetObjectState_;
     const ::grpc::internal::RpcMethod rpcmethod_UpdateObjectMass_;
+    const ::grpc::internal::RpcMethod rpcmethod_UpdateObjectRadius_;
+    const ::grpc::internal::RpcMethod rpcmethod_UpdateObjectMassAndRadius_;
     const ::grpc::internal::RpcMethod rpcmethod_SetPhysicsConfig_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
@@ -212,6 +258,8 @@ class Physics final {
     virtual ::grpc::Status ApplyTorque(::grpc::ServerContext* context, const ::physics::ApplyTorqueRequest* request, ::physics::ApplyTorqueResponse* response);
     virtual ::grpc::Status GetObjectState(::grpc::ServerContext* context, const ::physics::GetObjectStateRequest* request, ::physics::GetObjectStateResponse* response);
     virtual ::grpc::Status UpdateObjectMass(::grpc::ServerContext* context, const ::physics::UpdateObjectMassRequest* request, ::physics::UpdateObjectMassResponse* response);
+    virtual ::grpc::Status UpdateObjectRadius(::grpc::ServerContext* context, const ::physics::UpdateObjectRadiusRequest* request, ::physics::UpdateObjectRadiusResponse* response);
+    virtual ::grpc::Status UpdateObjectMassAndRadius(::grpc::ServerContext* context, const ::physics::UpdateObjectMassAndRadiusRequest* request, ::physics::UpdateObjectMassAndRadiusResponse* response);
     virtual ::grpc::Status SetPhysicsConfig(::grpc::ServerContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response);
   };
   template <class BaseClass>
@@ -315,12 +363,52 @@ class Physics final {
     }
   };
   template <class BaseClass>
+  class WithAsyncMethod_UpdateObjectRadius : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_UpdateObjectRadius() {
+      ::grpc::Service::MarkMethodAsync(5);
+    }
+    ~WithAsyncMethod_UpdateObjectRadius() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObjectRadius(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectRadiusRequest* /*request*/, ::physics::UpdateObjectRadiusResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestUpdateObjectRadius(::grpc::ServerContext* context, ::physics::UpdateObjectRadiusRequest* request, ::grpc::ServerAsyncResponseWriter< ::physics::UpdateObjectRadiusResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(5, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_UpdateObjectMassAndRadius : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_UpdateObjectMassAndRadius() {
+      ::grpc::Service::MarkMethodAsync(6);
+    }
+    ~WithAsyncMethod_UpdateObjectMassAndRadius() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObjectMassAndRadius(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectMassAndRadiusRequest* /*request*/, ::physics::UpdateObjectMassAndRadiusResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestUpdateObjectMassAndRadius(::grpc::ServerContext* context, ::physics::UpdateObjectMassAndRadiusRequest* request, ::grpc::ServerAsyncResponseWriter< ::physics::UpdateObjectMassAndRadiusResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(6, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
   class WithAsyncMethod_SetPhysicsConfig : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_SetPhysicsConfig() {
-      ::grpc::Service::MarkMethodAsync(5);
+      ::grpc::Service::MarkMethodAsync(7);
     }
     ~WithAsyncMethod_SetPhysicsConfig() override {
       BaseClassMustBeDerivedFromService(this);
@@ -331,10 +419,10 @@ class Physics final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSetPhysicsConfig(::grpc::ServerContext* context, ::physics::SetPhysicsConfigRequest* request, ::grpc::ServerAsyncResponseWriter< ::physics::SetPhysicsConfigResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(5, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(7, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_CreateObject<WithAsyncMethod_ApplyImpulse<WithAsyncMethod_ApplyTorque<WithAsyncMethod_GetObjectState<WithAsyncMethod_UpdateObjectMass<WithAsyncMethod_SetPhysicsConfig<Service > > > > > > AsyncService;
+  typedef WithAsyncMethod_CreateObject<WithAsyncMethod_ApplyImpulse<WithAsyncMethod_ApplyTorque<WithAsyncMethod_GetObjectState<WithAsyncMethod_UpdateObjectMass<WithAsyncMethod_UpdateObjectRadius<WithAsyncMethod_UpdateObjectMassAndRadius<WithAsyncMethod_SetPhysicsConfig<Service > > > > > > > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_CreateObject : public BaseClass {
    private:
@@ -471,18 +559,72 @@ class Physics final {
       ::grpc::CallbackServerContext* /*context*/, const ::physics::UpdateObjectMassRequest* /*request*/, ::physics::UpdateObjectMassResponse* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
+  class WithCallbackMethod_UpdateObjectRadius : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_UpdateObjectRadius() {
+      ::grpc::Service::MarkMethodCallback(5,
+          new ::grpc::internal::CallbackUnaryHandler< ::physics::UpdateObjectRadiusRequest, ::physics::UpdateObjectRadiusResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::physics::UpdateObjectRadiusRequest* request, ::physics::UpdateObjectRadiusResponse* response) { return this->UpdateObjectRadius(context, request, response); }));}
+    void SetMessageAllocatorFor_UpdateObjectRadius(
+        ::grpc::MessageAllocator< ::physics::UpdateObjectRadiusRequest, ::physics::UpdateObjectRadiusResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(5);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::physics::UpdateObjectRadiusRequest, ::physics::UpdateObjectRadiusResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_UpdateObjectRadius() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObjectRadius(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectRadiusRequest* /*request*/, ::physics::UpdateObjectRadiusResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* UpdateObjectRadius(
+      ::grpc::CallbackServerContext* /*context*/, const ::physics::UpdateObjectRadiusRequest* /*request*/, ::physics::UpdateObjectRadiusResponse* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_UpdateObjectMassAndRadius : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_UpdateObjectMassAndRadius() {
+      ::grpc::Service::MarkMethodCallback(6,
+          new ::grpc::internal::CallbackUnaryHandler< ::physics::UpdateObjectMassAndRadiusRequest, ::physics::UpdateObjectMassAndRadiusResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::physics::UpdateObjectMassAndRadiusRequest* request, ::physics::UpdateObjectMassAndRadiusResponse* response) { return this->UpdateObjectMassAndRadius(context, request, response); }));}
+    void SetMessageAllocatorFor_UpdateObjectMassAndRadius(
+        ::grpc::MessageAllocator< ::physics::UpdateObjectMassAndRadiusRequest, ::physics::UpdateObjectMassAndRadiusResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(6);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::physics::UpdateObjectMassAndRadiusRequest, ::physics::UpdateObjectMassAndRadiusResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_UpdateObjectMassAndRadius() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObjectMassAndRadius(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectMassAndRadiusRequest* /*request*/, ::physics::UpdateObjectMassAndRadiusResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* UpdateObjectMassAndRadius(
+      ::grpc::CallbackServerContext* /*context*/, const ::physics::UpdateObjectMassAndRadiusRequest* /*request*/, ::physics::UpdateObjectMassAndRadiusResponse* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
   class WithCallbackMethod_SetPhysicsConfig : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithCallbackMethod_SetPhysicsConfig() {
-      ::grpc::Service::MarkMethodCallback(5,
+      ::grpc::Service::MarkMethodCallback(7,
           new ::grpc::internal::CallbackUnaryHandler< ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::physics::SetPhysicsConfigRequest* request, ::physics::SetPhysicsConfigResponse* response) { return this->SetPhysicsConfig(context, request, response); }));}
     void SetMessageAllocatorFor_SetPhysicsConfig(
         ::grpc::MessageAllocator< ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse>* allocator) {
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(5);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(7);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
@@ -497,7 +639,7 @@ class Physics final {
     virtual ::grpc::ServerUnaryReactor* SetPhysicsConfig(
       ::grpc::CallbackServerContext* /*context*/, const ::physics::SetPhysicsConfigRequest* /*request*/, ::physics::SetPhysicsConfigResponse* /*response*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_CreateObject<WithCallbackMethod_ApplyImpulse<WithCallbackMethod_ApplyTorque<WithCallbackMethod_GetObjectState<WithCallbackMethod_UpdateObjectMass<WithCallbackMethod_SetPhysicsConfig<Service > > > > > > CallbackService;
+  typedef WithCallbackMethod_CreateObject<WithCallbackMethod_ApplyImpulse<WithCallbackMethod_ApplyTorque<WithCallbackMethod_GetObjectState<WithCallbackMethod_UpdateObjectMass<WithCallbackMethod_UpdateObjectRadius<WithCallbackMethod_UpdateObjectMassAndRadius<WithCallbackMethod_SetPhysicsConfig<Service > > > > > > > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_CreateObject : public BaseClass {
@@ -585,12 +727,46 @@ class Physics final {
     }
   };
   template <class BaseClass>
+  class WithGenericMethod_UpdateObjectRadius : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_UpdateObjectRadius() {
+      ::grpc::Service::MarkMethodGeneric(5);
+    }
+    ~WithGenericMethod_UpdateObjectRadius() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObjectRadius(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectRadiusRequest* /*request*/, ::physics::UpdateObjectRadiusResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_UpdateObjectMassAndRadius : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_UpdateObjectMassAndRadius() {
+      ::grpc::Service::MarkMethodGeneric(6);
+    }
+    ~WithGenericMethod_UpdateObjectMassAndRadius() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObjectMassAndRadius(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectMassAndRadiusRequest* /*request*/, ::physics::UpdateObjectMassAndRadiusResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
   class WithGenericMethod_SetPhysicsConfig : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_SetPhysicsConfig() {
-      ::grpc::Service::MarkMethodGeneric(5);
+      ::grpc::Service::MarkMethodGeneric(7);
     }
     ~WithGenericMethod_SetPhysicsConfig() override {
       BaseClassMustBeDerivedFromService(this);
@@ -702,12 +878,52 @@ class Physics final {
     }
   };
   template <class BaseClass>
+  class WithRawMethod_UpdateObjectRadius : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_UpdateObjectRadius() {
+      ::grpc::Service::MarkMethodRaw(5);
+    }
+    ~WithRawMethod_UpdateObjectRadius() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObjectRadius(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectRadiusRequest* /*request*/, ::physics::UpdateObjectRadiusResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestUpdateObjectRadius(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(5, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_UpdateObjectMassAndRadius : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_UpdateObjectMassAndRadius() {
+      ::grpc::Service::MarkMethodRaw(6);
+    }
+    ~WithRawMethod_UpdateObjectMassAndRadius() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObjectMassAndRadius(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectMassAndRadiusRequest* /*request*/, ::physics::UpdateObjectMassAndRadiusResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestUpdateObjectMassAndRadius(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(6, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
   class WithRawMethod_SetPhysicsConfig : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_SetPhysicsConfig() {
-      ::grpc::Service::MarkMethodRaw(5);
+      ::grpc::Service::MarkMethodRaw(7);
     }
     ~WithRawMethod_SetPhysicsConfig() override {
       BaseClassMustBeDerivedFromService(this);
@@ -718,7 +934,7 @@ class Physics final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSetPhysicsConfig(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(5, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(7, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -832,12 +1048,56 @@ class Physics final {
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
+  class WithRawCallbackMethod_UpdateObjectRadius : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_UpdateObjectRadius() {
+      ::grpc::Service::MarkMethodRawCallback(5,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->UpdateObjectRadius(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_UpdateObjectRadius() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObjectRadius(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectRadiusRequest* /*request*/, ::physics::UpdateObjectRadiusResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* UpdateObjectRadius(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_UpdateObjectMassAndRadius : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_UpdateObjectMassAndRadius() {
+      ::grpc::Service::MarkMethodRawCallback(6,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->UpdateObjectMassAndRadius(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_UpdateObjectMassAndRadius() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateObjectMassAndRadius(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectMassAndRadiusRequest* /*request*/, ::physics::UpdateObjectMassAndRadiusResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* UpdateObjectMassAndRadius(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
   class WithRawCallbackMethod_SetPhysicsConfig : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawCallbackMethod_SetPhysicsConfig() {
-      ::grpc::Service::MarkMethodRawCallback(5,
+      ::grpc::Service::MarkMethodRawCallback(7,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
                    ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->SetPhysicsConfig(context, request, response); }));
@@ -989,12 +1249,66 @@ class Physics final {
     virtual ::grpc::Status StreamedUpdateObjectMass(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::physics::UpdateObjectMassRequest,::physics::UpdateObjectMassResponse>* server_unary_streamer) = 0;
   };
   template <class BaseClass>
+  class WithStreamedUnaryMethod_UpdateObjectRadius : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_UpdateObjectRadius() {
+      ::grpc::Service::MarkMethodStreamed(5,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::physics::UpdateObjectRadiusRequest, ::physics::UpdateObjectRadiusResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::physics::UpdateObjectRadiusRequest, ::physics::UpdateObjectRadiusResponse>* streamer) {
+                       return this->StreamedUpdateObjectRadius(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_UpdateObjectRadius() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status UpdateObjectRadius(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectRadiusRequest* /*request*/, ::physics::UpdateObjectRadiusResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedUpdateObjectRadius(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::physics::UpdateObjectRadiusRequest,::physics::UpdateObjectRadiusResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_UpdateObjectMassAndRadius : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_UpdateObjectMassAndRadius() {
+      ::grpc::Service::MarkMethodStreamed(6,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::physics::UpdateObjectMassAndRadiusRequest, ::physics::UpdateObjectMassAndRadiusResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::physics::UpdateObjectMassAndRadiusRequest, ::physics::UpdateObjectMassAndRadiusResponse>* streamer) {
+                       return this->StreamedUpdateObjectMassAndRadius(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_UpdateObjectMassAndRadius() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status UpdateObjectMassAndRadius(::grpc::ServerContext* /*context*/, const ::physics::UpdateObjectMassAndRadiusRequest* /*request*/, ::physics::UpdateObjectMassAndRadiusResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedUpdateObjectMassAndRadius(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::physics::UpdateObjectMassAndRadiusRequest,::physics::UpdateObjectMassAndRadiusResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
   class WithStreamedUnaryMethod_SetPhysicsConfig : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_SetPhysicsConfig() {
-      ::grpc::Service::MarkMethodStreamed(5,
+      ::grpc::Service::MarkMethodStreamed(7,
         new ::grpc::internal::StreamedUnaryHandler<
           ::physics::SetPhysicsConfigRequest, ::physics::SetPhysicsConfigResponse>(
             [this](::grpc::ServerContext* context,
@@ -1015,9 +1329,9 @@ class Physics final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedSetPhysicsConfig(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::physics::SetPhysicsConfigRequest,::physics::SetPhysicsConfigResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_CreateObject<WithStreamedUnaryMethod_ApplyImpulse<WithStreamedUnaryMethod_ApplyTorque<WithStreamedUnaryMethod_GetObjectState<WithStreamedUnaryMethod_UpdateObjectMass<WithStreamedUnaryMethod_SetPhysicsConfig<Service > > > > > > StreamedUnaryService;
+  typedef WithStreamedUnaryMethod_CreateObject<WithStreamedUnaryMethod_ApplyImpulse<WithStreamedUnaryMethod_ApplyTorque<WithStreamedUnaryMethod_GetObjectState<WithStreamedUnaryMethod_UpdateObjectMass<WithStreamedUnaryMethod_UpdateObjectRadius<WithStreamedUnaryMethod_UpdateObjectMassAndRadius<WithStreamedUnaryMethod_SetPhysicsConfig<Service > > > > > > > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_CreateObject<WithStreamedUnaryMethod_ApplyImpulse<WithStreamedUnaryMethod_ApplyTorque<WithStreamedUnaryMethod_GetObjectState<WithStreamedUnaryMethod_UpdateObjectMass<WithStreamedUnaryMethod_SetPhysicsConfig<Service > > > > > > StreamedService;
+  typedef WithStreamedUnaryMethod_CreateObject<WithStreamedUnaryMethod_ApplyImpulse<WithStreamedUnaryMethod_ApplyTorque<WithStreamedUnaryMethod_GetObjectState<WithStreamedUnaryMethod_UpdateObjectMass<WithStreamedUnaryMethod_UpdateObjectRadius<WithStreamedUnaryMethod_UpdateObjectMassAndRadius<WithStreamedUnaryMethod_SetPhysicsConfig<Service > > > > > > > > StreamedService;
 };
 
 }  // namespace physics

@@ -39,6 +39,10 @@ func (mb *MockBroadcaster) BroadcastFoodState(foodItems interface{}) {
 	mb.StateEvents = append(mb.StateEvents, foodItems)
 }
 
+func (mb *MockBroadcaster) BroadcastPlayerSizeUpdate(playerID string, newRadius float64, newMass float64) {
+	// Mock implementation - can be extended if needed for testing
+}
+
 // Создаем тестовый GameTicker с игроками
 func createTestGameTicker() *GameTicker {
 	logger := log.New(os.Stdout, "[TEST] ", log.LstdFlags)

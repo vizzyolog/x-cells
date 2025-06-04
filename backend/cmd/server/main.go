@@ -64,6 +64,9 @@ func main() {
 	// === НОВОЕ: Связываем WSServer с GameTicker для управления игроками ===
 	wsServer.SetGameTicker(gameTicker)
 
+	// === НОВОЕ: Связываем GameTicker с WSServer для отправки обновлений размера игроков ===
+	gameTicker.SetPlayerBroadcaster(wsServer)
+
 	http.HandleFunc("/ws", wsServer.HandleWS)
 
 	// Эндпоинты для управления имитацией сети

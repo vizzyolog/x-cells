@@ -6,9 +6,13 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"x-cells/backend/internal/game"
 	"x-cells/backend/internal/world"
 )
+
+// PlayerManager интерфейс для управления игроками в игровых системах
+type PlayerManager interface {
+	AddPlayerFromWorldObject(playerID string, worldObject *world.WorldObject) error
+}
 
 // PlayerConnection представляет подключенного игрока
 type PlayerConnection struct {
@@ -35,16 +39,10 @@ func (s *WSServer) generatePlayerID() string {
 	return fmt.Sprintf("player_%d_%d", time.Now().UnixNano(), rand.IntN(10000))
 }
 
-// generatePlayerObjectID генерирует уникальный ID для объекта игрока
-func (s *WSServer) generatePlayerObjectID(playerID string) string {
-	// Все игроки получают уникальные ID на основе их playerID
-	return fmt.Sprintf("player_obj_%s", playerID)
-}
-
 // createPlayerObject создает объект игрока в мире
-func (s *WSServer) createPlayerObject(playerID, objectID string) error {
+func (s *WSServer) createPlayerObject(playerID string) (*world.WorldObject, error) {
 	if s.factory == nil {
-		return fmt.Errorf("factory не инициализирован")
+		return nil, fmt.Errorf("factory не инициализирован")
 	}
 
 	// Получаем максимальную высоту террейна для размещения игрока
@@ -64,7 +62,7 @@ func (s *WSServer) createPlayerObject(playerID, objectID string) error {
 	mass := radius * massCoeff
 
 	// Генерируем случайный уровень прыгучести как скилл (от 0.0 до 0.8)
-	bounceSkill := float32(rand.Float64() * 0.8) // 0.0 = нет отскока, 0.8 = очень прыгучий
+	bounceSkill := float32(0.0)
 
 	log.Printf("[WSServer] Расчет массы игрока: радиус=%.2f, коэффициент=%.2f, масса=%.2f кг",
 		radius, massCoeff, mass)
@@ -73,9 +71,9 @@ func (s *WSServer) createPlayerObject(playerID, objectID string) error {
 	colors := []string{"#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff", "#ffa500", "#800080"}
 	color := colors[rand.IntN(len(colors))]
 
-	// Создаем сферу игрока с индивидуальным скиллом прыгучести
+	// Создаем сферу игрока с индивидуальным скиллом прыгучести, используя playerID как ID объекта
 	playerSphere := world.NewPlayerWithBounceSkill(
-		objectID,
+		playerID, // используем playerID как ID объекта
 		world.Vector3{X: spawnX, Y: spawnY, Z: spawnZ},
 		radius, // Случайный радиус
 		mass,   // Масса
@@ -86,106 +84,62 @@ func (s *WSServer) createPlayerObject(playerID, objectID string) error {
 
 	// Создаем объект в клиентской физике (Ammo)
 	if err := s.factory.CreateObjectInAmmo(playerSphere); err != nil {
-		log.Printf("[WSServer] Ошибка при создании объекта игрока %s в Ammo: %v", objectID, err)
-		return err
+		log.Printf("[WSServer] Ошибка при создании объекта игрока %s в Ammo: %v", playerID, err)
+		return nil, err
 	}
 
 	// Создаем объект в серверной физике (Bullet)
 	if err := s.factory.CreateObjectBullet(playerSphere); err != nil {
-		log.Printf("[WSServer] Ошибка при создании объекта игрока %s в Bullet: %v", objectID, err)
-		return err
+		log.Printf("[WSServer] Ошибка при создании объекта игрока %s в Bullet: %v", playerID, err)
+		return nil, err
 	}
 
-	log.Printf("[WSServer] Создан объект игрока %s для игрока %s в позиции (%.2f, %.2f, %.2f) с радиусом %.2f, массой %.2f и скиллом прыгучести %.2f",
-		objectID, playerID, spawnX, spawnY, spawnZ, radius, mass, bounceSkill)
+	log.Printf("[WSServer] Создан объект игрока %s в позиции (%.2f, %.2f, %.2f) с радиусом %.2f, массой %.2f и скиллом прыгучести %.2f",
+		playerID, spawnX, spawnY, spawnZ, radius, mass, bounceSkill)
 
-	return nil
+	return playerSphere, nil
 }
 
 // removePlayerObject удаляет объект игрока из мира
-func (s *WSServer) removePlayerObject(objectID string) error {
+func (s *WSServer) removePlayerObject(playerID string) error {
 	// Удаляем объект из менеджера мира
-	s.objectManager.RemoveObject(objectID)
+	s.objectManager.RemoveObject(playerID)
 
 	// TODO: Добавить удаление из Bullet Physics когда будет доступен соответствующий метод
 
-	log.Printf("[WSServer] Удален объект игрока %s", objectID)
+	log.Printf("[WSServer] Удален объект игрока %s", playerID)
 	return nil
 }
 
 // addPlayer добавляет нового игрока при подключении
 func (s *WSServer) addPlayer(conn *SafeWriter) (*PlayerConnection, error) {
 	playerID := s.generatePlayerID()
-	objectID := s.generatePlayerObjectID(playerID)
 
-	// Создаем объект игрока в мире
-	if err := s.createPlayerObject(playerID, objectID); err != nil {
+	// Создаем объект игрока в мире, используя playerID
+	playerSphere, err := s.createPlayerObject(playerID)
+	if err != nil {
 		return nil, fmt.Errorf("ошибка создания объекта игрока: %v", err)
-	}
-
-	// Получаем реальный радиус созданного объекта игрока
-	var playerRadius float64
-	if obj, exists := s.objectManager.GetObject(objectID); exists {
-		if obj.Shape != nil && obj.Shape.Sphere != nil {
-			playerRadius = float64(obj.Shape.Sphere.Radius)
-		} else {
-			return nil, fmt.Errorf("объект игрока %s создан без геометрии сферы", objectID)
-		}
-	} else {
-		return nil, fmt.Errorf("объект игрока %s не найден после создания", objectID)
 	}
 
 	// Создаем структуру игрока
 	player := &PlayerConnection{
 		ID:       playerID,
-		ObjectID: objectID,
+		ObjectID: playerID, // теперь ObjectID = playerID
 		Conn:     conn,
 		JoinTime: time.Now(),
 	}
 
 	// === НОВОЕ: Добавляем игрока в GameTicker ===
-	if s.gameTicker != nil {
-		// Используем type assertion для получения методов GameTicker
-		if gameTicker, ok := s.gameTicker.(interface {
-			AddPlayerWithRadius(playerID string, pos game.Vector3, radius float64)
-		}); ok {
-			// Позиция игрока (используем ту же, что при создании объекта)
-			spawnX := rand.IntN(200) - 100 // от -100 до 100
-			spawnZ := rand.IntN(200) - 100 // от -100 до 100
-			spawnY := 80.0                 // Примерная высота
-
-			// Создаем позицию с правильным типом Vector3
-			position := game.Vector3{
-				X: float64(spawnX),
-				Y: spawnY,
-				Z: float64(spawnZ),
-			}
-
-			gameTicker.AddPlayerWithRadius(playerID, position, playerRadius)
-			log.Printf("[WSServer] Игрок %s добавлен в GameTicker в позиции (%.1f, %.1f, %.1f) с радиусом %.1f",
-				playerID, float64(spawnX), spawnY, float64(spawnZ), playerRadius)
-		} else if gameTicker, ok := s.gameTicker.(interface {
-			AddPlayer(playerID string, pos game.Vector3)
-		}); ok {
-			// Fallback к старому методу
-			position := game.Vector3{
-				X: float64(rand.IntN(200) - 100),
-				Y: 80.0,
-				Z: float64(rand.IntN(200) - 100),
-			}
-			gameTicker.AddPlayer(playerID, position)
-			log.Printf("[WSServer] Игрок %s добавлен в GameTicker (старый метод)", playerID)
-		} else {
-			log.Printf("[WSServer] ОШИБКА: gameTicker не имеет метода AddPlayer")
-		}
+	if err := s.addPlayerToGameTicker(playerID, playerSphere); err != nil {
+		log.Printf("[WSServer] ОШИБКА добавления игрока %s в GameTicker: %v", playerID, err)
 	} else {
-		log.Printf("[WSServer] ПРЕДУПРЕЖДЕНИЕ: gameTicker не установлен")
+		log.Printf("[WSServer] Игрок %s успешно добавлен в GameTicker", playerID)
 	}
 
-	log.Printf("[WSServer] Создан игрок %s с объектом %s", playerID, objectID)
+	log.Printf("[WSServer] Создан игрок %s", playerID)
 
 	// Отправляем клиенту информацию о его объекте
-	infoMsg := NewInfoMessage(fmt.Sprintf("Вы подключены как игрок %s, ваш объект: %s", playerID, objectID))
+	infoMsg := NewInfoMessage(fmt.Sprintf("Вы подключены как игрок %s", playerID))
 	if err := conn.WriteJSON(infoMsg); err != nil {
 		log.Printf("[WSServer] Ошибка отправки информации игроку %s: %v", playerID, err)
 	}
@@ -194,7 +148,7 @@ func (s *WSServer) addPlayer(conn *SafeWriter) (*PlayerConnection, error) {
 	playerIDMsg := map[string]interface{}{
 		"type":      "player_id",
 		"player_id": playerID,
-		"object_id": objectID,
+		"object_id": playerID, // теперь object_id = player_id
 	}
 	if err := conn.WriteJSON(playerIDMsg); err != nil {
 		log.Printf("[WSServer] Ошибка отправки player_id игроку %s: %v", playerID, err)
@@ -226,8 +180,8 @@ func (s *WSServer) removePlayer(conn *SafeWriter) {
 	}
 
 	// Удаляем объект игрока из мира
-	if err := s.removePlayerObject(playerToRemove.ObjectID); err != nil {
-		log.Printf("[WSServer] Ошибка удаления объекта игрока %s: %v", playerToRemove.ObjectID, err)
+	if err := s.removePlayerObject(playerIDToRemove); err != nil {
+		log.Printf("[WSServer] Ошибка удаления объекта игрока %s: %v", playerIDToRemove, err)
 	}
 
 	// === НОВОЕ: Удаляем игрока из GameTicker ===
@@ -243,7 +197,7 @@ func (s *WSServer) removePlayer(conn *SafeWriter) {
 	// Удаляем игрока из карты
 	delete(s.players, playerIDToRemove)
 
-	log.Printf("[WSServer] Удален игрок %s с объектом %s", playerIDToRemove, playerToRemove.ObjectID)
+	log.Printf("[WSServer] Удален игрок %s", playerIDToRemove)
 }
 
 // getPlayerByConnection возвращает игрока по соединению
@@ -286,4 +240,18 @@ func (s *WSServer) playerCreationWorker() {
 		// Небольшая задержка между созданиями для стабильности
 		time.Sleep(100 * time.Millisecond)
 	}
+}
+
+// addPlayerToGameTicker добавляет игрока в GameTicker простым и чистым способом
+func (s *WSServer) addPlayerToGameTicker(playerID string, worldObject *world.WorldObject) error {
+	if s.gameTicker == nil {
+		return fmt.Errorf("gameTicker не установлен")
+	}
+
+	// Проверяем, что gameTicker реализует нужный интерфейс
+	if playerManager, ok := s.gameTicker.(PlayerManager); ok {
+		return playerManager.AddPlayerFromWorldObject(playerID, worldObject)
+	}
+
+	return fmt.Errorf("gameTicker не реализует интерфейс PlayerManager")
 }

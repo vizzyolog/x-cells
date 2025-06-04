@@ -19,12 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Physics_CreateObject_FullMethodName     = "/physics.Physics/CreateObject"
-	Physics_ApplyImpulse_FullMethodName     = "/physics.Physics/ApplyImpulse"
-	Physics_ApplyTorque_FullMethodName      = "/physics.Physics/ApplyTorque"
-	Physics_GetObjectState_FullMethodName   = "/physics.Physics/GetObjectState"
-	Physics_UpdateObjectMass_FullMethodName = "/physics.Physics/UpdateObjectMass"
-	Physics_SetPhysicsConfig_FullMethodName = "/physics.Physics/SetPhysicsConfig"
+	Physics_CreateObject_FullMethodName              = "/physics.Physics/CreateObject"
+	Physics_ApplyImpulse_FullMethodName              = "/physics.Physics/ApplyImpulse"
+	Physics_ApplyTorque_FullMethodName               = "/physics.Physics/ApplyTorque"
+	Physics_GetObjectState_FullMethodName            = "/physics.Physics/GetObjectState"
+	Physics_UpdateObjectMass_FullMethodName          = "/physics.Physics/UpdateObjectMass"
+	Physics_UpdateObjectRadius_FullMethodName        = "/physics.Physics/UpdateObjectRadius"
+	Physics_UpdateObjectMassAndRadius_FullMethodName = "/physics.Physics/UpdateObjectMassAndRadius"
+	Physics_SetPhysicsConfig_FullMethodName          = "/physics.Physics/SetPhysicsConfig"
 )
 
 // PhysicsClient is the client API for Physics service.
@@ -38,6 +40,8 @@ type PhysicsClient interface {
 	ApplyTorque(ctx context.Context, in *ApplyTorqueRequest, opts ...grpc.CallOption) (*ApplyTorqueResponse, error)
 	GetObjectState(ctx context.Context, in *GetObjectStateRequest, opts ...grpc.CallOption) (*GetObjectStateResponse, error)
 	UpdateObjectMass(ctx context.Context, in *UpdateObjectMassRequest, opts ...grpc.CallOption) (*UpdateObjectMassResponse, error)
+	UpdateObjectRadius(ctx context.Context, in *UpdateObjectRadiusRequest, opts ...grpc.CallOption) (*UpdateObjectRadiusResponse, error)
+	UpdateObjectMassAndRadius(ctx context.Context, in *UpdateObjectMassAndRadiusRequest, opts ...grpc.CallOption) (*UpdateObjectMassAndRadiusResponse, error)
 	SetPhysicsConfig(ctx context.Context, in *SetPhysicsConfigRequest, opts ...grpc.CallOption) (*SetPhysicsConfigResponse, error)
 }
 
@@ -99,6 +103,26 @@ func (c *physicsClient) UpdateObjectMass(ctx context.Context, in *UpdateObjectMa
 	return out, nil
 }
 
+func (c *physicsClient) UpdateObjectRadius(ctx context.Context, in *UpdateObjectRadiusRequest, opts ...grpc.CallOption) (*UpdateObjectRadiusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateObjectRadiusResponse)
+	err := c.cc.Invoke(ctx, Physics_UpdateObjectRadius_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *physicsClient) UpdateObjectMassAndRadius(ctx context.Context, in *UpdateObjectMassAndRadiusRequest, opts ...grpc.CallOption) (*UpdateObjectMassAndRadiusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateObjectMassAndRadiusResponse)
+	err := c.cc.Invoke(ctx, Physics_UpdateObjectMassAndRadius_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *physicsClient) SetPhysicsConfig(ctx context.Context, in *SetPhysicsConfigRequest, opts ...grpc.CallOption) (*SetPhysicsConfigResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetPhysicsConfigResponse)
@@ -120,6 +144,8 @@ type PhysicsServer interface {
 	ApplyTorque(context.Context, *ApplyTorqueRequest) (*ApplyTorqueResponse, error)
 	GetObjectState(context.Context, *GetObjectStateRequest) (*GetObjectStateResponse, error)
 	UpdateObjectMass(context.Context, *UpdateObjectMassRequest) (*UpdateObjectMassResponse, error)
+	UpdateObjectRadius(context.Context, *UpdateObjectRadiusRequest) (*UpdateObjectRadiusResponse, error)
+	UpdateObjectMassAndRadius(context.Context, *UpdateObjectMassAndRadiusRequest) (*UpdateObjectMassAndRadiusResponse, error)
 	SetPhysicsConfig(context.Context, *SetPhysicsConfigRequest) (*SetPhysicsConfigResponse, error)
 	mustEmbedUnimplementedPhysicsServer()
 }
@@ -145,6 +171,12 @@ func (UnimplementedPhysicsServer) GetObjectState(context.Context, *GetObjectStat
 }
 func (UnimplementedPhysicsServer) UpdateObjectMass(context.Context, *UpdateObjectMassRequest) (*UpdateObjectMassResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateObjectMass not implemented")
+}
+func (UnimplementedPhysicsServer) UpdateObjectRadius(context.Context, *UpdateObjectRadiusRequest) (*UpdateObjectRadiusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateObjectRadius not implemented")
+}
+func (UnimplementedPhysicsServer) UpdateObjectMassAndRadius(context.Context, *UpdateObjectMassAndRadiusRequest) (*UpdateObjectMassAndRadiusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateObjectMassAndRadius not implemented")
 }
 func (UnimplementedPhysicsServer) SetPhysicsConfig(context.Context, *SetPhysicsConfigRequest) (*SetPhysicsConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetPhysicsConfig not implemented")
@@ -260,6 +292,42 @@ func _Physics_UpdateObjectMass_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Physics_UpdateObjectRadius_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateObjectRadiusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PhysicsServer).UpdateObjectRadius(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Physics_UpdateObjectRadius_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PhysicsServer).UpdateObjectRadius(ctx, req.(*UpdateObjectRadiusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Physics_UpdateObjectMassAndRadius_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateObjectMassAndRadiusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PhysicsServer).UpdateObjectMassAndRadius(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Physics_UpdateObjectMassAndRadius_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PhysicsServer).UpdateObjectMassAndRadius(ctx, req.(*UpdateObjectMassAndRadiusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Physics_SetPhysicsConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SetPhysicsConfigRequest)
 	if err := dec(in); err != nil {
@@ -304,6 +372,14 @@ var Physics_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateObjectMass",
 			Handler:    _Physics_UpdateObjectMass_Handler,
+		},
+		{
+			MethodName: "UpdateObjectRadius",
+			Handler:    _Physics_UpdateObjectRadius_Handler,
+		},
+		{
+			MethodName: "UpdateObjectMassAndRadius",
+			Handler:    _Physics_UpdateObjectMassAndRadius_Handler,
 		},
 		{
 			MethodName: "SetPhysicsConfig",
